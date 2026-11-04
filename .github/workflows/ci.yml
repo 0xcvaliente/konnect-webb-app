@@ -1,0 +1,68 @@
+name: CI
+
+# Runs on every push to any branch and on every pull request.
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    # PostgreSQL 18, same major version as local development and production.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: konnected
+          POSTGRES_PASSWORD: konnected
+          POSTGRES_DB: konnected
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U konnected -d konnected"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # CI-only values for a throwaway database. These are not secrets.
+      DATABASE_URL: postgres://konnected:konnected@127.0.0.1:5432/konnected
+      PAYLOAD_SECRET: ci-only-secret-for-throwaway-database
+      ADMIN_EMAILS: admin@konnected.test
+
+    steps:
+      # Actions are pinned to a full commit SHA. The comment is the release it points to.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The pnpm version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      # The Node version comes from .nvmrc.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm format:check
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      # Creates and migrates a separate test database on the service container, then runs the
+      # access and workflow tests as each role.
+      - run: pnpm test
+
+      - run: pnpm build
