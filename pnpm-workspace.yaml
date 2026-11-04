@@ -1,0 +1,18 @@
+# Install policy. pnpm 12 reads these from this file, not from .npmrc.
+saveExact: true
+engineStrict: true
+
+# Only esbuild may run install scripts.
+allowBuilds:
+  esbuild: true
+# pnpm added these when it blocked payload 3.93.0 (published 2026-11-04) under its
+# default minimum release age. CLAUDE.md pins 3.93.0, so the exclusion is intentional.
+# Remove these lines once 3.93.0 is older than the age gate.
+minimumReleaseAgeExclude:
+  - '@payloadcms/db-postgres@3.93.0'
+  - '@payloadcms/drizzle@3.93.0'
+  - '@payloadcms/graphql@3.93.0'
+  - '@payloadcms/next@3.93.0'
+  - '@payloadcms/translations@3.93.0'
+  - '@payloadcms/ui@3.93.0'
+  - payload@3.93.0
