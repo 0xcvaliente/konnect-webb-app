@@ -1,0 +1,119 @@
+import type { Where } from 'payload'
+import { APIError, type CollectionConfig } from 'payload'
+
+import { isAdminEmail } from '@/access/adminEmails'
+import { adminOnlyField, isAdmin } from '@/access/roles'
+import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+
+/**
+ * Accounts. Sign-in methods (Google, magic link, password) are provisional and belong to the auth
+ * card. This collection keeps Payload's local strategy (email and password) enabled.
+ *
+ * Student personal data does NOT live here. It lives in `student-profiles`, which companies
+ * cannot read. A user record only carries what is needed to sign in and to check access.
+ */
+export const Users: CollectionConfig = {
+  slug: 'users',
+  auth: {
+    // Lock the account after repeated wrong passwords.
+    maxLoginAttempts: 5,
+    lockTime: 15 * 60 * 1000,
+    // Keep req.user shallow so it never carries populated relations.
+    depth: 0,
+  },
+  admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
+  access: {
+    // A user reads only their own record. Nobody can list other users, so a company cannot list
+    // students. Sign-up is done by server code with `overrideAccess`, never by a public request.
+    read: ({ req: { user } }): Where | boolean => {
+      if (!user) return false
+      if (isAdmin(user)) return true
+      return { id: { equals: user.id } }
+    },
+    create: ({ req: { user } }) => isAdmin(user),
+    update: ({ req: { user } }): Where | boolean => {
+      if (!user) return false
+      if (isAdmin(user)) return true
+      return { id: { equals: user.id } }
+    },
+    delete: ({ req: { user } }) => isAdmin(user),
+    // Only the Konnected team can enter the Payload admin panel.
+    admin: ({ req: { user } }) => isAdmin(user),
+  },
+  // Payload's "create first user" endpoint runs with access control off. On an empty database it
+  // would let anyone register as the first user. Admins come from the allowlist and the seed
+  // script, so this endpoint is closed. Custom endpoints take precedence over the default one.
+  endpoints: [
+    {
+      path: '/first-register',
+      method: 'post',
+      handler: () => Response.json({ message: 'Not available' }, { status: 403 }),
+    },
+  ],
+  hooks: {
+    beforeChange: [
+      ({ data, originalDoc }) => {
+        const role = data.role ?? originalDoc?.role
+        if (role === 'admin') {
+          const email: string | undefined = data.email ?? originalDoc?.email
+          const verified = data.emailVerifiedAt ?? originalDoc?.emailVerifiedAt
+          if (!isAdminEmail(email) || !verified) {
+            throw new APIError('admin needs a verified email that is on the ADMIN_EMAILS list', 403)
+          }
+        }
+        return data
+      },
+    ],
+    afterChange: [logActivityAfterChange({ statusField: 'role' })],
+    afterDelete: [logActivityAfterDelete()],
+  },
+  fields: [
+    {
+      name: 'role',
+      type: 'select',
+      required: true,
+      defaultValue: 'student',
+      options: ['admin', 'student', 'company'],
+      index: true,
+      saveToJWT: true,
+      // Nobody can pick or change a role through the API. Server code sets it.
+      access: { create: adminOnlyField, update: adminOnlyField },
+    },
+    {
+      name: 'company',
+      type: 'relationship',
+      relationTo: 'companies',
+      index: true,
+      // Set by the server when a company user creates their company.
+      access: {
+        read: ({ req: { user }, id }) => isAdmin(user) || user?.id === id,
+        create: adminOnlyField,
+        update: adminOnlyField,
+      },
+    },
+    {
+      name: 'language',
+      type: 'select',
+      defaultValue: 'en',
+      options: ['en', 'no'],
+    },
+    {
+      // The Google account id (`sub`). Optional: only users who signed in with Google have one.
+      name: 'googleSub',
+      type: 'text',
+      unique: true,
+      index: true,
+      access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+    },
+    {
+      // Set by the server when an email is proven (Google email_verified, a clicked magic link).
+      name: 'emailVerifiedAt',
+      type: 'date',
+      access: {
+        read: ({ req: { user }, id }) => isAdmin(user) || user?.id === id,
+        create: adminOnlyField,
+        update: adminOnlyField,
+      },
+    },
+  ],
+}

@@ -52,13 +52,14 @@ Node 24 (Payload needs `^22.23.4 || >=24.22.1`). `payload`, `@payloadcms/next` a
 
 Run `fnm use` first (Node 24, from `.nvmrc`). Docker must be running for `dev`.
 
-- `pnpm dev`: start local PostgreSQL 18 (Docker Compose, host port 5433), then `next dev` on port 3000.
+- `pnpm dev`: start local PostgreSQL 18 (Docker Compose, host port 5433), run migrations, then `next dev` on port 3000.
+- `pnpm test`: Vitest access and workflow tests on a real PostgreSQL test database (`<name>_test`, created and migrated for each run). Needs `pnpm db:up`.
+- `pnpm seed`: dev seed (admin, student, company, one project per status). Repeatable. Refuses to run in production.
 - `pnpm build`, `pnpm start`: production build and run.
 - `pnpm lint`, `pnpm typecheck` (runs `next typegen` then `tsc --noEmit`), `pnpm format:check`, `pnpm format`.
-- `pnpm migrate`, `pnpm migrate:create`: Payload migrations in `src/migrations`.
+- `pnpm migrate`, `pnpm migrate:create`: Payload migrations in `src/migrations`. Schema push is off. Every schema change needs a committed migration.
 - `pnpm generate:types`, `pnpm generate:importmap`: Payload generated files.
 - `pnpm db:up`, `pnpm db:down`: local PostgreSQL only.
-- `test`: not set up yet. It comes with the CI and access-testing cards. Until then, report "no tests exist".
 
 ## Open decisions
 

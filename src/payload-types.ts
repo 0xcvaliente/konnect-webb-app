@@ -67,16 +67,32 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    'payload-kv': PayloadKv;
     users: User;
+    'student-profiles': StudentProfile;
+    companies: Company;
+    projects: Project;
+    applications: Application;
+    matches: Match;
+    deliverables: Deliverable;
+    payments: Payment;
+    'activity-logs': ActivityLog;
+    'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
   collectionsJoins: {};
   collectionsSelect: {
-    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    'student-profiles': StudentProfilesSelect<false> | StudentProfilesSelect<true>;
+    companies: CompaniesSelect<false> | CompaniesSelect<true>;
+    projects: ProjectsSelect<false> | ProjectsSelect<true>;
+    applications: ApplicationsSelect<false> | ApplicationsSelect<true>;
+    matches: MatchesSelect<false> | MatchesSelect<true>;
+    deliverables: DeliverablesSelect<false> | DeliverablesSelect<true>;
+    payments: PaymentsSelect<false> | PaymentsSelect<true>;
+    'activity-logs': ActivityLogsSelect<false> | ActivityLogsSelect<true>;
+    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -117,27 +133,15 @@ export interface UserAuthOperations {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload-kv".
- */
-export interface PayloadKv {
-  id: number;
-  key: string;
-  data:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
   id: number;
+  role: 'admin' | 'student' | 'company';
+  company?: (number | null) | Company;
+  language?: ('en' | 'no') | null;
+  googleSub?: string | null;
+  emailVerifiedAt?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -160,14 +164,222 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "companies".
+ */
+export interface Company {
+  id: number;
+  name: string;
+  description?: string | null;
+  sector?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "student-profiles".
+ */
+export interface StudentProfile {
+  id: number;
+  user: number | User;
+  name: string;
+  school?: string | null;
+  programme?: string | null;
+  year?: number | null;
+  pitch?: string | null;
+  skills?: string[] | null;
+  interests?: string[] | null;
+  experience?: string | null;
+  highlights?: string | null;
+  preferredProjectTypes?: string[] | null;
+  contactEmail?: string | null;
+  phone?: string | null;
+  privacy?: {
+    shareName?: boolean | null;
+    sharePitch?: boolean | null;
+    shareSkills?: boolean | null;
+    shareExperience?: boolean | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "projects".
+ */
+export interface Project {
+  id: number;
+  company: number | Company;
+  companyName?: string | null;
+  title: string;
+  description: string;
+  tasks?: string | null;
+  deliverable?: string | null;
+  desiredSkills?: string[] | null;
+  workload?: string | null;
+  duration?: string | null;
+  location?: string | null;
+  fee?: number | null;
+  deadline?: string | null;
+  status:
+    | 'draft'
+    | 'submitted'
+    | 'changes_requested'
+    | 'rejected'
+    | 'approved'
+    | 'published'
+    | 'matched'
+    | 'in_progress'
+    | 'delivered'
+    | 'closed';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "applications".
+ */
+export interface Application {
+  id: number;
+  student: number | StudentProfile;
+  project: number | Project;
+  status: 'applied' | 'shortlisted' | 'selected' | 'not_selected' | 'withdrawn';
+  note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "matches".
+ */
+export interface Match {
+  id: number;
+  project: number | Project;
+  student: number | StudentProfile;
+  application?: (number | null) | Application;
+  agreementNotes?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  sharedInfo?: {
+    name?: string | null;
+    pitch?: string | null;
+    skills?: string[] | null;
+    experience?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "deliverables".
+ */
+export interface Deliverable {
+  id: number;
+  match: number | Match;
+  note?: string | null;
+  links?:
+    | {
+        label?: string | null;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  status: 'submitted' | 'released';
+  submittedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payments".
+ */
+export interface Payment {
+  id: number;
+  match: number | Match;
+  projectFee?: number | null;
+  konnectedShare?: number | null;
+  studentPay?: number | null;
+  invoiceSentAt?: string | null;
+  invoicePaidAt?: string | null;
+  studentPaidAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activity-logs".
+ */
+export interface ActivityLog {
+  id: number;
+  actor?: (number | null) | User;
+  action: 'create' | 'status_change' | 'delete';
+  targetCollection: string;
+  targetId: string;
+  fromStatus?: string | null;
+  toStatus?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv".
+ */
+export interface PayloadKv {
+  id: number;
+  key: string;
+  data:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
   id: number;
-  document?: {
-    relationTo: 'users';
-    value: number | User;
-  } | null;
+  document?:
+    | ({
+        relationTo: 'users';
+        value: number | User;
+      } | null)
+    | ({
+        relationTo: 'student-profiles';
+        value: number | StudentProfile;
+      } | null)
+    | ({
+        relationTo: 'companies';
+        value: number | Company;
+      } | null)
+    | ({
+        relationTo: 'projects';
+        value: number | Project;
+      } | null)
+    | ({
+        relationTo: 'applications';
+        value: number | Application;
+      } | null)
+    | ({
+        relationTo: 'matches';
+        value: number | Match;
+      } | null)
+    | ({
+        relationTo: 'deliverables';
+        value: number | Deliverable;
+      } | null)
+    | ({
+        relationTo: 'payments';
+        value: number | Payment;
+      } | null)
+    | ({
+        relationTo: 'activity-logs';
+        value: number | ActivityLog;
+      } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
@@ -212,17 +424,14 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload-kv_select".
- */
-export interface PayloadKvSelect<T extends boolean = true> {
-  key?: T;
-  data?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  role?: T;
+  company?: T;
+  language?: T;
+  googleSub?: T;
+  emailVerifiedAt?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -240,6 +449,158 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "student-profiles_select".
+ */
+export interface StudentProfilesSelect<T extends boolean = true> {
+  user?: T;
+  name?: T;
+  school?: T;
+  programme?: T;
+  year?: T;
+  pitch?: T;
+  skills?: T;
+  interests?: T;
+  experience?: T;
+  highlights?: T;
+  preferredProjectTypes?: T;
+  contactEmail?: T;
+  phone?: T;
+  privacy?:
+    | T
+    | {
+        shareName?: T;
+        sharePitch?: T;
+        shareSkills?: T;
+        shareExperience?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "companies_select".
+ */
+export interface CompaniesSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  sector?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "projects_select".
+ */
+export interface ProjectsSelect<T extends boolean = true> {
+  company?: T;
+  companyName?: T;
+  title?: T;
+  description?: T;
+  tasks?: T;
+  deliverable?: T;
+  desiredSkills?: T;
+  workload?: T;
+  duration?: T;
+  location?: T;
+  fee?: T;
+  deadline?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "applications_select".
+ */
+export interface ApplicationsSelect<T extends boolean = true> {
+  student?: T;
+  project?: T;
+  status?: T;
+  note?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "matches_select".
+ */
+export interface MatchesSelect<T extends boolean = true> {
+  project?: T;
+  student?: T;
+  application?: T;
+  agreementNotes?: T;
+  startDate?: T;
+  endDate?: T;
+  sharedInfo?:
+    | T
+    | {
+        name?: T;
+        pitch?: T;
+        skills?: T;
+        experience?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "deliverables_select".
+ */
+export interface DeliverablesSelect<T extends boolean = true> {
+  match?: T;
+  note?: T;
+  links?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  status?: T;
+  submittedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payments_select".
+ */
+export interface PaymentsSelect<T extends boolean = true> {
+  match?: T;
+  projectFee?: T;
+  konnectedShare?: T;
+  studentPay?: T;
+  invoiceSentAt?: T;
+  invoicePaidAt?: T;
+  studentPaidAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activity-logs_select".
+ */
+export interface ActivityLogsSelect<T extends boolean = true> {
+  actor?: T;
+  action?: T;
+  targetCollection?: T;
+  targetId?: T;
+  fromStatus?: T;
+  toStatus?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv_select".
+ */
+export interface PayloadKvSelect<T extends boolean = true> {
+  key?: T;
+  data?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
