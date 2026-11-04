@@ -21,7 +21,7 @@ For library behaviour, the installed version and its types beat any note or memo
 
 - Use the `konnected-*` skills. Start with `konnected-product-rules`.
 - Companies never see or search students. A company sees a student only after Konnected selects them, and only what the student agreed to share.
-- Login is Google sign-in only. No passwords, no Feide, no other SSO. Role comes from our database. `admin` only from the `ADMIN_EMAILS` allowlist.
+- Login (PROVISIONAL, owner decision 2026-11-05): Google sign-in, email magic link, or email and password. No Feide, no other SSO, no university email check. Role comes from our database. `admin` only from the `ADMIN_EMAILS` allowlist and only for a verified email. Link sign-in methods to one account by verified email only. Open points are in the Notion Engineering draft, section 12: scope of "SSO", how a student is confirmed, admin sign-in method, password rules.
 - Konnected approves every company and every project before students see it.
 - Enforce access on the server (Payload access functions and hooks), for REST, GraphQL and the Local API. In the Local API pass `overrideAccess: false` for anything done for a user.
 - Every access or status change comes with a test run as each role.
@@ -40,7 +40,7 @@ For library behaviour, the installed version and its types beat any note or memo
 
 ## Version 1 scope
 
-In: Google sign-in and role choice, university email check, student profile and CV, company registration and approval, project submission and review, project list with filters, apply, manual matching, deliverables, admin queues and payment log (manual), EN/NO.
+In: sign-in (Google, magic link, password) and role choice, student profile and CV, company registration and approval, project submission and review, project list with filters, apply, manual matching, deliverables, admin queues and payment log (manual), EN/NO.
 
 Out until after launch: public introduction site, built-in scheduler and calendar sync, messaging, agreements and e-signature, payment integration, reviews display, partner roles, analytics.
 
@@ -62,4 +62,4 @@ Run `fnm use` first (Node 24, from `.nvmrc`). Docker must be running for `dev`.
 
 ## Open decisions
 
-Domain name, VPS provider, university email domains, file storage, fee and payment model, re-applying after withdrawing an application, account recovery. Do not guess these. Ask.
+Domain name, VPS provider, file storage, transactional email provider, fee and payment model, re-applying after withdrawing an application, account recovery, how a student is confirmed (no university email check), admin sign-in method, password rules. Do not guess these. Ask.
