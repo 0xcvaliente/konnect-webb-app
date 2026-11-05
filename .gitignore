@@ -30,3 +30,11 @@ next-env.d.ts
 # editor
 .idea/
 .vscode/
+
+# credentials: never commit (Google OAuth downloads, service accounts, keys)
+credentials/
+client_secret*.json
+*.apps.googleusercontent.com.json
+service-account*.json
+*.key
+*.p12
