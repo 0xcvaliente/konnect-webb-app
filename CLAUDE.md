@@ -21,7 +21,7 @@ For library behaviour, the installed version and its types beat any note or memo
 
 - Use the `konnected-*` skills. Start with `konnected-product-rules`.
 - Companies never see or search students. A company sees a student only after Konnected selects them, and only what the student agreed to share.
-- Login is Google sign-in only. No passwords, no Feide, no other SSO. Role comes from our database. `admin` only from the `ADMIN_EMAILS` allowlist.
+- Login (PROVISIONAL, owner decision 2026-11-05): Google sign-in, email magic link, or email and password. No Feide, no other SSO, no university email check. Role comes from our database. `admin` only from the `ADMIN_EMAILS` allowlist and only for a verified email. Link sign-in methods to one account by verified email only. Open points are in the Notion Engineering draft, section 12: scope of "SSO", how a student is confirmed, admin sign-in method, password rules.
 - Konnected approves every company and every project before students see it.
 - Enforce access on the server (Payload access functions and hooks), for REST, GraphQL and the Local API. In the Local API pass `overrideAccess: false` for anything done for a user.
 - Every access or status change comes with a test run as each role.
@@ -40,7 +40,7 @@ For library behaviour, the installed version and its types beat any note or memo
 
 ## Version 1 scope
 
-In: Google sign-in and role choice, university email check, student profile and CV, company registration and approval, project submission and review, project list with filters, apply, manual matching, deliverables, admin queues and payment log (manual), EN/NO.
+In: sign-in (Google, magic link, password) and role choice, student profile and CV, company registration and approval, project submission and review, project list with filters, apply, manual matching, deliverables, admin queues and payment log (manual), EN/NO.
 
 Out until after launch: public introduction site, built-in scheduler and calendar sync, messaging, agreements and e-signature, payment integration, reviews display, partner roles, analytics.
 
@@ -52,14 +52,15 @@ Node 24 (Payload needs `^22.23.4 || >=24.22.1`). `payload`, `@payloadcms/next` a
 
 Run `fnm use` first (Node 24, from `.nvmrc`). Docker must be running for `dev`.
 
-- `pnpm dev`: start local PostgreSQL 18 (Docker Compose, host port 5433), then `next dev` on port 3000.
+- `pnpm dev`: start local PostgreSQL 18 (Docker Compose, host port 5433), run migrations, then `next dev` on port 3000.
+- `pnpm test`: Vitest access and workflow tests on a real PostgreSQL test database (`<name>_test`, created and migrated for each run). Needs `pnpm db:up`.
+- `pnpm seed`: dev seed (admin, student, company, one project per status). Repeatable. Refuses to run in production.
 - `pnpm build`, `pnpm start`: production build and run.
 - `pnpm lint`, `pnpm typecheck` (runs `next typegen` then `tsc --noEmit`), `pnpm format:check`, `pnpm format`.
-- `pnpm migrate`, `pnpm migrate:create`: Payload migrations in `src/migrations`.
+- `pnpm migrate`, `pnpm migrate:create`: Payload migrations in `src/migrations`. Schema push is off. Every schema change needs a committed migration.
 - `pnpm generate:types`, `pnpm generate:importmap`: Payload generated files.
 - `pnpm db:up`, `pnpm db:down`: local PostgreSQL only.
-- `test`: not set up yet. It comes with the CI and access-testing cards. Until then, report "no tests exist".
 
 ## Open decisions
 
-Domain name, VPS provider, university email domains, file storage, fee and payment model, re-applying after withdrawing an application, account recovery. Do not guess these. Ask.
+Domain name, VPS provider, file storage, transactional email provider, fee and payment model, re-applying after withdrawing an application, account recovery, how a student is confirmed (no university email check), admin sign-in method, password rules. Do not guess these. Ask.

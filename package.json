@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Konnected: managed platform where startups submit paid project assignments and university students deliver them.",
   "scripts": {
-    "dev": "pnpm db:up && next dev",
+    "dev": "pnpm db:up && pnpm migrate && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -18,7 +18,9 @@
     "generate:types": "payload generate:types",
     "generate:importmap": "payload generate:importmap",
     "migrate": "payload migrate",
-    "migrate:create": "payload migrate:create"
+    "migrate:create": "payload migrate:create",
+    "test": "vitest run",
+    "seed": "payload run src/seed.ts"
   },
   "engines": {
     "node": ">=24.22.1 <25",
@@ -36,12 +38,16 @@
   },
   "devDependencies": {
     "@types/node": "24.19.2",
+    "@types/pg": "8.20.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.5",
     "eslint-config-prettier": "10.1.8",
+    "pg": "8.20.0",
     "prettier": "3.9.10",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vite-tsconfig-paths": "6.1.1",
+    "vitest": "5.1.0"
   }
 }

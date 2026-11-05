@@ -28,20 +28,24 @@ PostgreSQL listens on `127.0.0.1:5433` (not 5432, so it does not clash with a lo
 
 ## Commands
 
-| Command                             | What it does                               |
-| ----------------------------------- | ------------------------------------------ |
-| `pnpm dev`                          | Start PostgreSQL (Docker), then `next dev` |
-| `pnpm build` / `pnpm start`         | Production build / run the build           |
-| `pnpm lint`                         | ESLint                                     |
-| `pnpm typecheck`                    | `next typegen`, then `tsc --noEmit`        |
-| `pnpm format` / `pnpm format:check` | Prettier write / check                     |
-| `pnpm db:up` / `pnpm db:down`       | Start / stop local PostgreSQL              |
-| `pnpm migrate`                      | Run migrations in `src/migrations`         |
-| `pnpm migrate:create`               | Create a migration                         |
-| `pnpm generate:types`               | Regenerate `src/payload-types.ts`          |
-| `pnpm generate:importmap`           | Regenerate the Payload admin import map    |
+| Command                             | What it does                                                         |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| `pnpm dev`                          | Start PostgreSQL (Docker), run migrations, then `next dev`           |
+| `pnpm build` / `pnpm start`         | Production build / run the build                                     |
+| `pnpm lint`                         | ESLint                                                               |
+| `pnpm typecheck`                    | `next typegen`, then `tsc --noEmit`                                  |
+| `pnpm format` / `pnpm format:check` | Prettier write / check                                               |
+| `pnpm db:up` / `pnpm db:down`       | Start / stop local PostgreSQL                                        |
+| `pnpm migrate`                      | Run migrations in `src/migrations`                                   |
+| `pnpm test`                         | Vitest: access and workflow tests on a real PostgreSQL test database |
+| `pnpm seed`                         | Dev seed: admin, student, company, one project per status            |
+| `pnpm migrate:create`               | Create a migration                                                   |
+| `pnpm generate:types`               | Regenerate `src/payload-types.ts`                                    |
+| `pnpm generate:importmap`           | Regenerate the Payload admin import map                              |
 
-There is no `test` command yet. The test runner and CI come with their own cards.
+`pnpm test` needs the Docker PostgreSQL running (`pnpm db:up`). It creates and migrates a separate `<name>_test` database, so it never touches your dev data. The seed refuses to run in production. Local seed accounts use a throwaway password written in `src/seed.ts`.
+
+Schema changes always go through a committed migration (`pnpm migrate:create`). Schema push is off.
 
 Reset the local database: `pnpm db:down && docker volume rm konnect-webb-app_pgdata`.
 
@@ -51,6 +55,5 @@ Reset the local database: `pnpm db:down && docker volume rm konnect-webb-app_pgd
   the same version.
 - pnpm 12 blocks packages newer than its minimum release age. `pnpm-workspace.yaml` lists the
   Payload 3.93.0 packages as exceptions. Remove them when 3.93.0 is old enough.
-- Payload adds a default `users` collection with email and password login when none is defined.
-  That is a placeholder until the data model card. Do not deploy this scaffold.
+- Login is provisional (Google, email magic link, or email and password). The collections and access rules are built. The sign-in flows themselves are not: until the auth card, only the Payload admin password login works, and the first-user endpoint is closed. Create an admin with `pnpm seed`.
 - Never commit `.env`. Only `NEXT_PUBLIC_*` values may be Docker build args.
