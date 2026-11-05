@@ -21,7 +21,7 @@ For library behaviour, the installed version and its types beat any note or memo
 
 - Use the `konnected-*` skills. Start with `konnected-product-rules`.
 - Companies never see or search students. A company sees a student only after Konnected selects them, and only what the student agreed to share.
-- Login (PROVISIONAL, owner decision 2026-11-05): Google sign-in, email magic link, or email and password. No Feide, no other SSO, no university email check. Role comes from our database. `admin` only from the `ADMIN_EMAILS` allowlist and only for a verified email. Link sign-in methods to one account by verified email only. Open points are in the Notion Engineering draft, section 12: scope of "SSO", how a student is confirmed, admin sign-in method, password rules.
+- Login (PROVISIONAL, owner decision 2026-11-05): Google sign-in, email magic link, or email and password. No Feide, no other SSO, no university email check. Role comes from our database. `admin` only from the `ADMIN_EMAILS` allowlist and only for a verified email. Link sign-in methods to one account by verified email only. Decided 2026-11-05: "SSO" is Google only; no automated student check for the pilot (Konnected reviews every profile); admins sign in with Google only; passwords need 15+ characters, breached-password check, email verified before first sign-in, lockout after 5 tries. Details in the Notion Engineering draft, section 12.
 - Konnected approves every company and every project before students see it.
 - Enforce access on the server (Payload access functions and hooks), for REST, GraphQL and the Local API. In the Local API pass `overrideAccess: false` for anything done for a user.
 - Every access or status change comes with a test run as each role.
@@ -63,4 +63,4 @@ Run `fnm use` first (Node 24, from `.nvmrc`). Docker must be running for `dev`.
 
 ## Open decisions
 
-Domain name, VPS provider, file storage, transactional email provider, fee and payment model, re-applying after withdrawing an application, account recovery, how a student is confirmed (no university email check), admin sign-in method, password rules. Do not guess these. Ask.
+Domain name, VPS provider, file storage, transactional email provider, fee and payment model, re-applying after withdrawing an application, account recovery. Do not guess these. Ask.
