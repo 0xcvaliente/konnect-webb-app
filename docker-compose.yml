@@ -1,0 +1,24 @@
+# Local development only. Production Compose (app, postgres, caddy) is a separate card.
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      # Throwaway local credentials. They must match DATABASE_URL in .env.example.
+      POSTGRES_USER: konnected
+      POSTGRES_PASSWORD: konnected
+      POSTGRES_DB: konnected
+    ports:
+      # Bound to localhost only. Host port 5433 so it does not clash with a local PostgreSQL on 5432.
+      - '127.0.0.1:5433:5432'
+    volumes:
+      # PostgreSQL 18 images keep data in a versioned directory under /var/lib/postgresql.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U konnected -d konnected']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

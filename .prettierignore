@@ -1,0 +1,7 @@
+.next/
+node_modules/
+pnpm-lock.yaml
+next-env.d.ts
+src/payload-types.ts
+src/app/(payload)/admin/importMap.js
+src/migrations/
