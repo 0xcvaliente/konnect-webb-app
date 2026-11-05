@@ -36,6 +36,8 @@ export default buildConfig({
     ActivityLogs,
   ],
   secret: process.env.PAYLOAD_SECRET ?? '',
+  // Cookie-authenticated requests are accepted only from our own site.
+  csrf: process.env.APP_URL ? [process.env.APP_URL.replace(/\/+$/, '')] : [],
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },

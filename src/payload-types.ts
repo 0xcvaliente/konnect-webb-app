@@ -137,7 +137,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
-  role: 'admin' | 'student' | 'company';
+  role: 'admin' | 'student' | 'company' | 'pending';
   company?: (number | null) | Company;
   language?: ('en' | 'no') | null;
   googleSub?: string | null;
