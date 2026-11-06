@@ -1,6 +1,7 @@
 import * as migration_20261104_233443_initial from './20261104_233443_initial';
 import * as migration_20261105_023035_role_pending from './20261105_023035_role_pending';
 import * as migration_20261105_023036_role_pending_default from './20261105_023036_role_pending_default';
+import * as migration_20261106_142300_locales from './20261106_142300_locales';
 
 export const migrations = [
   {
@@ -17,5 +18,10 @@ export const migrations = [
     up: migration_20261105_023036_role_pending_default.up,
     down: migration_20261105_023036_role_pending_default.down,
     name: '20261105_023036_role_pending_default',
+  },
+  {
+    up: migration_20261106_142300_locales.up,
+    down: migration_20261106_142300_locales.down,
+    name: '20261106_142300_locales'
   },
 ];

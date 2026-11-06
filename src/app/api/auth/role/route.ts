@@ -2,6 +2,7 @@ import config from '@payload-config'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
+import { requestLocale } from '@/i18n/locale'
 import { googleEnv, isSameOrigin } from '@/lib/auth/env'
 
 /**
@@ -13,9 +14,10 @@ export async function POST(request: Request) {
   const { appUrl } = googleEnv()
   if (!isSameOrigin(request, appUrl)) return new Response('Forbidden', { status: 403 })
 
+  const locale = requestLocale(request)
   const payload = await getPayload({ config })
   const { user } = await payload.auth({ headers: request.headers })
-  if (!user) return NextResponse.redirect(`${appUrl}/?auth_error=session_expired`, 303)
+  if (!user) return NextResponse.redirect(`${appUrl}/${locale}?auth_error=session_expired`, 303)
 
   const form = await request.formData()
   const role = form.get('role')
@@ -31,5 +33,5 @@ export async function POST(request: Request) {
     user,
     overrideAccess: true,
   })
-  return NextResponse.redirect(`${appUrl}/`, 303)
+  return NextResponse.redirect(`${appUrl}/${locale}`, 303)
 }

@@ -100,10 +100,10 @@ export interface Config {
   db: {
     defaultIDType: number;
   };
-  fallbackLocale: null;
+  fallbackLocale: ('false' | 'none' | 'null') | false | null | ('en' | 'no') | ('en' | 'no')[];
   globals: {};
   globalsSelect: {};
-  locale: null;
+  locale: 'en' | 'no';
   widgets: {
     collections: CollectionsWidget;
   };

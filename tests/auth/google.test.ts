@@ -112,7 +112,7 @@ describe('start: the address we send the browser to', () => {
         }),
       )
     for (let i = 0; i < 20; i++) expect(location(await hit())).toContain('accounts.google.com')
-    expect(location(await hit())).toBe(`${APP}/?auth_error=too_many_requests`)
+    expect(location(await hit())).toBe(`${APP}/en?auth_error=too_many_requests`)
   })
 })
 
@@ -132,7 +132,7 @@ describe('the signed sign-in cookie', () => {
 describe('callback: errors end on the home page with a message code, never a 500', () => {
   const expectFail = (res: Response, code: string) => {
     expect(res.status).toBe(307)
-    expect(location(res)).toBe(`${APP}/?auth_error=${code}`)
+    expect(location(res)).toBe(`${APP}/en?auth_error=${code}`)
     expect(setCookies(res).some((c) => c.startsWith(`${OIDC_COOKIE}=;`))).toBe(true)
     expect(setCookies(res).some((c) => c.startsWith('payload-token='))).toBe(false)
   }
@@ -212,7 +212,7 @@ describe('callback: errors end on the home page with a message code, never a 500
 describe('callback: a successful sign-in', () => {
   it('creates a pending account, starts a real Payload session and asks for a role', async () => {
     const res = await signInThroughRoutes(claimsFor())
-    expect(location(res)).toBe(`${APP}/choose-role`)
+    expect(location(res)).toBe(`${APP}/en/choose-role`)
     const session = setCookies(res).find((c) => c.startsWith('payload-token='))!
     expect(session).toMatch(/HttpOnly/i)
     expect(session).toMatch(/SameSite=Lax/i)

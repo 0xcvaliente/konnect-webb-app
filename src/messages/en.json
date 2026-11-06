@@ -1,0 +1,13 @@
+{
+  "Home": {
+    "signedInAs": "Signed in as {email} ({role})",
+    "chooseRole": "Choose student or company",
+    "signOut": "Sign out",
+    "continueWithGoogle": "Continue with Google"
+  },
+  "ChooseRole": {
+    "title": "How will you use Konnected?",
+    "student": "I am a student",
+    "company": "I am a company"
+  }
+}

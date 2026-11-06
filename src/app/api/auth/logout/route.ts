@@ -2,6 +2,7 @@ import config from '@payload-config'
 import { REST_POST } from '@payloadcms/next/routes'
 import { NextResponse } from 'next/server'
 
+import { requestLocale } from '@/i18n/locale'
 import { googleEnv, isSameOrigin } from '@/lib/auth/env'
 
 /** Sign out: end the Payload session and clear the cookie, then go home. */
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     { params: Promise.resolve({ slug: ['users', 'logout'] }) },
   )
 
-  const response = NextResponse.redirect(`${appUrl}/`, 303)
+  const response = NextResponse.redirect(`${appUrl}/${requestLocale(request)}`, 303)
   for (const cookie of logout.headers.getSetCookie()) response.headers.append('Set-Cookie', cookie)
   return response
 }

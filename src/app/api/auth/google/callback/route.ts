@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import { parseCookies } from 'payload/shared'
 
+import { requestLocale } from '@/i18n/locale'
 import { AuthFlowError, completeGoogleLogin } from '@/lib/auth/accounts'
 import { googleEnv, signingSecret } from '@/lib/auth/env'
 import { exchangeGoogleCode } from '@/lib/auth/google'
@@ -27,7 +28,8 @@ export async function GET(request: Request) {
     if (sessionCookie) response.headers.append('Set-Cookie', sessionCookie)
     return response
   }
-  const fail = (code: AuthErrorCode) => finish(`/?auth_error=${code}`)
+  const locale = requestLocale(request)
+  const fail = (code: AuthErrorCode) => finish(`/${locale}?auth_error=${code}`)
 
   if (rateLimited(clientKey(request, 'google-callback'), 20, 60_000)) {
     return fail('too_many_requests')
@@ -57,7 +59,7 @@ export async function GET(request: Request) {
   try {
     const user = await completeGoogleLogin(payload, claims)
     const sessionCookie = await createSessionCookie(payload, user.id)
-    return finish(user.role === 'pending' ? '/choose-role' : '/', sessionCookie)
+    return finish(user.role === 'pending' ? `/${locale}/choose-role` : `/${locale}`, sessionCookie)
   } catch (error) {
     if (error instanceof AuthFlowError) return fail(error.code)
     payload.logger.error({ msg: 'Sign-in could not be completed', reason: (error as Error).name })

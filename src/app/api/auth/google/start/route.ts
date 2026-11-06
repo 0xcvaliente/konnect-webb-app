@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { requestLocale } from '@/i18n/locale'
 import { googleEnv, signingSecret } from '@/lib/auth/env'
 import { startGoogleSignIn } from '@/lib/auth/google'
 import { cookieHeader, OIDC_COOKIE, OIDC_COOKIE_MAX_AGE, sealChecks } from '@/lib/auth/oidcCookie'
@@ -9,7 +10,7 @@ import { clientKey, rateLimited } from '@/lib/auth/rateLimit'
 export async function GET(request: Request) {
   const { appUrl } = googleEnv()
   if (rateLimited(clientKey(request, 'google-start'), 20, 60_000)) {
-    return NextResponse.redirect(`${appUrl}/?auth_error=too_many_requests`)
+    return NextResponse.redirect(`${appUrl}/${requestLocale(request)}?auth_error=too_many_requests`)
   }
 
   const { url, checks } = await startGoogleSignIn()

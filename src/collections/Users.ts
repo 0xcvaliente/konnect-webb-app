@@ -1,5 +1,5 @@
 import type { Where } from 'payload'
-import { APIError, type CollectionConfig } from 'payload'
+import { APIError, AuthenticationError, type CollectionConfig } from 'payload'
 
 import { isAdminEmail } from '@/access/adminEmails'
 import { adminOnlyField, isAdmin } from '@/access/roles'
@@ -53,6 +53,39 @@ export const Users: CollectionConfig = {
     },
   ],
   hooks: {
+    // Admins sign in with Google only (owner decision, 5 Nov 2026). Payload runs this after the
+    // password check, so the error is the same generic one a wrong password gets.
+    beforeLogin: [
+      ({ req, user }) => {
+        if (user?.role === 'admin') throw new AuthenticationError(req.t)
+        return user
+      },
+    ],
+    beforeOperation: [
+      // No password reset for admins: a reset would give them a password. The request still gets
+      // Payload's normal "success" answer, so nobody learns which addresses are admins; the email
+      // just is not sent, and the stored token is never shown to anyone.
+      async ({ args, operation, req }) => {
+        if (operation !== 'forgotPassword') return args
+        const email = String(args.data?.email ?? '')
+          .toLowerCase()
+          .trim()
+        if (!email) return args
+        let admin = isAdminEmail(email)
+        if (!admin) {
+          const found = await req.payload.find({
+            collection: 'users',
+            where: { email: { equals: email } },
+            limit: 1,
+            depth: 0,
+            overrideAccess: true,
+            req,
+          })
+          admin = found.docs[0]?.role === 'admin'
+        }
+        return admin ? { ...args, disableEmail: true } : args
+      },
+    ],
     beforeChange: [
       ({ data, originalDoc }) => {
         const role = data.role ?? originalDoc?.role
