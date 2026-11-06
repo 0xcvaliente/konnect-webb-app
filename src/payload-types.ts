@@ -219,11 +219,16 @@ export interface StudentProfile {
   phone?: string | null;
   privacy?: {
     shareName?: boolean | null;
+    shareSchool?: boolean | null;
     sharePitch?: boolean | null;
     shareSkills?: boolean | null;
     shareExperience?: boolean | null;
     shareCv?: boolean | null;
+    shareContactEmail?: boolean | null;
+    sharePhone?: boolean | null;
   };
+  reviewStatus?: ('waiting' | 'reviewed') | null;
+  reviewedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -323,10 +328,15 @@ export interface Match {
   endDate?: string | null;
   sharedInfo?: {
     name?: string | null;
+    school?: string | null;
+    programme?: string | null;
+    year?: number | null;
     pitch?: string | null;
     skills?: string[] | null;
     experience?: string | null;
     cv?: (number | null) | Cv;
+    contactEmail?: string | null;
+    phone?: string | null;
   };
   updatedAt: string;
   createdAt: string;
@@ -688,11 +698,16 @@ export interface StudentProfilesSelect<T extends boolean = true> {
     | T
     | {
         shareName?: T;
+        shareSchool?: T;
         sharePitch?: T;
         shareSkills?: T;
         shareExperience?: T;
         shareCv?: T;
+        shareContactEmail?: T;
+        sharePhone?: T;
       };
+  reviewStatus?: T;
+  reviewedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -757,10 +772,15 @@ export interface MatchesSelect<T extends boolean = true> {
     | T
     | {
         name?: T;
+        school?: T;
+        programme?: T;
+        year?: T;
         pitch?: T;
         skills?: T;
         experience?: T;
         cv?: T;
+        contactEmail?: T;
+        phone?: T;
       };
   updatedAt?: T;
   createdAt?: T;

@@ -73,12 +73,17 @@ export const Matches: CollectionConfig = {
         // student changes their profile or what they share (see StudentProfiles).
         data.sharedInfo = {
           name: privacy.shareName ? profile.name : null,
+          school: privacy.shareSchool ? profile.school : null,
+          programme: privacy.shareSchool ? profile.programme : null,
+          year: privacy.shareSchool ? profile.year : null,
           pitch: privacy.sharePitch ? profile.pitch : null,
           // An empty list, not null: a hasMany field ignores null on update and would keep the old copy.
           skills: privacy.shareSkills ? profile.skills : [],
           experience: privacy.shareExperience ? profile.experience : null,
           // The CV itself stays in `cvs`; its read rule checks the same tick on every request.
           cv: privacy.shareCv ? (relationId(profile.cv) ?? null) : null,
+          contactEmail: privacy.shareContactEmail ? profile.contactEmail : null,
+          phone: privacy.sharePhone ? profile.phone : null,
         }
         return data
       },
@@ -125,10 +130,15 @@ export const Matches: CollectionConfig = {
       },
       fields: [
         { name: 'name', type: 'text' },
+        { name: 'school', type: 'text' },
+        { name: 'programme', type: 'text' },
+        { name: 'year', type: 'number' },
         { name: 'pitch', type: 'textarea' },
         { name: 'skills', type: 'text', hasMany: true },
         { name: 'experience', type: 'textarea' },
         { name: 'cv', type: 'upload', relationTo: 'cvs' },
+        { name: 'contactEmail', type: 'email' },
+        { name: 'phone', type: 'text' },
       ],
     },
   ],

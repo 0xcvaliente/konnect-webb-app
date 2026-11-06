@@ -279,5 +279,182 @@
     "showToast": "Vis varsel",
     "toast": "Lagret",
     "loading": "Laster"
+  },
+  "StudentFields": {
+    "name": "Fullt navn",
+    "school": "Studiested",
+    "programme": "Studieprogram",
+    "year": "Studieår",
+    "yearOption": {
+      "1": "1. år",
+      "2": "2. år",
+      "3": "3. år",
+      "4": "4. år",
+      "5": "5. år",
+      "6": "6. år eller senere"
+    },
+    "chooseYear": "Velg studieår",
+    "pitch": "Kort presentasjon",
+    "pitchHint": "Noen setninger om hva du er god på og hva du vil jobbe med.",
+    "skills": "Ferdigheter",
+    "skillsHint": "Skill med komma, for eksempel Figma, Excel, brukerintervjuer.",
+    "interests": "Interesser",
+    "interest": {
+      "marketing": "Markedsføring",
+      "design": "Design og UX",
+      "research": "Research og undersøkelser",
+      "data": "Data og analyse",
+      "software": "Programvareutvikling",
+      "business": "Forretning og strategi",
+      "writing": "Skriving og tekst",
+      "testing": "Testing og kvalitetssikring"
+    },
+    "projectTypes": "Prosjekter du ønsker",
+    "projectType": {
+      "paid": "Betalte prosjekter",
+      "unpaid": "Ubetalte prosjekter, for erfaringen",
+      "remote": "Arbeid på avstand",
+      "onSite": "Arbeid på stedet"
+    },
+    "schoolOption": {
+      "ntnu": "NTNU",
+      "uio": "Universitetet i Oslo",
+      "uib": "Universitetet i Bergen",
+      "bi": "Handelshøyskolen BI",
+      "nhh": "NHH",
+      "oslomet": "OsloMet"
+    },
+    "experience": "Erfaring",
+    "experienceHint": "Jobber, frivillig arbeid eller prosjekter som viser hva du kan. Valgfritt.",
+    "highlights": "Høydepunkter for Konnected",
+    "highlightsHint": "Karakterer, priser eller annet du vil at Konnected skal vite. Valgfritt, og deles aldri med en bedrift.",
+    "contactEmail": "E-post for kontakt",
+    "contactEmailHint": "Valgfritt. Deles bare hvis du krysser av for det under «Hva en bedrift kan se».",
+    "phone": "Telefonnummer",
+    "phoneHint": "Valgfritt. Deles bare hvis du krysser av for det under «Hva en bedrift kan se».",
+    "share": {
+      "shareName": "Navnet ditt",
+      "shareSchool": "Studiested, studieprogram og studieår",
+      "sharePitch": "Den korte presentasjonen din",
+      "shareSkills": "Ferdighetene dine",
+      "shareExperience": "Erfaringen din",
+      "shareCv": "CV-en din",
+      "shareContactEmail": "E-posten din for kontakt",
+      "sharePhone": "Telefonnummeret ditt"
+    },
+    "shareHint": {
+      "shareContactEmail": "Bare hvis du legger den inn på profilen. Ellers går kontakten gjennom Konnected.",
+      "sharePhone": "Bare hvis du legger det inn på profilen. Ellers går kontakten gjennom Konnected."
+    },
+    "sharingLegend": "Deles med bedriften etter at Konnected har valgt deg",
+    "sharingExplain": "Bedrifter ser aldri profilen din og kan ikke søke etter studenter. Ingenting deles før Konnected velger deg til et prosjekt, og da bare det du krysser av her. Alt er av til du slår det på.",
+    "sharingLater": "Du kan endre dette når som helst. Hvis du fjerner et kryss etter at du er valgt, slutter Konnected å dele det, men bedriften kan allerede ha sett det.",
+    "errors": {
+      "required": "Fyll inn dette.",
+      "requiredChoice": "Velg minst ett alternativ.",
+      "requiredOne": "Velg et alternativ.",
+      "tooLong": "Dette er for langt. Hold det under {max} tegn.",
+      "tooManySkills": "Legg til høyst {max} ferdigheter.",
+      "skillTooLong": "Hold hver ferdighet under {max} tegn.",
+      "emailInvalid": "Skriv inn en e-postadresse, som navn@eksempel.no.",
+      "phoneInvalid": "Skriv inn et telefonnummer med sifre, som +47 912 34 567.",
+      "yearInvalid": "Velg ett av studieårene.",
+      "cvInvalid": "Denne CV-en kunne ikke brukes. Last den opp på nytt."
+    }
+  },
+  "Cv": {
+    "title": "CV",
+    "hint": "Bare PDF, opptil 10 MB.",
+    "dropTitle": "Legg til CV-en din",
+    "choose": "Velg en PDF",
+    "replace": "Bytt ut",
+    "remove": "Fjern",
+    "download": "Last ned",
+    "uploading": "Laster opp CV-en…",
+    "removing": "Fjerner CV-en…",
+    "uploadedOn": "{size}, lastet opp {date}",
+    "noCv": "Ingen CV ennå",
+    "noCvNote": "Har du ikke CV ennå? Det går fint. Du kan legge den til senere på profilen. Konnected ser på CV-en før du blir valgt til et prosjekt.",
+    "saved": "CV-en er lagret.",
+    "removed": "CV-en er fjernet.",
+    "errors": {
+      "type": "Bare PDF-filer kan brukes som CV.",
+      "size": "Filen er større enn 10 MB. Prøv en mindre PDF.",
+      "tooMany": "Du har lastet opp flere CV-er som ikke er i bruk. Fjern en, eller prøv igjen i morgen.",
+      "generic": "CV-en kunne ikke lastes opp. Prøv igjen."
+    }
+  },
+  "Onboarding": {
+    "label": "Oppstart for studenter",
+    "count": "Spørsmål {n} av {total}",
+    "done": "Ferdig",
+    "welcomeTitle": "Velkommen til Konnected",
+    "welcomeBody": "{total} korte spørsmål hjelper Konnected med å finne de riktige prosjektene for deg. Det tar omtrent tre minutter, og du gjør det bare én gang.",
+    "start": "Start",
+    "ok": "OK",
+    "finish": "Fullfør",
+    "saving": "Lagrer…",
+    "pressEnter": "trykk <b>Enter ↵</b>",
+    "previous": "Forrige spørsmål",
+    "next": "Neste spørsmål",
+    "placeholder": "Skriv svaret ditt her",
+    "otherSchool": "Et annet studiested",
+    "otherSchoolLabel": "Navnet på studiestedet ditt",
+    "q": {
+      "name": "Hva er det fulle navnet ditt?",
+      "school": "Hvor studerer du?",
+      "programme": "Hva studerer du?",
+      "year": "Hvilket studieår går du?",
+      "pitch": "Fortell Konnected litt om deg selv",
+      "skills": "Hvilke ferdigheter har du?",
+      "interests": "Hva slags arbeid interesserer deg?",
+      "projectTypes": "Hvilke prosjekter ønsker du?",
+      "cv": "Last opp CV-en din",
+      "privacy": "Hvis Konnected velger deg til et prosjekt, hva kan de dele med bedriften?"
+    },
+    "help": {
+      "name": "Konnected bruker det i profilen din. En bedrift ser det bare hvis du velger å dele det.",
+      "programme": "Studieprogrammet ditt, for eksempel Industriell design.",
+      "pitch": "Hva du er god på og hva du vil jobbe med. Valgfritt.",
+      "skills": "Skill med komma, for eksempel Figma, Excel, brukerintervjuer. Valgfritt.",
+      "interests": "Velg så mange du vil.",
+      "projectTypes": "Velg så mange du vil. Valgfritt.",
+      "cv": "Valgfritt."
+    },
+    "doneTitle": "Takk, {name}. Nå er du klar.",
+    "doneBody": "Profilen din venter på gjennomgang. Vi går gjennom profiler innen 2 arbeidsdager.",
+    "toProfile": "Gå til profilen din",
+    "doneHint": "Du ser ikke disse spørsmålene igjen. Du kan endre svarene når som helst på profilen.",
+    "notAnswered": "Ikke besvart",
+    "nothingShared": "Ingenting",
+    "cvAdded": "Lagt til",
+    "errors": {
+      "exists": "Du har allerede en profil. Åpne den for å gjøre endringer.",
+      "forbidden": "Bare en innlogget student kan fylle ut dette. Logg inn på nytt.",
+      "generic": "Noe gikk galt, og svarene ble ikke lagret. Prøv igjen."
+    },
+    "sharedLabel": "Deles etter at du er valgt"
+  },
+  "Profile": {
+    "title": "Profilen din",
+    "lede": "Konnected går gjennom hver profil før de finner studenter til prosjekter. Hold den oppdatert.",
+    "aboutTitle": "Om deg",
+    "moreTitle": "Erfaring og kontakt",
+    "save": "Lagre profilen",
+    "saving": "Lagrer…",
+    "saved": "Profilen er lagret.",
+    "sharingTitle": "Hva en bedrift kan se",
+    "saveSharing": "Lagre valgene for deling",
+    "sharingSaved": "Valgene for deling er lagret.",
+    "sharedCount": "{count, plural, =0 {Ingenting deles} one {# ting deles} other {# ting deles}}",
+    "waitingTitle": "Venter på gjennomgang",
+    "waitingBody": "Vi går gjennom profiler innen 2 arbeidsdager. Du kan fortsatt se på prosjekter og søke i mellomtiden.",
+    "reviewedTitle": "Profilen er gjennomgått",
+    "reviewedBody": "Konnected gikk gjennom profilen din {date}. Nå kan Konnected velge deg til et prosjekt.",
+    "errors": {
+      "fix": "Noen svar må sjekkes. Se feltene som er merket nedenfor.",
+      "generic": "Noe gikk galt, og ingenting ble lagret. Prøv igjen.",
+      "forbidden": "Økten din er utløpt. Logg inn på nytt."
+    }
   }
 }

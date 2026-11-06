@@ -3,9 +3,22 @@ import { APIError, type CollectionConfig } from 'payload'
 
 import { adminOnlyField, adminOrStudentField, isAdmin, isStudent, relationId } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { REVIEW_STATUSES, SHARE_KEYS } from '@/lib/students/fields'
 
 /** Fields copied to a match's `sharedInfo`. A change to any of them refreshes the copies. */
-const SHARED_SOURCE_FIELDS = ['name', 'pitch', 'skills', 'experience', 'cv', 'privacy'] as const
+const SHARED_SOURCE_FIELDS = [
+  'name',
+  'school',
+  'programme',
+  'year',
+  'pitch',
+  'skills',
+  'experience',
+  'cv',
+  'contactEmail',
+  'phone',
+  'privacy',
+] as const
 
 /**
  * ALL student personal data lives here and nowhere else. Admin reads everything. A student reads
@@ -42,6 +55,26 @@ export const StudentProfiles: CollectionConfig = {
           data.user = req.user!.id
         }
 
+        // Review: only Konnected decides. A new profile always waits for review, whatever the
+        // request says (field access already drops a non-admin's value; this is the second
+        // layer). Moving to `reviewed` records the date unless the admin gave one; moving back
+        // to `waiting` clears it.
+        if (!isAdmin(req.user)) {
+          if (operation === 'create') {
+            data.reviewStatus = 'waiting'
+            data.reviewedAt = null
+          } else {
+            data.reviewStatus = originalDoc?.reviewStatus
+            data.reviewedAt = originalDoc?.reviewedAt ?? null
+          }
+        } else {
+          const to = data.reviewStatus ?? originalDoc?.reviewStatus ?? 'waiting'
+          if (to === 'waiting') data.reviewedAt = null
+          else if (originalDoc?.reviewStatus !== 'reviewed') {
+            data.reviewedAt ??= new Date().toISOString()
+          }
+        }
+
         // The CV on a profile must be one the profile's student uploaded. Bypass: the server
         // reads the CV's owner, which the acting user may not be allowed to read.
         const cvId = relationId(data.cv)
@@ -62,7 +95,7 @@ export const StudentProfiles: CollectionConfig = {
       },
     ],
     afterChange: [
-      logActivityAfterChange(),
+      logActivityAfterChange({ statusField: 'reviewStatus' }),
       async ({ doc, previousDoc, operation, req }) => {
         // Keep what companies see in step with what the student shares now: ticking "share my
         // CV" after selection shares it, unticking stops it. Bypass: the server rebuilds the
@@ -127,17 +160,32 @@ export const StudentProfiles: CollectionConfig = {
     { name: 'phone', type: 'text', access: personal },
     {
       // What the student agrees to share with a company after Konnected selects them.
-      // Nothing is shared by default.
+      // Nothing is shared by default. `shareSchool` covers school, programme and year.
       name: 'privacy',
       type: 'group',
       access: personal,
-      fields: [
-        { name: 'shareName', type: 'checkbox', defaultValue: false },
-        { name: 'sharePitch', type: 'checkbox', defaultValue: false },
-        { name: 'shareSkills', type: 'checkbox', defaultValue: false },
-        { name: 'shareExperience', type: 'checkbox', defaultValue: false },
-        { name: 'shareCv', type: 'checkbox', defaultValue: false },
-      ],
+      fields: SHARE_KEYS.map((name) => ({ name, type: 'checkbox' as const, defaultValue: false })),
+    },
+    {
+      // Konnected's review of the profile. Every profile starts `waiting`; only an admin moves it.
+      // The student reads it (to see "We review profiles within 2 working days" or the date).
+      name: 'reviewStatus',
+      type: 'select',
+      // Not `required`, so creating a profile does not have to name it: the default and the hook
+      // above always set it. A missing value reads as `waiting`.
+      defaultValue: 'waiting',
+      options: [...REVIEW_STATUSES],
+      index: true,
+      access: { read: adminOrStudentField, create: adminOnlyField, update: adminOnlyField },
+      admin: { position: 'sidebar' },
+    },
+    {
+      // When Konnected reviewed the profile. Set by the hook above when the status moves to
+      // `reviewed`; an admin may correct it.
+      name: 'reviewedAt',
+      type: 'date',
+      access: { read: adminOrStudentField, create: adminOnlyField, update: adminOnlyField },
+      admin: { position: 'sidebar' },
     },
   ],
 }
