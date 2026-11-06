@@ -5,6 +5,7 @@ import {
   createWorld,
   graphql,
   login,
+  PASSWORD,
   sessionFor,
   resetDatabase,
   rest,
@@ -46,7 +47,8 @@ const FORBIDDEN = [
 ]
 
 const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
-  users: '{ Users(limit: 100) { docs { id email role company { id } } } }',
+  users:
+    '{ Users(limit: 100) { docs { id email name role accountStatus lastSignInAt company { id } } } }',
   'student-profiles':
     '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt privacy { shareName shareSchool shareContactEmail sharePhone } user { id email } } } }',
   companies:
@@ -144,6 +146,73 @@ describe.each(['local', 'rest', 'graphql'] as const)(
     })
   },
 )
+
+describe('the account name (users.name) never reaches a company', () => {
+  it('the student user record carries the profile name, and only the team sees it', async () => {
+    // The name is copied from the profile onto the user record (copyNameToUser).
+    const adminView = await rest.get(`users/${world.alpha.user.id}?depth=0`, adminCookie)
+    expect(adminView.json.name).toBe(SENTINEL.alpha.name)
+    const adminGql = await graphql(`{ User(id: ${world.alpha.user.id}) { name } }`, adminCookie)
+    expect(adminGql.text).toContain(SENTINEL.alpha.name)
+
+    const direct = await rest.get(`users/${world.alpha.user.id}?depth=0`, companyCookie)
+    expect([403, 404]).toContain(direct.status)
+    expect(direct.text).not.toContain(SENTINEL.alpha.name)
+    const gql = await graphql(`{ User(id: ${world.alpha.user.id}) { name email } }`, companyCookie)
+    expect(gql.text).not.toContain(SENTINEL.alpha.name)
+    await expect(
+      world.payload.findByID({
+        collection: 'users',
+        id: world.alpha.user.id,
+        user: asUser(world.companyA.user),
+        overrideAccess: false,
+      }),
+    ).rejects.toThrow()
+  })
+})
+
+describe('server-only account fields are not part of any API', () => {
+  it('the status version and the sign-out time are hidden, even from the team', async () => {
+    const marker = '2001-02-03T04:05:06.789Z'
+    const user = await world.payload.create({
+      collection: 'users',
+      data: { email: 'hidden-fields@example.test', password: PASSWORD, role: 'student' } as never,
+      overrideAccess: true,
+      disableVerificationEmail: true,
+    })
+    try {
+      await world.payload.db.updateOne({
+        collection: 'users',
+        where: { id: { equals: user.id } },
+        data: { sessionsValidAfter: marker, accountStatusVersion: 4242 },
+        returning: false,
+      })
+      for (const cookie of [companyCookie, adminCookie]) {
+        const gql = await graphql(
+          `{ User(id: ${user.id}) { id accountStatusVersion sessionsValidAfter } }`,
+          cookie,
+        )
+        const one = await rest.get(`users/${user.id}?depth=0`, cookie)
+        const all = await rest.get('users?depth=0&limit=100', cookie)
+        for (const text of [gql.text, one.text, all.text]) {
+          expect(text).not.toContain(marker)
+          expect(text).not.toContain('4242')
+        }
+      }
+      // Positive control: the values are stored.
+      const row = await world.payload.db.findOne<{
+        id: number
+        sessionsValidAfter?: string | null
+      }>({
+        collection: 'users',
+        where: { id: { equals: user.id } },
+      })
+      expect(row!.sessionsValidAfter).toBe(marker)
+    } finally {
+      await world.payload.delete({ collection: 'users', id: user.id, overrideAccess: true })
+    }
+  })
+})
 
 describe('company cannot reach student collections directly', () => {
   it('REST: student profiles and applications are forbidden', async () => {

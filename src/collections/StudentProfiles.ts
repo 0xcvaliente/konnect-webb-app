@@ -2,6 +2,7 @@ import type { Where } from 'payload'
 import { APIError, type CollectionConfig } from 'payload'
 
 import { adminOnlyField, adminOrStudentField, isAdmin, isStudent, relationId } from '@/access/roles'
+import { copyNameToUser } from '@/hooks/copyNameToUser'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { REVIEW_STATUSES, SHARE_KEYS } from '@/lib/students/fields'
 
@@ -96,6 +97,7 @@ export const StudentProfiles: CollectionConfig = {
     ],
     afterChange: [
       logActivityAfterChange({ statusField: 'reviewStatus' }),
+      copyNameToUser('name'),
       async ({ doc, previousDoc, operation, req }) => {
         // Keep what companies see in step with what the student shares now: ticking "share my
         // CV" after selection shares it, unticking stops it. Bypass: the server rebuilds the

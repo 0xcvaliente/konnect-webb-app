@@ -6,6 +6,8 @@ export type AuthErrorCode =
   | 'session_expired'
   | 'too_many_requests'
   | 'account_conflict'
+  | 'account_paused'
+  | 'team_removed'
 
 export const AUTH_MESSAGES: Record<AuthErrorCode, { en: string; no: string }> = {
   cancelled: {
@@ -31,6 +33,14 @@ export const AUTH_MESSAGES: Record<AuthErrorCode, { en: string; no: string }> = 
   account_conflict: {
     en: 'This email is already linked to a different Google account. Contact Konnected.',
     no: 'Denne e-posten er allerede koblet til en annen Google-konto. Kontakt Konnected.',
+  },
+  account_paused: {
+    en: 'This account is paused. Write to Konnected if you think this is a mistake.',
+    no: 'Denne kontoen er satt på pause. Skriv til Konnected hvis du mener dette er feil.',
+  },
+  team_removed: {
+    en: 'This Konnected team account is no longer active. Ask the team if you need access.',
+    no: 'Denne teamkontoen hos Konnected er ikke lenger aktiv. Spør teamet hvis du trenger tilgang.',
   },
 }
 

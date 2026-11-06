@@ -5,7 +5,10 @@ import { NextResponse } from 'next/server'
 import { requestLocale } from '@/i18n/locale'
 import { googleEnv, isSameOrigin } from '@/lib/auth/env'
 
-/** Sign out: end the Payload session and clear the cookie, then go home. */
+/**
+ * Sign out: end the Payload session and clear the cookie, then go to the entry page, which says
+ * "You are signed out" (mockup "Signed out and linked").
+ */
 export async function POST(request: Request) {
   const { appUrl } = googleEnv()
   if (!isSameOrigin(request, appUrl)) return new Response('Forbidden', { status: 403 })
@@ -19,7 +22,7 @@ export async function POST(request: Request) {
     { params: Promise.resolve({ slug: ['users', 'logout'] }) },
   )
 
-  const response = NextResponse.redirect(`${appUrl}/${requestLocale(request)}`, 303)
+  const response = NextResponse.redirect(`${appUrl}/${requestLocale(request)}?signed_out=1`, 303)
   for (const cookie of logout.headers.getSetCookie()) response.headers.append('Set-Cookie', cookie)
   return response
 }

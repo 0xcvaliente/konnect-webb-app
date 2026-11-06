@@ -1,4 +1,5 @@
 import type { SiteNavKey } from '@/components/app/nav'
+import { accountMenuUser } from '@/lib/account'
 import type { Company } from '@/payload-types'
 
 import type { SessionUser } from './company'
@@ -19,6 +20,10 @@ export function companyShellProps(user: SessionUser, company: Company) {
   return {
     role: 'company' as const,
     locked: company.status === 'approved' ? [] : LOCKED_UNTIL_APPROVED,
-    user: { name: company.contactName || company.name, detail: user.email },
+    // The account's name is the contact person's (copied from the company by a hook).
+    user: accountMenuUser({
+      name: user.name || company.contactName || company.name,
+      email: user.email,
+    }),
   }
 }

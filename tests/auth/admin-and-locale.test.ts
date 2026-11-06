@@ -123,6 +123,6 @@ describe('redirects from the sign-in routes keep the language', () => {
         headers: { origin: APP, cookie: 'NEXT_LOCALE=no' },
       }),
     )
-    expect(res.headers.get('location')).toBe(`${APP}/no`)
+    expect(res.headers.get('location')).toBe(`${APP}/no?signed_out=1`)
   })
 })

@@ -1,7 +1,13 @@
 import type { Where } from 'payload'
 import { APIError, type CollectionConfig } from 'payload'
 
-import { adminOnlyField, adminOrStudentField, isAdmin, isStudent } from '@/access/roles'
+import {
+  adminOnlyField,
+  adminOrStudentField,
+  effectiveRole,
+  isAdmin,
+  isStudent,
+} from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import {
   APPLICATION_TRANSITIONS,
@@ -38,7 +44,7 @@ export const Applications: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, originalDoc, operation, req }) => {
-        const role = req.user?.role
+        const role = effectiveRole(req.user)
 
         if (operation === 'create') {
           assertInitialStatus<ApplicationStatus>('applied', data.status, 'A new application')

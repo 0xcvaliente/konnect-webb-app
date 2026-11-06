@@ -56,6 +56,26 @@ export const DELIVERABLE_TRANSITIONS: TransitionMap<DeliverableStatus> = {
 }
 
 /**
+ * A user's role. `pending` picks student or company once, themselves (the role step). After
+ * that only Konnected fixes a wrong pick, between student and company, and only before the
+ * account has applications or projects (checked in the Users hook). Nothing here leads to or from
+ * `admin`: admin comes only from the ADMIN_EMAILS list, set by the sign-in code.
+ */
+export const ROLE_TRANSITIONS: TransitionMap<Role> = {
+  pending: { student: ['pending'], company: ['pending'] },
+  student: { company: ['admin'] },
+  company: { student: ['admin'] },
+}
+
+/** Pausing and reactivating an account: the Konnected team only. */
+export type AccountStatus = 'active' | 'paused'
+
+export const ACCOUNT_TRANSITIONS: TransitionMap<AccountStatus> = {
+  active: { paused: ['admin'] },
+  paused: { active: ['admin'] },
+}
+
+/**
  * Throw unless `from -> to` is a listed move that `role` may make. Same status is not a move.
  * 400 for a move that does not exist, 403 for a move that exists but not for this role.
  */

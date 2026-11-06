@@ -1,3 +1,4 @@
+import { ChevronLeftIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 
@@ -17,7 +18,9 @@ export async function TeamShell({
   current,
   counts = {},
   user,
+  crumb,
   title,
+  meta,
   lede,
   actions,
   children,
@@ -26,7 +29,11 @@ export async function TeamShell({
   /** Open items per menu entry. Entries without a number show no count. */
   counts?: Partial<Record<TeamNavKey, number>>
   user?: AccountUser | null
+  /** A link back, above the title (for example "Back to accounts"). */
+  crumb?: { href: string; label: string }
   title: ReactNode
+  /** Pills or other short facts between the title and the lede. */
+  meta?: ReactNode
   lede?: ReactNode
   actions?: ReactNode
   children: ReactNode
@@ -101,7 +108,18 @@ export async function TeamShell({
         >
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div className="grid min-w-0 gap-1">
-              <h1 className="text-[1.55rem] leading-[1.2]">{title}</h1>
+              {crumb && (
+                <Link
+                  href={crumb.href}
+                  prefetch={false}
+                  className="inline-flex min-h-11 w-fit items-center gap-1 text-[0.88rem] font-semibold sm:min-h-0"
+                >
+                  <ChevronLeftIcon aria-hidden="true" className="size-4" />
+                  {crumb.label}
+                </Link>
+              )}
+              <h1 className="text-[1.55rem] leading-[1.2] [overflow-wrap:anywhere]">{title}</h1>
+              {meta && <div className="flex flex-wrap items-center gap-2 pt-1">{meta}</div>}
               {lede && (
                 <p className="max-w-[62ch] [overflow-wrap:anywhere] text-muted-foreground">
                   {lede}

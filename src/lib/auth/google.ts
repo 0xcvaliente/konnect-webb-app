@@ -41,7 +41,7 @@ export async function startGoogleSignIn(): Promise<{ url: URL; checks: OidcCheck
   return { url, checks: { state, nonce, verifier } }
 }
 
-export type GoogleClaims = { sub: string; email?: string; emailVerified: boolean }
+export type GoogleClaims = { sub: string; email?: string; emailVerified: boolean; name?: string }
 
 /**
  * Exchange the code from Google's redirect. The library checks the issuer, audience, expiry,
@@ -64,5 +64,7 @@ export async function exchangeGoogleCode(
     sub: claims.sub,
     email: typeof claims.email === 'string' ? claims.email : undefined,
     emailVerified: verified === true || verified === 'true',
+    // The Google profile name. Used only for Konnected team accounts (see completeGoogleLogin).
+    name: typeof claims.name === 'string' ? claims.name : undefined,
   }
 }

@@ -4,6 +4,8 @@ import createNextIntlPlugin from 'next-intl/plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+import { LEGACY_TEAM_REDIRECTS } from './src/lib/legacyRedirects'
+
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
@@ -30,6 +32,9 @@ const nextConfig: NextConfig = {
   // CLAUDE.md is the agent instruction file. Stop `next dev` from generating AGENTS.md.
   agentRules: false,
   poweredByHeader: false,
+  async redirects() {
+    return LEGACY_TEAM_REDIRECTS
+  },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },

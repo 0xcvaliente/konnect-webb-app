@@ -11,10 +11,12 @@ import {
   adminOnlyField,
   adminOrCompanyField,
   companyIdOf,
+  effectiveRole,
   isAdmin,
   isCompany,
   relationId,
 } from '@/access/roles'
+import { copyNameToUser } from '@/hooks/copyNameToUser'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import {
   COMPANY_STATUSES,
@@ -160,7 +162,7 @@ export const Companies: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, originalDoc, operation, req }) => {
-        const role = req.user?.role
+        const role = effectiveRole(req.user)
         const admin = isAdmin(req.user)
 
         if (operation === 'create') {
@@ -280,6 +282,7 @@ export const Companies: CollectionConfig = {
         return doc
       },
       logActivityAfterChange({ statusField: 'status' }),
+      copyNameToUser('contactName'),
     ],
     afterDelete: [logActivityAfterDelete()],
   },

@@ -1,6 +1,8 @@
 /*
- * Menu items for the two layouts. The routes do not exist yet; they are placeholders until the
+ * Menu items for the two layouts. Most routes do not exist yet; they are placeholders until the
  * dashboard cards build them. Labels come from the "Shell" messages in src/messages/{en,no}.json.
+ * The team workspace lives at /{locale}/team (owner decision); Payload's own admin panel stays
+ * at /admin as a fallback, and /{locale}/admin/... redirects to /{locale}/team/... (next.config).
  */
 
 export const SITE_NAV = {
@@ -30,27 +32,28 @@ export const TEAM_NAV = [
   {
     group: 'daily',
     items: [
-      { key: 'today', href: '/admin' },
-      { key: 'approvals', href: '/admin/approvals' },
-      { key: 'matching', href: '/admin/matching' },
-      { key: 'agreements', href: '/admin/agreements' },
-      { key: 'deliverables', href: '/admin/deliverables' },
-      { key: 'questions', href: '/admin/questions' },
-      { key: 'payments', href: '/admin/payments' },
+      { key: 'today', href: '/team' },
+      { key: 'approvals', href: '/team/approvals' },
+      { key: 'matching', href: '/team/matching' },
+      { key: 'agreements', href: '/team/agreements' },
+      { key: 'deliverables', href: '/team/deliverables' },
+      { key: 'questions', href: '/team/questions' },
+      { key: 'payments', href: '/team/payments' },
     ],
   },
   {
     group: 'records',
     items: [
-      { key: 'directory', href: '/admin/directory' },
-      { key: 'dataRequests', href: '/admin/data-requests' },
+      { key: 'directory', href: '/team/directory' },
+      { key: 'users', href: '/team/users' },
+      { key: 'dataRequests', href: '/team/data-requests' },
     ],
   },
   {
     group: 'settings',
     items: [
-      { key: 'team', href: '/admin/team' },
-      { key: 'templates', href: '/admin/agreements/templates' },
+      { key: 'team', href: '/team/members' },
+      { key: 'templates', href: '/team/agreements/templates' },
     ],
   },
 ] as const

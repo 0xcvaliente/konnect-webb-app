@@ -1,7 +1,14 @@
 import type { Where } from 'payload'
 import { APIError, type CollectionConfig } from 'payload'
 
-import { adminOnlyField, companyIdOf, isAdmin, isStudent, relationId } from '@/access/roles'
+import {
+  adminOnlyField,
+  companyIdOf,
+  effectiveRole,
+  isAdmin,
+  isStudent,
+  relationId,
+} from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { MAX_DELIVERABLE_FILES } from './DeliverableFiles'
 import {
@@ -52,7 +59,7 @@ export const Deliverables: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, originalDoc, operation, req }) => {
-        const role = req.user?.role
+        const role = effectiveRole(req.user)
 
         if (operation === 'create') {
           assertInitialStatus<DeliverableStatus>('submitted', data.status, 'A new deliverable')

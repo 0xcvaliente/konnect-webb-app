@@ -159,11 +159,18 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  name?: string | null;
   password?: string | null;
   role: 'admin' | 'student' | 'company' | 'pending';
   company?: (number | null) | Company;
   language?: ('en' | 'no') | null;
   googleSub?: string | null;
+  accountStatus?: ('active' | 'paused') | null;
+  accountStatusVersion?: number | null;
+  sessionsValidAfter?: string | null;
+  passwordSetAt?: string | null;
+  lastSignInAt?: string | null;
+  methodAddedNotice?: ('google' | 'password') | null;
   emailVerifiedAt?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -433,11 +440,13 @@ export interface Payment {
 export interface ActivityLog {
   id: number;
   actor?: (number | null) | User;
-  action: 'create' | 'status_change' | 'delete';
+  action: 'create' | 'status_change' | 'delete' | 'sign_out_everywhere' | 'sign_in_method_added';
   targetCollection: string;
   targetId: string;
+  field?: string | null;
   fromStatus?: string | null;
   toStatus?: string | null;
+  note?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -682,11 +691,18 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
   password?: T;
   role?: T;
   company?: T;
   language?: T;
   googleSub?: T;
+  accountStatus?: T;
+  accountStatusVersion?: T;
+  sessionsValidAfter?: T;
+  passwordSetAt?: T;
+  lastSignInAt?: T;
+  methodAddedNotice?: T;
   emailVerifiedAt?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -940,8 +956,10 @@ export interface ActivityLogsSelect<T extends boolean = true> {
   action?: T;
   targetCollection?: T;
   targetId?: T;
+  field?: T;
   fromStatus?: T;
   toStatus?: T;
+  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }

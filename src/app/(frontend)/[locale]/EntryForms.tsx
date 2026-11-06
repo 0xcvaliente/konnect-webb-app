@@ -69,11 +69,14 @@ export function EntryForms({
   locale,
   initialTab,
   notice,
+  signedOut,
 }: {
   locale: string
   initialTab: 'signin' | 'signup'
   /** A message from the Google flow (cancelled, expired), already in the page's language. */
   notice?: string
+  /** "You are signed out" after a sign-out; "You were signed out" when a session ended. */
+  signedOut?: 'now' | 'ended'
 }) {
   const t = useTranslations('Entry')
   return (
@@ -84,7 +87,7 @@ export function EntryForms({
           <TabsTrigger value="signup">{t('tabSignUp')}</TabsTrigger>
         </TabsList>
         <TabsContent value="signin" className="grid gap-4">
-          <SignIn locale={locale} notice={notice} />
+          <SignIn locale={locale} notice={notice} signedOut={signedOut} />
         </TabsContent>
         <TabsContent value="signup" className="grid gap-4">
           <SignUp locale={locale} />
@@ -94,7 +97,15 @@ export function EntryForms({
   )
 }
 
-function SignIn({ locale, notice }: { locale: string; notice?: string }) {
+function SignIn({
+  locale,
+  notice,
+  signedOut,
+}: {
+  locale: string
+  notice?: string
+  signedOut?: 'now' | 'ended'
+}) {
   const t = useTranslations('Entry')
   const fieldError = useFieldError()
   const [linkState, linkAction, linkPending] = useActionState(requestLinkAction, IDLE)
@@ -160,6 +171,16 @@ function SignIn({ locale, notice }: { locale: string; notice?: string }) {
       {notice && (
         <Banner tone="bad" role="alert">
           {notice}
+        </Banner>
+      )}
+      {signedOut && !notice && (
+        <Banner tone={signedOut === 'now' ? 'ok' : 'info'} role="status">
+          <p className="font-semibold">
+            {signedOut === 'now' ? t('signedOutTitle') : t('sessionEndedTitle')}
+          </p>
+          <p className="text-[0.88rem] text-muted-foreground">
+            {signedOut === 'now' ? t('signedOutBody') : t('sessionEndedBody')}
+          </p>
         </Banner>
       )}
       <GoogleButton label={t('continueWithGoogle')} />
