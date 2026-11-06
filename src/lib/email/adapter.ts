@@ -10,6 +10,7 @@ import nodemailer from 'nodemailer'
  * link or personal data.
  */
 export function emailAdapter() {
+  const production = process.env.NODE_ENV === 'production'
   const host = process.env.SMTP_HOST
   const port = Number(process.env.SMTP_PORT ?? 587)
   const user = process.env.SMTP_USER
@@ -24,10 +25,20 @@ export function emailAdapter() {
       ? nodemailer.createTransport({
           host,
           port,
-          // Port 465 is TLS from the start; 587 and Mailpit's 1025 upgrade with STARTTLS or not at all.
+          // Port 465 is TLS from the start. On 587 production refuses to send without STARTTLS,
+          // so the password and the links in the email are never sent in clear text. Mailpit
+          // (port 1025, local only) has no TLS.
           secure: port === 465,
+          requireTLS: production && port !== 465,
           ...(user && pass ? { auth: { user, pass } } : {}),
         })
-      : nodemailer.createTransport({ jsonTransport: true }),
+      : production
+        ? // A production server without SMTP must fail loudly, not drop every email in silence.
+          nodemailer.createTransport({
+            name: 'smtp-not-configured',
+            version: '1',
+            send: (_mail, done) => done(new Error('SMTP_HOST is not set'), undefined as never),
+          })
+        : nodemailer.createTransport({ jsonTransport: true }),
   })
 }

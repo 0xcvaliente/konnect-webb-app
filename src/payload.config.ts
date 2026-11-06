@@ -53,26 +53,33 @@ export default buildConfig({
     fallbackLanguage: 'en',
   },
   email: emailAdapter(),
-  // Never log secrets or personal data, even when a library passes them to the logger.
-  logger: {
-    options: {
-      redact: {
-        paths: [
-          'req.headers.authorization',
-          'req.headers.cookie',
-          '*.headers.authorization',
-          '*.headers.cookie',
-          '*.password',
-          '*.token',
-          '*.email',
-          'email',
-          'to',
-          '*.to',
-        ],
-        censor: '[hidden]',
-      },
-    },
-  },
+  // Production: never log secrets or personal data, even when a library passes them to the
+  // logger (SMTP errors carry recipient addresses). Development keeps Payload's readable logs.
+  logger:
+    process.env.NODE_ENV === 'production'
+      ? {
+          options: {
+            redact: {
+              paths: [
+                'req.headers.authorization',
+                'req.headers.cookie',
+                '*.headers.authorization',
+                '*.headers.cookie',
+                '*.password',
+                '*.token',
+                '*.email',
+                'email',
+                'to',
+                '*.to',
+                'err.rejected',
+                'err.rejectedErrors',
+                'err.response',
+              ],
+              censor: '[hidden]',
+            },
+          },
+        }
+      : undefined,
   secret: process.env.PAYLOAD_SECRET ?? '',
   // Cookie-authenticated requests are accepted only from our own site.
   csrf: process.env.APP_URL ? [process.env.APP_URL.replace(/\/+$/, '')] : [],

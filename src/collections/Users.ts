@@ -4,6 +4,7 @@ import { APIError, AuthenticationError, type CollectionConfig } from 'payload'
 import { isAdminEmail } from '@/access/adminEmails'
 import { adminOnlyField, isAdmin } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { resetEmailHTML, resetEmailSubject } from '@/lib/email/passwordReset'
 
 /**
  * Accounts. Sign-in methods (Google, magic link, password) are provisional and belong to the auth
@@ -22,6 +23,13 @@ export const Users: CollectionConfig = {
     depth: 0,
     // The session cookie: HttpOnly (Payload default), Lax, and Secure on https in production.
     cookies: { secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' },
+    // Reset links last an hour and work once. Admins get an email without a link (see
+    // resetEmailHTML), so a reset request looks the same whoever the address belongs to.
+    forgotPassword: {
+      expiration: 60 * 60 * 1000,
+      generateEmailHTML: resetEmailHTML,
+      generateEmailSubject: resetEmailSubject,
+    },
   },
   admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
   access: {
@@ -59,31 +67,6 @@ export const Users: CollectionConfig = {
       ({ req, user }) => {
         if (user?.role === 'admin') throw new AuthenticationError(req.t)
         return user
-      },
-    ],
-    beforeOperation: [
-      // No password reset for admins: a reset would give them a password. The request still gets
-      // Payload's normal "success" answer, so nobody learns which addresses are admins; the email
-      // just is not sent, and the stored token is never shown to anyone.
-      async ({ args, operation, req }) => {
-        if (operation !== 'forgotPassword') return args
-        const email = String(args.data?.email ?? '')
-          .toLowerCase()
-          .trim()
-        if (!email) return args
-        let admin = isAdminEmail(email)
-        if (!admin) {
-          const found = await req.payload.find({
-            collection: 'users',
-            where: { email: { equals: email } },
-            limit: 1,
-            depth: 0,
-            overrideAccess: true,
-            req,
-          })
-          admin = found.docs[0]?.role === 'admin'
-        }
-        return admin ? { ...args, disableEmail: true } : args
       },
     ],
     beforeChange: [

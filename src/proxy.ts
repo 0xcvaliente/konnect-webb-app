@@ -21,10 +21,21 @@ export default function proxy(request: NextRequest) {
     url.pathname = `/${requestLocale(request)}${pathname === '/' ? '' : pathname}`
     return Response.redirect(url, 307)
   }
-  return intl(request)
+  // Remember the language of the page the user is on, so redirects from the sign-in routes
+  // (which have no /en or /no in their path) send them back in the same language.
+  const response = intl(request)
+  const locale = pathname.split('/')[1]!
+  if (request.cookies.get('NEXT_LOCALE')?.value !== locale) {
+    response.cookies.set('NEXT_LOCALE', locale, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+    })
+  }
+  return response
 }
 
 export const config = {
   // Everything except the Payload API and admin, Next internals and files with an extension.
-  matcher: ['/((?!api|admin|_next|_vercel|.*\\..*).*)'],
+  matcher: ['/((?!api(?:/|$)|admin(?:/|$)|_next|_vercel|.*\\..*).*)'],
 }

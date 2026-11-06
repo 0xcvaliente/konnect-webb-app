@@ -47,26 +47,36 @@ describe('admins sign in with Google only', () => {
     await expect(login('student@example.test')).resolves.toContain('payload-token=')
   })
 
-  it('sends no password reset email to an admin, and answers exactly as for anyone else', async () => {
+  it('gives an admin a reset email without a link, the same way as anyone else', async () => {
     const payload = await getTestPayload()
     await makeUser(ADMIN_EMAIL, 'admin')
     await makeUser('student@example.test', 'student')
     const send = vi.spyOn(payload.email, 'sendEmail')
 
     const forAdmin = await rest.post('users/forgot-password', { email: ADMIN_EMAIL })
-    expect(send).not.toHaveBeenCalled()
-
     const forStudent = await rest.post('users/forgot-password', { email: 'student@example.test' })
-    expect(send).toHaveBeenCalledTimes(1)
-    expect(send.mock.calls[0]![0]).toMatchObject({ to: 'student@example.test' })
-
     const forNobody = await rest.post('users/forgot-password', { email: 'nobody@example.test' })
+
+    // Same answer whoever the address belongs to.
     expect(forAdmin.status).toBe(200)
     expect(forAdmin.json).toEqual(forStudent.json)
     expect(forAdmin.json).toEqual(forNobody.json)
+
+    // Both real accounts get an email; only the student's has a reset link.
+    expect(send).toHaveBeenCalledTimes(2)
+    const [adminMail, studentMail] = send.mock.calls.map(
+      (c) => c[0] as { to: string; html: string },
+    )
+    expect(adminMail!.to).toBe(ADMIN_EMAIL)
+    expect(adminMail!.html).not.toContain('href')
+    expect(adminMail!.html).toContain('Google')
+    expect(studentMail!.to).toBe('student@example.test')
+    expect(studentMail!.html).toMatch(
+      /href="http:\/\/localhost:3000\/en\/reset-password\/[0-9a-f]+"/,
+    )
   })
 
-  it('also refuses a reset for an address on the admin list that is not an admin yet', async () => {
+  it('gives no link to an address on the admin list that is not an admin yet', async () => {
     const payload = await getTestPayload()
     await payload.create({
       collection: 'users',
@@ -75,7 +85,26 @@ describe('admins sign in with Google only', () => {
     })
     const send = vi.spyOn(payload.email, 'sendEmail')
     await rest.post('users/forgot-password', { email: ADMIN_EMAIL.toUpperCase() })
-    expect(send).not.toHaveBeenCalled()
+    expect(send).toHaveBeenCalledTimes(1)
+    expect((send.mock.calls[0]![0] as { html: string }).html).not.toContain('href')
+  })
+
+  it('an admin cannot use a reset token to get a password session', async () => {
+    const payload = await getTestPayload()
+    await makeUser(ADMIN_EMAIL, 'admin')
+    const token = await payload.forgotPassword({
+      collection: 'users',
+      data: { email: ADMIN_EMAIL },
+      disableEmail: true,
+    })
+    const res = await rest.post('users/reset-password', {
+      token,
+      password: 'A-new-long-password-123',
+    })
+    expect(res.status).toBe(401)
+    expect(res.json?.token).toBeUndefined()
+    // The new password was rolled back with the refused sign-in.
+    await expect(login(ADMIN_EMAIL, 'A-new-long-password-123')).rejects.toThrow()
   })
 })
 
