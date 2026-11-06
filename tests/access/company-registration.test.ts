@@ -411,6 +411,80 @@ describe('one person per company account', () => {
       }),
     ).rejects.toThrow(/not a company user/)
   })
+
+  it('a company with a logo can be handed over; the admin and the new user can still save it', async () => {
+    const { user: old, company } = await registered()
+    const logo = await uploadLogo(old)
+    await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { logo: logo.id },
+      ...as(old),
+    })
+    const next = await makeUser('company')
+    await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { user: next.id },
+      ...as(w.admin),
+    })
+    expect(await approve(company.id)).toMatchObject({ status: 'approved', logo: { id: logo.id } })
+
+    // The new user keeps the logo the old user uploaded, and the profile still saves.
+    const form = registrationForm({ logo: String(logo.id), description: 'Under new hands' })
+    form.delete('name')
+    form.delete('orgNumber')
+    expect(await saveCompany(w.payload, session(await fresh(next)), form)).toMatchObject({
+      status: 'done',
+    })
+    const stored = await w.payload.findByID({ collection: 'companies', id: company.id, depth: 0 })
+    expect(stored).toMatchObject({ user: next.id, logo: logo.id, description: 'Under new hands' })
+
+    // The company still cannot take a logo the old user uploads after the handover.
+    const stray = await uploadLogo(old, 'stray.png')
+    await expect(
+      w.payload.update({
+        collection: 'companies',
+        id: company.id,
+        data: { logo: stray.id },
+        ...as(await fresh(next)),
+      }),
+    ).rejects.toThrow(/does not belong/)
+  })
+
+  it('an admin attaches a logo they uploaded, and saves a company whose user is gone', async () => {
+    const { user, company } = await registered()
+    const own = await uploadLogo(user)
+    await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { logo: own.id },
+      ...as(user),
+    })
+
+    const adminLogo = await uploadLogo(w.admin, 'from-konnected.png')
+    const attached = await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { logo: adminLogo.id },
+      depth: 0,
+      ...as(w.admin),
+    })
+    expect(attached.logo).toBe(adminLogo.id)
+
+    // The user is deleted: the company keeps its logo and the team can still approve or rename it.
+    await w.payload.delete({ collection: 'users', id: user.id, overrideAccess: true })
+    const orphan = await w.payload.findByID({ collection: 'companies', id: company.id, depth: 0 })
+    expect(orphan.user ?? null).toBeNull()
+    expect(await approve(company.id)).toMatchObject({ status: 'approved' })
+    const renamed = await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { name: 'Renamed by Konnected AS' },
+      ...as(w.admin),
+    })
+    expect(renamed.name).toBe('Renamed by Konnected AS')
+  })
 })
 
 describe('reading companies', () => {
@@ -647,6 +721,113 @@ describe('changing a company', () => {
 
     // Taking the approval back clears the date.
     expect((await approve(company.id, 'rejected')).approvedAt).toBeNull()
+  })
+
+  it('a company with a Konnected owner still saves its profile, and never learns who it is', async () => {
+    const { company, user } = w.companyA
+    await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { teamOwner: w.admin.id },
+      ...as(w.admin),
+    })
+
+    // The profile page.
+    const form = registrationForm({ description: 'Saved again' })
+    form.delete('name')
+    form.delete('orgNumber')
+    expect(await saveCompany(w.payload, session(await fresh(user)), form)).toMatchObject({
+      status: 'done',
+    })
+    // The Local API as the company.
+    await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { contactRole: 'CEO' },
+      ...as(await fresh(user)),
+    })
+    // REST and GraphQL: saved, and nothing in the answer names the owner.
+    const cookie = await login(user.email)
+    const patched = await rest.patch(`companies/${company.id}`, { contactName: 'Via REST' }, cookie)
+    expect(patched.status).toBe(200)
+    expect(patched.json.doc).not.toHaveProperty('teamOwner')
+    expect(patched.text).not.toMatch(/owner|invalid/i)
+    expect(patched.text).not.toContain(w.admin.email)
+    const gql = await graphql(
+      `mutation { updateCompany(id: ${company.id}, data: { contactName: "Via GraphQL" }) { contactName } }`,
+      cookie,
+    )
+    expect(gql.json).not.toHaveProperty('errors')
+    expect(gql.text).not.toMatch(/owner|invalid/i)
+
+    const stored = await w.payload.findByID({ collection: 'companies', id: company.id, depth: 0 })
+    expect(stored).toMatchObject({
+      teamOwner: w.admin.id,
+      description: 'Saved again',
+      contactRole: 'CEO',
+      contactName: 'Via GraphQL',
+    })
+  })
+
+  it('a pilot company Konnected added without an organisation number can save its profile', async () => {
+    const user = await makeUser('company')
+    const pilot = await w.payload.create({
+      collection: 'companies',
+      data: { name: 'Pilot AS', status: 'pending' },
+      ...as(w.admin),
+    })
+    await w.payload.update({
+      collection: 'companies',
+      id: pilot.id,
+      data: { status: 'approved', user: user.id },
+      ...as(w.admin),
+    })
+    const me = await fresh(user)
+
+    // The page sends no name or number once approved; the user fills in the rest.
+    const form = registrationForm({ name: 'Pilot AS' })
+    form.delete('orgNumber')
+    expect(await saveCompany(w.payload, session(me), form)).toMatchObject({ status: 'done' })
+    const cookie = await login(user.email)
+    expect(
+      (await rest.patch(`companies/${pilot.id}`, { description: 'Via REST' }, cookie)).status,
+    ).toBe(200)
+
+    // The blank number is still Konnected's to fill in, not the company's.
+    await expect(
+      w.payload.update({
+        collection: 'companies',
+        id: pilot.id,
+        data: { orgNumber: '923609016' },
+        ...as(me),
+      }),
+    ).rejects.toThrow(/after approval/)
+    expect(
+      (await w.payload.findByID({ collection: 'companies', id: pilot.id, depth: 0 })).orgNumber ??
+        null,
+    ).toBeNull()
+
+    // While a company is pending its user must still give the number.
+    const other = await makeUser('company')
+    const pending = await w.payload.create({
+      collection: 'companies',
+      data: { ...companyDetails('Pending AS'), orgNumber: null, status: 'pending' },
+      ...as(w.admin),
+    })
+    await w.payload.update({
+      collection: 'companies',
+      id: pending.id,
+      data: { user: other.id },
+      ...as(w.admin),
+    })
+    await expect(
+      w.payload.update({
+        collection: 'companies',
+        id: pending.id,
+        data: { description: 'changed' },
+        ...as(await fresh(other)),
+      }),
+    ).rejects.toThrow(/Organisation number/)
   })
 })
 

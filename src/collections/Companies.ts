@@ -45,16 +45,33 @@ const isBlank = (value: unknown) =>
 
 /**
  * A field the onboarding asks for. A company user must fill it in; admins (and server code) may
- * leave it empty, for example for a pilot company Konnected adds by hand.
+ * leave it empty, for example for a pilot company Konnected adds by hand. A field locked after
+ * approval (`untilApproved`) is required only while the company is new or pending: once approved
+ * the company cannot change it, so a blank one Konnected left must not block every later save.
+ * `data.status` is the stored status here: the collection hook refuses a company's own change.
  */
 const requiredForCompany =
-  (base?: Validate): Validate =>
+  (base?: Validate, { untilApproved = false } = {}): Validate =>
   async (value, options) => {
     const result = base ? await base(value, options) : true
     if (result !== true) return result
-    if (isCompany(options.req.user) && isBlank(value)) return options.req.t('validation:required')
-    return true
+    if (!isCompany(options.req.user) || !isBlank(value)) return true
+    const status = (options.data as { status?: unknown } | undefined)?.status
+    if (untilApproved && options.operation !== 'create' && status !== 'pending') return true
+    return options.req.t('validation:required')
   }
+
+/**
+ * Payload checks a relationship's `filterOptions` again on every save, against the whole stored
+ * document and with the acting user's read access. For `logo` and `teamOwner` that refuses saves
+ * that are fine (a company cannot read its admin owner; an admin hands a company with a logo to
+ * a new user), so only the base checks run. The collection hook is the real rule for both;
+ * `filterOptions` stays as a picker helper in the admin panel.
+ */
+const withoutFilterOptions =
+  (base: Validate): Validate =>
+  (value, options) =>
+    base(value, { ...options, filterOptions: undefined } as typeof options)
 
 const orgNumberRule: Validate = (value: unknown) =>
   isBlank(value) || (typeof value === 'string' && isValidOrgNumber(value))
@@ -287,7 +304,7 @@ export const Companies: CollectionConfig = {
           ({ value }) => (typeof value === 'string' ? normalizeOrgNumber(value.trim()) : value),
         ],
       },
-      validate: requiredForCompany(orgNumberRule),
+      validate: requiredForCompany(orgNumberRule, { untilApproved: true }),
     },
     {
       // The person who registered the company and Konnected's contact there.
@@ -339,8 +356,11 @@ export const Companies: CollectionConfig = {
       name: 'logo',
       type: 'upload',
       relationTo: 'company-logos',
-      // Admin panel helper only. The hook above is the real check.
-      filterOptions: ({ data }) => ({ uploadedBy: { equals: relationId(data?.user) ?? 0 } }),
+      // Admin panel picker only (see withoutFilterOptions). The hook above is the real check, and
+      // an admin may attach any logo.
+      filterOptions: ({ data, req }) =>
+        isAdmin(req.user) ? true : { uploadedBy: { equals: relationId(data?.user) ?? 0 } },
+      validate: withoutFilterOptions(validations.upload as Validate),
     },
     {
       name: 'status',
@@ -372,7 +392,9 @@ export const Companies: CollectionConfig = {
       type: 'relationship',
       relationTo: 'users',
       index: true,
+      // Admin panel picker only (see withoutFilterOptions); the hook above checks the role.
       filterOptions: { role: { equals: 'admin' } },
+      validate: withoutFilterOptions(validations.relationship as Validate),
       access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
       admin: { position: 'sidebar' },
     },
