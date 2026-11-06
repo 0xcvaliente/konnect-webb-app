@@ -56,6 +56,7 @@ import {
   WORK_MODES,
   type WorkMode,
 } from '@/lib/projects/fields'
+import { createSaveQueue } from '@/lib/projects/saveQueue'
 import { cn } from '@/lib/utils'
 
 /** How long the form waits after the last change before it saves the draft. */
@@ -157,7 +158,6 @@ export function ProjectForm({
   const idRef = useRef<number | undefined>(initialId)
   const valuesRef = useRef(values)
   const dirty = useRef(false)
-  const queue = useRef<Promise<void>>(Promise.resolve())
   /** Files on the project as last saved. Others that are removed were never saved. */
   const savedFiles = useRef(new Set(initialFiles.map((file) => file.id)))
   const today = todayInOslo()
@@ -171,57 +171,59 @@ export function ProjectForm({
       formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(),
     )
 
-  /** Save the draft now, after any save already running. Resolves when it is done. */
-  const saveNow = useCallback((): Promise<void> => {
-    const run = async () => {
-      if (!dirty.current) return
-      const current = valuesRef.current
-      if (!current.title.trim()) {
-        setSave({ kind: 'needsTitle' })
-        return
-      }
-      dirty.current = false
-      setSave({ kind: 'saving' })
-      const result = await saveProjectDraftAction(idRef.current, current).catch(() => null)
-      if (!result) {
-        dirty.current = true
-        setSave({ kind: 'error' })
-        return
-      }
-      if (result.id && result.id !== idRef.current) {
-        idRef.current = result.id
-        // The draft exists now: later visits and reloads open it again.
-        window.history.replaceState(null, '', `/${locale}/company/projects/${result.id}/edit`)
-      }
-      if (result.status === 'saved') {
-        savedFiles.current = new Set(current.attachments)
-        setSave({ kind: 'saved', at: Date.now() })
-        setErrors((old) => {
-          // Problems the last save no longer has are gone; keep "required" marks from a send.
-          const next: ProjectFieldErrors = {}
-          for (const [key, value] of Object.entries(old))
-            if (value === 'required' || value === 'past' || value === 'before_deadline')
-              next[key as ProjectField] = value
-          return next
-        })
-        return
-      }
+  /** Use a project id the server gave: later visits and reloads open that draft again. */
+  const adoptId = useCallback(
+    (id: number | undefined) => {
+      if (!id || id === idRef.current) return
+      idRef.current = id
+      window.history.replaceState(null, '', `/${locale}/company/projects/${id}/edit`)
+    },
+    [locale],
+  )
+
+  /** One draft save. The queue below runs it, one at a time and never during or after a send. */
+  const saveDraftOnce = useCallback(async (): Promise<void> => {
+    if (!dirty.current) return
+    const current = valuesRef.current
+    if (!current.title.trim()) {
+      setSave({ kind: 'needsTitle' })
+      return
+    }
+    dirty.current = false
+    setSave({ kind: 'saving' })
+    const result = await saveProjectDraftAction(idRef.current, current).catch(() => null)
+    if (!result) {
       dirty.current = true
       setSave({ kind: 'error' })
-      if (result.fields) setErrors(result.fields)
-      else setFormError(result.error ?? 'generic')
+      return
     }
-    const next = queue.current.then(run, run)
-    queue.current = next
-    return next
-  }, [locale])
+    adoptId(result.id)
+    if (result.status === 'saved') {
+      savedFiles.current = new Set(current.attachments)
+      setSave({ kind: 'saved', at: Date.now() })
+      setErrors((old) => {
+        // Problems the last save no longer has are gone; keep "required" marks from a send.
+        const next: ProjectFieldErrors = {}
+        for (const [key, value] of Object.entries(old))
+          if (value === 'required' || value === 'past' || value === 'before_deadline')
+            next[key as ProjectField] = value
+        return next
+      })
+      return
+    }
+    dirty.current = true
+    setSave({ kind: 'error' })
+    if (result.fields) setErrors(result.fields)
+    else setFormError(result.error ?? 'generic')
+  }, [adoptId])
+
+  const [queue] = useState(() => createSaveQueue(AUTOSAVE_MS))
+  useEffect(() => () => queue.cancel(), [queue])
 
   // Auto-save a moment after the last change.
   useEffect(() => {
-    if (!dirty.current) return
-    const timer = setTimeout(() => void saveNow(), AUTOSAVE_MS)
-    return () => clearTimeout(timer)
-  }, [values, saveNow])
+    if (dirty.current) queue.schedule(saveDraftOnce)
+  }, [values, queue, saveDraftOnce])
 
   // Ask before leaving with changes that are not saved yet.
   useEffect(() => {
@@ -273,18 +275,23 @@ export function ProjectForm({
   const send = async () => {
     setSending(true)
     setFormError(null)
-    await queue.current
-    const result = await sendProjectForReviewAction(idRef.current, valuesRef.current).catch(
-      () => null,
+    // The queue cancels the pending autosave and runs no save during the send or after it went
+    // through, so a late autosave cannot create a second project or fail on the sent one.
+    const result = await queue.send(
+      () => sendProjectForReviewAction(idRef.current, valuesRef.current).catch(() => null),
+      (answer) => answer?.status === 'sent' && Boolean(answer.id),
     )
     setSending(false)
     setConfirmOpen(false)
-    if (result?.id) idRef.current = result.id
     if (result?.status === 'sent' && result.id) {
+      idRef.current = result.id
       dirty.current = false
       router.push(`/company/projects/${result.id}?sent=1`)
       return
     }
+    // Not sent: the draft may exist now, and saving works again.
+    adoptId(result?.id)
+    if (dirty.current) queue.schedule(saveDraftOnce)
     if (result?.fields) {
       setErrors(result.fields)
       setFormError('fix')
@@ -296,7 +303,7 @@ export function ProjectForm({
 
   const saveDraft = async () => {
     dirty.current = true
-    await saveNow()
+    await queue.saveNow(saveDraftOnce)
     if (valuesRef.current.title.trim()) toast(t('draftSaved'))
     else {
       setErrors((old) => ({ ...old, title: 'required' }))
