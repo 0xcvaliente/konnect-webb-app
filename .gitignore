@@ -13,6 +13,7 @@ build/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # logs & misc
 *.log
@@ -44,3 +45,10 @@ service-account*.json
 
 # Playwright MCP screenshots (may show seed personal data)
 .playwright-mcp/
+
+# Production server files next to docker-compose.prod.yml (scripts/deploy): never in git
+/release.env
+/release.env.*
+/backup-ssh/
+/.deploy.lock/
+/.backup-media.lock/

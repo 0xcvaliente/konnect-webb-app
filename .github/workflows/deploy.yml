@@ -1,0 +1,115 @@
+name: Deploy
+
+# Push to main: lint, typecheck, tests and build (ci.yml), then build the app image and push it to
+# GitHub Container Registry as ghcr.io/<owner>/<repo>:<full commit sha>. The server deploy job is
+# written but switched off until the server and its secrets exist (see the "deploy" job).
+# Pull requests that touch the images: build both images without pushing, so a broken Dockerfile
+# shows up before it reaches main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - docker/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - next.config.ts
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
+
+# Never two deploys at once, and never cancel one half-way.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # The same checks as every push, so a failing test blocks the image and the deploy.
+  check:
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/ci.yml
+
+  image:
+    name: Build and push the images
+    needs: check
+    # Runs after a passing check, or without it on pull requests (where ci.yml runs on its own).
+    if: ${{ !cancelled() && !failure() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.name.outputs.image }}
+    steps:
+      # Actions are pinned to a full commit SHA. The comment is the release it points to.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # GHCR image names must be lowercase.
+      - id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - if: github.event_name != 'pull_request'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # No build arguments: secrets never go into the image. Only NEXT_PUBLIC_* values ever may.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.name.outputs.image }}
+          provenance: false
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+
+      # PostgreSQL with pgBackRest. The server builds it from docker/postgres; this only checks
+      # that it still builds (the pinned pgBackRest package must stay available).
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: docker/postgres
+          platforms: linux/amd64
+          push: false
+          provenance: false
+          cache-from: type=gha,scope=postgres
+          cache-to: type=gha,mode=max,scope=postgres
+
+  deploy:
+    name: Deploy to the server
+    needs: image
+    # Switched off until the server exists. To switch on: create the "production" environment with
+    # the secrets DEPLOY_HOST, DEPLOY_SSH_KEY (a key only for this, with a forced command on the
+    # server) and DEPLOY_HOST_FINGERPRINT (ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub), give
+    # the server read access to the image (docs/production.md), then replace `false` with
+    # `github.event_name == 'push'`.
+    if: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
+          command_timeout: 20m
+          # The server keeps a checkout of this repository in /opt/konnected for the Compose file,
+          # Caddyfile and scripts; it moves to the commit being deployed.
+          script: |
+            set -euo pipefail
+            cd /opt/konnected
+            git fetch --quiet origin
+            git checkout --quiet --detach ${{ github.sha }}
+            scripts/deploy/deploy.sh ${{ github.sha }}

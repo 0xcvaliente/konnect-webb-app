@@ -1,0 +1,280 @@
+# Production stack: Caddy, the app (one container, two during a deploy), the job worker,
+# PostgreSQL 18 with pgBackRest, and Gotenberg. How to run it: docs/production.md.
+#
+# Settings come from .env.prod (copy .env.prod.example; never commit it) and the image to run
+# from release.env (APP_IMAGE=..., written by scripts/deploy/deploy.sh). Pass both:
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod --env-file release.env up -d
+#
+# .env.prod is only read to fill in ${...} below. Each service gets just the settings it needs,
+# so the database password and backup keys do not reach Gotenberg, and the app's secrets do not
+# reach PostgreSQL. Only Caddy publishes ports. Nothing else is reachable from outside.
+
+name: konnected
+
+# Docker keeps container logs forever by default. Rotate them.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+# Settings shared by the app, the worker and the migration run.
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
+  PAYLOAD_SECRET: ${PAYLOAD_SECRET:?}
+  APP_URL: ${APP_URL:?}
+  ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  EMAIL_FROM: ${EMAIL_FROM:?}
+  MEDIA_DIR: /data/media
+  # Jobs run in the worker only, never in the app: two app containers run side by side during a
+  # deploy and would both run them.
+  RUN_JOBS_IN_APP: 'false'
+
+# pgBackRest settings (scripts/deploy/pgbackrest/pgbackrest.conf), for PostgreSQL and the
+# restore test.
+x-pgbackrest-env: &pgbackrest-env
+  PGBACKREST_PG1_USER: ${POSTGRES_USER:?}
+  PGBACKREST_REPO1_SFTP_HOST: ${BACKUP_SFTP_HOST:?}
+  PGBACKREST_REPO1_SFTP_HOST_PORT: ${BACKUP_SFTP_PORT:-23}
+  PGBACKREST_REPO1_SFTP_HOST_USER: ${BACKUP_SFTP_USER:?}
+  PGBACKREST_REPO1_PATH: ${PGBACKREST_REPO_PATH:?}
+  PGBACKREST_REPO1_CIPHER_PASS: ${PGBACKREST_CIPHER_PASS:?}
+
+x-pgbackrest-volumes: &pgbackrest-volumes
+  - ./scripts/deploy/pgbackrest:/etc/pgbackrest:ro
+  # SSH key and known_hosts for the Storage Box (never in git; see docs/production.md).
+  - ${BACKUP_SSH_DIR:?}:/etc/konnected-backup:ro
+
+services:
+  caddy:
+    # Pinned. Never :latest.
+    image: caddy:2.11.7
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+    volumes:
+      # The folder, not the file, so an edited Caddyfile is seen by `caddy reload`.
+      - ./caddy:/etc/caddy:ro
+      # Certificates and their keys. Must survive restarts (Let's Encrypt rate limits).
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [public]
+    depends_on:
+      app:
+        condition: service_healthy
+    mem_limit: 256m
+    logging: *logging
+
+  app:
+    # No container_name and no published ports: deploy.sh runs a second copy next to the first
+    # (docker compose up --scale app=2 --no-recreate) and Caddy finds both through Docker's DNS.
+    image: ${APP_IMAGE:?set APP_IMAGE in release.env (scripts/deploy/deploy.sh writes it)}
+    restart: unless-stopped
+    init: true
+    environment: *app-env
+    volumes:
+      - media:/data/media
+    networks: [public, internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 2s
+    # Next.js finishes the requests it has started before it exits.
+    stop_grace_period: 30s
+    mem_limit: 1536m
+    logging: *logging
+
+  worker:
+    # Same image as the app. Every minute: queue the jobs that are due (--handle-schedules) and
+    # run what is queued in every queue (--all-queues; the nightly file clean-up uses the
+    # "maintenance" queue). Exactly one worker: do not scale it.
+    image: ${APP_IMAGE:?}
+    restart: unless-stopped
+    init: true
+    working_dir: /app/cli
+    command:
+      - node
+      - node_modules/payload/bin.js
+      - jobs:run
+      - --cron
+      - '* * * * *'
+      - --all-queues
+      - --handle-schedules
+    environment:
+      <<: *app-env
+      # Cron times in the jobs (03:15 for the file clean-up) are Norwegian time.
+      TZ: Europe/Oslo
+    volumes:
+      - media:/data/media
+    networks: [internal, outbound]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    stop_grace_period: 30s
+    mem_limit: 768m
+    logging: *logging
+
+  # One-off, before each deploy: `docker compose ... run --rm migrate` (deploy.sh does this).
+  # Migrations must be backward compatible: the old app keeps running on the new schema until
+  # the swap is done.
+  migrate:
+    image: ${APP_IMAGE:?}
+    profiles: [tools]
+    working_dir: /app/cli
+    command: [node, node_modules/payload/bin.js, migrate]
+    environment: *app-env
+    networks: [internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: 'no'
+    logging: *logging
+
+  postgres:
+    # postgres:18.6-trixie plus pgBackRest 2.60 (docker/postgres/Dockerfile). Built on the server
+    # from this repository: docker compose ... build postgres
+    build: ./docker/postgres
+    image: konnected-postgres:18.6-pgbackrest-2.60
+    restart: unless-stopped
+    command:
+      - postgres
+      # Continuous backup: every finished WAL segment goes to the Storage Box, and a segment is
+      # finished at least once a minute, so at most about a minute of changes can be lost.
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=pgbackrest --stanza=konnected archive-push %p
+      - -c
+      - archive_timeout=60
+    environment:
+      <<: *pgbackrest-env
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+    volumes:
+      # PostgreSQL 18 images keep data in a versioned folder under /var/lib/postgresql.
+      - pgdata:/var/lib/postgresql
+      - ./scripts/deploy/pgbackrest:/etc/pgbackrest:ro
+      - ${BACKUP_SSH_DIR:?}:/etc/konnected-backup:ro
+    # "outbound" only so pgBackRest can reach the Storage Box. No published ports.
+    networks: [internal, outbound]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    shm_size: 256mb
+    stop_grace_period: 60s
+    mem_limit: 1g
+    logging: *logging
+
+  # DOCX to PDF for agreements (LibreOffice). Internal network only: no ports, no internet.
+  gotenberg:
+    image: gotenberg/gotenberg:8.38.1
+    restart: unless-stopped
+    command:
+      - gotenberg
+      - --chromium-disable-routes
+      - --api-disable-download-from
+      - --webhook-disable
+    networks: [internal]
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3000/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    mem_limit: 1g
+    logging: *logging
+
+  # Restore test (scripts/deploy/restore-test.sh): restores the newest backup from the Storage
+  # Box into a throwaway container, replays the archived WAL and starts PostgreSQL there. It has
+  # no named volume, so everything is gone when the container is removed.
+  restore-test:
+    image: konnected-postgres:18.6-pgbackrest-2.60
+    profiles: [tools]
+    environment: *pgbackrest-env
+    entrypoint: [bash, -euc]
+    command:
+      - |
+        install -d -o postgres -g postgres -m 700 /var/lib/postgresql/18/docker
+        gosu postgres pgbackrest --stanza=konnected --archive-mode=off --log-level-console=warn restore
+        exec gosu postgres postgres -D /var/lib/postgresql/18/docker -c listen_addresses= -c archive_mode=off
+    volumes: *pgbackrest-volumes
+    networks: [outbound]
+    restart: 'no'
+    logging: *logging
+
+  # Upload backup with restic (scripts/deploy/backup-media.sh, every 5 minutes from cron).
+  restic:
+    image: restic/restic:0.19.1
+    profiles: [tools]
+    # A fixed host name, so every snapshot belongs to one restic host and retention works.
+    hostname: konnected-media
+    # ssh refuses a key file that is not private to its user, and the shared key must stay
+    # readable by PostgreSQL (uid 999), so restic uses a private copy inside the container.
+    entrypoint:
+      - sh
+      - -euc
+      - >-
+        install -m 600 /etc/konnected-backup/id_ed25519 /tmp/id_ed25519 &&
+        exec restic -o "sftp.command=ssh -i /tmp/id_ed25519 -p ${BACKUP_SFTP_PORT:-23}
+        -o UserKnownHostsFile=/etc/konnected-backup/known_hosts -o StrictHostKeyChecking=yes
+        -o IdentitiesOnly=yes -o BatchMode=yes ${BACKUP_SFTP_USER:?}@${BACKUP_SFTP_HOST:?} -s sftp"
+        "$$@"
+      - restic
+    environment:
+      RESTIC_REPOSITORY: sftp:${BACKUP_SFTP_USER:?}@${BACKUP_SFTP_HOST:?}:${RESTIC_REPO_PATH:?}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:?}
+      TZ: Europe/Oslo
+    volumes:
+      - media:/data/media:ro
+      - ${BACKUP_SSH_DIR:?}:/etc/konnected-backup:ro
+      - restic_cache:/root/.cache/restic
+    networks: [outbound]
+    restart: 'no'
+    logging: *logging
+
+networks:
+  # Caddy and the app.
+  public: {}
+  # The app, worker, migrations, PostgreSQL and Gotenberg. No way in or out.
+  internal:
+    internal: true
+  # Outgoing connections only (no published ports): backups to the Storage Box, email from jobs.
+  outbound: {}
+
+volumes:
+  pgdata:
+  media:
+  caddy_data:
+  caddy_config:
+  restic_cache:

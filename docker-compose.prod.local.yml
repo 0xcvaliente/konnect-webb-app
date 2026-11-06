@@ -1,0 +1,34 @@
+# Local trial of the production stack on a laptop, on top of docker-compose.prod.yml. Never on
+# the server. Set up by scripts/deploy/local-trial.sh; see docs/production.md.
+#
+# - Caddy on 127.0.0.1:8080 and :8443 instead of 80 and 443 (SITE_ADDRESS=localhost uses Caddy's
+#   internal certificate).
+# - An SFTP container stands in for the Hetzner Storage Box, for pgBackRest and restic.
+
+services:
+  caddy:
+    ports: !override
+      - '127.0.0.1:8080:80'
+      - '127.0.0.1:8443:443'
+
+  sftp:
+    # Pinned by digest (the image has no version tags). Built for linux/amd64 only: emulated on
+    # Apple silicon, which is fine for a trial.
+    platform: linux/amd64
+    image: atmoz/sftp:debian@sha256:54efe2a6cda236d713042e17a836d970342eea5a7568e4f60800432cec4da205
+    # User "konnected", key login only, uid 1001, with a writable folder /repo (the user is
+    # chrooted to its home folder, like on the Storage Box). The folder lives in the container
+    # (no volume, so it has the right owner): recreating this container empties the repository.
+    command: konnected::1001:1001:repo
+    volumes:
+      - ${BACKUP_SSH_DIR:?}/id_ed25519.pub:/home/konnected/.ssh/keys/id_ed25519.pub:ro
+      - ${SFTP_HOST_KEY:?}:/etc/ssh/ssh_host_ed25519_key:ro
+    networks: [outbound]
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '2'
+
+  postgres:
+    depends_on: [sftp]
