@@ -1,7 +1,7 @@
 # Konnected web app
 
-Managed platform where startups submit paid project assignments and university students deliver
-them. Konnected approves, matches, coordinates and handles payment.
+Managed platform where startups submit project assignments, paid or unpaid, and university
+students deliver them. Konnected approves, matches, coordinates and handles payment.
 
 Stack: Next.js (App Router), Payload CMS 3 (TypeScript), PostgreSQL 18. Package manager: pnpm.
 
