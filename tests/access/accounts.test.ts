@@ -1,3 +1,5 @@
+import crypto from 'node:crypto'
+
 import * as oidc from 'openid-client'
 import {
   afterEach,
@@ -588,6 +590,179 @@ describe('signing out everywhere', () => {
       })
     }
     expect(await me(cookie)).toBeTruthy()
+  })
+})
+
+// ---------------------------------------------------------------------------------------------
+describe('a pause and sign out everywhere hold against writes that started before them', () => {
+  // Payload writes the whole user row, sessions included, from the copy it read when an operation
+  // began. These tests let the team act inside that window, the way a real race would.
+  let admin: User
+  let student: User
+  beforeEach(async () => {
+    await resetDatabase()
+    admin = await makeUser(ADMIN_EMAIL, 'admin')
+    student = await makeUser('student@example.test', 'student')
+    send = vi.spyOn((await getTestPayload()).email, 'sendEmail')
+  })
+
+  const pause = async () =>
+    pauseAccount(await getTestPayload(), asUser(admin), form({ userId: student.id, reason: 'x' }))
+  const reactivate = async () =>
+    reactivateAccount(await getTestPayload(), asUser(admin), form({ userId: student.id }))
+  const signOutAll = async () =>
+    signOutEverywhere(await getTestPayload(), asUser(admin), form({ userId: student.id }))
+
+  /** The session rows as stored, read straight from the database. */
+  const storedSessions = async (id: number) => {
+    const row = await (
+      await getTestPayload()
+    ).db.findOne<{ id: number; sessions?: { id: string }[] }>({
+      collection: 'users',
+      where: { id: { equals: id } },
+    })
+    return row?.sessions ?? []
+  }
+
+  /**
+   * Run `act` once, inside the next update of a user, after Payload has read the row it will
+   * write back and before it writes it. `act` runs on its own connection and commits first.
+   */
+  const duringNextUserUpdate = async (act: () => Promise<unknown>) => {
+    const hooks = (await getTestPayload()).collections.users.config.hooks.beforeChange
+    let ran = false
+    const hook = async ({ data }: { data: Record<string, unknown> }) => {
+      if (!ran) {
+        ran = true
+        await act()
+      }
+      return data
+    }
+    hooks.push(hook as never)
+    return {
+      ran: () => ran,
+      done: () => void hooks.splice(hooks.indexOf(hook as never), 1),
+    }
+  }
+
+  it('a pause that lands while a password sign-in hashes the password holds', async () => {
+    // Pause the account once the sign-in has read the user and is checking the password.
+    const pbkdf2 = crypto.pbkdf2
+    let ran = false
+    vi.spyOn(crypto, 'pbkdf2').mockImplementation(((...args: unknown[]) => {
+      const done = args.pop() as (error: Error | null, key?: Buffer) => void
+      ;(pbkdf2 as (...a: unknown[]) => void)(...args, (error: Error | null, key?: Buffer) => {
+        if (ran) return done(error, key)
+        ran = true
+        pause().then(
+          () => done(error, key),
+          (failure: Error) => done(failure),
+        )
+      })
+    }) as never)
+
+    const res = await rest.post('users/login', { email: student.email, password: PASSWORD })
+    expect(ran).toBe(true)
+    expect(res.status).toBe(403)
+    expect(res.headers.getSetCookie().some((c) => c.startsWith('payload-token=ey'))).toBe(false)
+    expect((await reload(student.id)).accountStatus).toBe('paused')
+    expect(await storedSessions(student.id)).toEqual([])
+  })
+
+  it('a pause that lands while the person saves their own account holds', async () => {
+    const cookie = await login(student.email)
+    const race = await duringNextUserUpdate(pause)
+    try {
+      await rest.patch(`users/${student.id}`, { name: 'Still here' }, cookie)
+    } finally {
+      race.done()
+    }
+    expect(race.ran()).toBe(true)
+    expect((await reload(student.id)).accountStatus).toBe('paused')
+    expect(await storedSessions(student.id)).toEqual([])
+    expect(await me(cookie)).toBeNull()
+  })
+
+  it('sign out everywhere that lands while the person saves their account holds', async () => {
+    const cookie = await login(student.email)
+    const race = await duringNextUserUpdate(signOutAll)
+    try {
+      const res = await rest.patch(`users/${student.id}`, { name: 'Still here' }, cookie)
+      expect(res.status).toBe(200)
+    } finally {
+      race.done()
+    }
+    expect(race.ran()).toBe(true)
+    // The rest of the save went through; the old session did not come back.
+    const after = await reload(student.id)
+    expect(after.name).toBe('Still here')
+    expect(after.accountStatus).toBe('active')
+    expect(await storedSessions(student.id)).toEqual([])
+    expect(await me(cookie)).toBeNull()
+    // A new sign-in works as usual.
+    const fresh = await login(student.email)
+    expect(await me(fresh)).toBeTruthy()
+  })
+
+  it('a whole-row write from an old copy puts back neither the status nor the sessions', async () => {
+    const payload = await getTestPayload()
+    const cookie = await login(student.email)
+    // What sign-in and sign-out do: write back the row as read earlier.
+    const stale = await payload.db.findOne<Record<string, unknown> & { id: number }>({
+      collection: 'users',
+      where: { id: { equals: student.id } },
+    })
+    expect(await signOutAll()).toMatchObject({ status: 'done' })
+    expect(await pause()).toMatchObject({ status: 'done' })
+    await payload.db.updateOne({
+      collection: 'users',
+      id: student.id,
+      data: { ...stale!, updatedAt: null },
+      returning: false,
+    })
+    expect((await reload(student.id)).accountStatus).toBe('paused')
+    expect(await storedSessions(student.id)).toEqual([])
+    expect(await me(cookie)).toBeNull()
+  })
+
+  it('the team can still pause and reactivate an account again and again', async () => {
+    for (let round = 0; round < 2; round++) {
+      expect(await pause()).toMatchObject({ status: 'done' })
+      expect((await reload(student.id)).accountStatus).toBe('paused')
+      expect(await reactivate()).toMatchObject({ status: 'done' })
+      expect((await reload(student.id)).accountStatus).toBe('active')
+      await expect(login(student.email)).resolves.toContain('payload-token=')
+    }
+  })
+
+  it('the version and the sign-out time are not part of the API, for anyone', async () => {
+    const studentCookie = await login(student.email)
+    const adminCookie = await sessionFor(admin.id)
+    for (const cookie of [studentCookie, adminCookie]) {
+      const res = await rest.get(`users/${student.id}`, cookie)
+      expect(res.status).toBe(200)
+      expect(res.json).not.toHaveProperty('accountStatusVersion')
+      expect(res.json).not.toHaveProperty('sessionsValidAfter')
+    }
+    // Nobody but the team moves the version, and nobody at all sets the sign-out time.
+    await rest.patch(
+      `users/${student.id}`,
+      { accountStatusVersion: 99, sessionsValidAfter: new Date(0).toISOString() },
+      studentCookie,
+    )
+    const row = await (
+      await getTestPayload()
+    ).db.findOne<{
+      id: number
+      accountStatusVersion?: number | null
+      sessionsValidAfter?: string | null
+    }>({
+      collection: 'users',
+      where: { id: { equals: student.id } },
+    })
+    expect(Number(row!.accountStatusVersion ?? 0)).toBe(0)
+    expect(row!.sessionsValidAfter ?? null).toBeNull()
+    expect(await me(studentCookie)).toBeTruthy()
   })
 })
 

@@ -1,4 +1,10 @@
-import { createLocalReq, getFieldsToSign, jwtSign, type Payload } from 'payload'
+import {
+  createLocalReq,
+  getFieldsToSign,
+  jwtSign,
+  type Payload,
+  type PayloadRequest,
+} from 'payload'
 import { addSessionToUser, generatePayloadCookie } from 'payload/shared'
 
 import { AccountPausedError, isPaused } from './paused'
@@ -13,6 +19,41 @@ export type SessionCookie = {
   sameSite: 'lax' | 'strict' | 'none'
   path: string
   domain?: string
+}
+
+/**
+ * End every session of a user: every session started before now is void, and the session rows are
+ * removed. The time matters because Payload writes the whole user row, sessions included, from
+ * the copy it read when an operation began: a sign-in, a sign-out or a profile save that started
+ * before this would otherwise put the old sessions back. The database refuses session rows older
+ * than `sessionsValidAfter` (migration 20261106_210116_accounts_hold_against_stale_writes).
+ *
+ * Two writes on purpose: Payload turns a write of a column plus the session list into an
+ * INSERT ... ON CONFLICT of a partial row, which Postgres refuses (no email). The time goes first,
+ * so from then on no old session can be stored again. Pass `req` to stay in its transaction.
+ *
+ * Bypass: direct database writes of server-only fields. Callers check who may do this.
+ */
+export async function revokeAllSessions(
+  payload: Payload,
+  userId: number,
+  req?: PayloadRequest,
+): Promise<void> {
+  const where = { id: { equals: userId } }
+  await payload.db.updateOne({
+    collection: 'users',
+    where,
+    data: { sessionsValidAfter: new Date().toISOString() },
+    returning: false,
+    req,
+  })
+  await payload.db.updateOne({
+    collection: 'users',
+    where,
+    data: { sessions: [] },
+    returning: false,
+    req,
+  })
 }
 
 /** Build Payload's session cookie for a signed token, as parts. Never log it. */
@@ -64,6 +105,17 @@ export async function createSessionToken(payload: Payload, userId: number): Prom
     req,
     user: user as never,
   })
+  // The pause may have landed between the read above and the session write. The database
+  // refuses session rows for a paused account; read the status again so the person gets the
+  // paused answer instead of a cookie that does not work.
+  const fresh = await payload.db.findOne<{ id: number; accountStatus?: string | null }>({
+    collection: 'users',
+    where: { id: { equals: userId } },
+    select: { accountStatus: true },
+    req,
+  })
+  if (!fresh || isPaused(fresh)) throw new AccountPausedError()
+
   const fieldsToSign = getFieldsToSign({
     collectionConfig,
     email: user.email,

@@ -166,6 +166,8 @@ export interface User {
   language?: ('en' | 'no') | null;
   googleSub?: string | null;
   accountStatus?: ('active' | 'paused') | null;
+  accountStatusVersion?: number | null;
+  sessionsValidAfter?: string | null;
   passwordSetAt?: string | null;
   lastSignInAt?: string | null;
   methodAddedNotice?: ('google' | 'password') | null;
@@ -696,6 +698,8 @@ export interface UsersSelect<T extends boolean = true> {
   language?: T;
   googleSub?: T;
   accountStatus?: T;
+  accountStatusVersion?: T;
+  sessionsValidAfter?: T;
   passwordSetAt?: T;
   lastSignInAt?: T;
   methodAddedNotice?: T;

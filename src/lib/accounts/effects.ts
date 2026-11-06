@@ -3,6 +3,7 @@ import type { PayloadRequest } from 'payload'
 import { relationId } from '@/access/roles'
 import { writeActivity } from '@/hooks/logActivity'
 import { appUrl } from '@/lib/auth/env'
+import { revokeAllSessions } from '@/lib/auth/session'
 import { sendSignInEmail } from '@/lib/email/send'
 import {
   accountPausedEmail,
@@ -84,15 +85,9 @@ export async function announceRoleChanged(
 
 /** End every session of a user. Their next request is signed out. */
 export async function endAllSessions(req: PayloadRequest, userId: number): Promise<void> {
-  // Bypass: `sessions` is Payload's own field, not writable through the API. Callers have
-  // checked that the acting user may do this (the team, or the hooks below on a pause).
-  await req.payload.db.updateOne({
-    collection: 'users',
-    where: { id: { equals: userId } },
-    data: { sessions: [] },
-    returning: false,
-    req,
-  })
+  // Callers have checked that the acting user may do this (the team, or the Users hook on a
+  // pause). See revokeAllSessions for why a stale write cannot bring a session back.
+  await revokeAllSessions(req.payload, userId, req)
 }
 
 /**

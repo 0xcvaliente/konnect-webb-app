@@ -194,6 +194,20 @@ export const Users: CollectionConfig = {
         if (isPaused(user)) throw new AccountPausedError()
         return user
       },
+      // `user` is the copy Payload read before checking the password. A pause can land while
+      // the password is hashed: read the status again, inside the sign-in's transaction, after
+      // its session write (which the database refused for a paused account). Throwing here rolls
+      // the sign-in back.
+      async ({ req, user }) => {
+        const fresh = await req.payload.db.findOne<{ id: number; accountStatus?: string | null }>({
+          collection: 'users',
+          where: { id: { equals: user.id } },
+          select: { accountStatus: true },
+          req,
+        })
+        if (!fresh || isPaused(fresh)) throw new AccountPausedError()
+        return user
+      },
     ],
     afterLogin: [
       async ({ req, user }) => {
@@ -251,7 +265,11 @@ export const Users: CollectionConfig = {
         if (operation === 'create') {
           assertInitialStatus<AccountStatus>('active', data.accountStatus, 'A new account')
           data.accountStatus = 'active'
-        } else if (actor) {
+        } else if (data.accountStatus && data.accountStatus !== originalDoc?.accountStatus) {
+          // Mark this as a change made from the current row (see `accountStatusVersion`).
+          data.accountStatusVersion = (Number(originalDoc?.accountStatusVersion) || 0) + 1
+        }
+        if (operation === 'update' && actor) {
           // Server code without a signed-in user (the sign-in code) sets roles itself, under the
           // admin rule above. A signed-in user's change follows the maps in transitions.ts.
           const fromRole = originalDoc?.role as Role
@@ -439,6 +457,28 @@ export const Users: CollectionConfig = {
       options: ['active', 'paused'],
       index: true,
       access: { create: adminOnlyField, update: adminOnlyField },
+    },
+    {
+      // Goes up by one with every change of `accountStatus` (the hook above). Payload writes the
+      // whole user row from the copy it read when an operation began (a sign-in, a profile save,
+      // a sign-out), so a write that started before a pause would put `active` back. The database
+      // keeps the stored status when the write carries an older version than the row's
+      // (migration 20261106_210116_accounts_hold_against_stale_writes). Never shown.
+      name: 'accountStatusVersion',
+      type: 'number',
+      defaultValue: 0,
+      hidden: true,
+      access: { create: () => false, update: adminOnlyField },
+    },
+    {
+      // Sessions started before this time are void ("Sign out everywhere", a pause). Written only
+      // by revokeAllSessions. The database never moves it back and never stores a session row that
+      // is older, or any session row of a paused account, so a stale whole-row write cannot bring
+      // an ended session back (same migration). Never shown.
+      name: 'sessionsValidAfter',
+      type: 'date',
+      hidden: true,
+      access: { create: () => false, update: () => false },
     },
     {
       // When the person chose a password. Empty for Google and email-link accounts, whose

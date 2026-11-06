@@ -6,6 +6,7 @@ import { isAdminEmail } from '@/access/adminEmails'
 import type { User } from '@/payload-types'
 
 import { isPaused } from './paused'
+import { revokeAllSessions } from './session'
 
 import type { GoogleClaims } from './google'
 import type { AuthErrorCode } from './messages'
@@ -61,12 +62,7 @@ async function proveEmail(payload: Payload, user: User, extra: Partial<User> = {
     context: generated(),
   })) as User
   if (neverProvedEmail) {
-    await payload.db.updateOne({
-      collection: 'users',
-      where: { id: { equals: user.id } },
-      data: { sessions: [] },
-      returning: false,
-    })
+    await revokeAllSessions(payload, user.id)
   }
   return updated
 }

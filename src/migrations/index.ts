@@ -8,6 +8,7 @@ import * as migration_20261106_173513_unused_file_jobs from './20261106_173513_u
 import * as migration_20261106_175329_student_profile_review_and_sharing from './20261106_175329_student_profile_review_and_sharing';
 import * as migration_20261106_183900_company_registration from './20261106_183900_company_registration';
 import * as migration_20261106_201633_accounts_team_basics from './20261106_201633_accounts_team_basics';
+import * as migration_20261106_210116_accounts_hold_against_stale_writes from './20261106_210116_accounts_hold_against_stale_writes';
 
 export const migrations = [
   {
@@ -58,6 +59,11 @@ export const migrations = [
   {
     up: migration_20261106_201633_accounts_team_basics.up,
     down: migration_20261106_201633_accounts_team_basics.down,
-    name: '20261106_201633_accounts_team_basics'
+    name: '20261106_201633_accounts_team_basics',
+  },
+  {
+    up: migration_20261106_210116_accounts_hold_against_stale_writes.up,
+    down: migration_20261106_210116_accounts_hold_against_stale_writes.down,
+    name: '20261106_210116_accounts_hold_against_stale_writes'
   },
 ];

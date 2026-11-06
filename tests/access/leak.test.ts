@@ -5,6 +5,7 @@ import {
   createWorld,
   graphql,
   login,
+  PASSWORD,
   sessionFor,
   resetDatabase,
   rest,
@@ -167,6 +168,49 @@ describe('the account name (users.name) never reaches a company', () => {
         overrideAccess: false,
       }),
     ).rejects.toThrow()
+  })
+})
+
+describe('server-only account fields are not part of any API', () => {
+  it('the status version and the sign-out time are hidden, even from the team', async () => {
+    const marker = '2001-02-03T04:05:06.789Z'
+    const user = await world.payload.create({
+      collection: 'users',
+      data: { email: 'hidden-fields@example.test', password: PASSWORD, role: 'student' } as never,
+      overrideAccess: true,
+      disableVerificationEmail: true,
+    })
+    try {
+      await world.payload.db.updateOne({
+        collection: 'users',
+        where: { id: { equals: user.id } },
+        data: { sessionsValidAfter: marker, accountStatusVersion: 4242 },
+        returning: false,
+      })
+      for (const cookie of [companyCookie, adminCookie]) {
+        const gql = await graphql(
+          `{ User(id: ${user.id}) { id accountStatusVersion sessionsValidAfter } }`,
+          cookie,
+        )
+        const one = await rest.get(`users/${user.id}?depth=0`, cookie)
+        const all = await rest.get('users?depth=0&limit=100', cookie)
+        for (const text of [gql.text, one.text, all.text]) {
+          expect(text).not.toContain(marker)
+          expect(text).not.toContain('4242')
+        }
+      }
+      // Positive control: the values are stored.
+      const row = await world.payload.db.findOne<{
+        id: number
+        sessionsValidAfter?: string | null
+      }>({
+        collection: 'users',
+        where: { id: { equals: user.id } },
+      })
+      expect(row!.sessionsValidAfter).toBe(marker)
+    } finally {
+      await world.payload.delete({ collection: 'users', id: user.id, overrideAccess: true })
+    }
   })
 })
 
