@@ -174,6 +174,17 @@ export const Users: CollectionConfig = {
   },
   fields: [
     {
+      // Payload's email, made admin-only to change (merged with Payload's base email field).
+      // Email-link and Google sign-in link to an existing account by email, so a user who could
+      // set their own email to someone else's address, with no proof, would have that person
+      // land in their account later, or become admin when a newly listed admin first signs in.
+      // A self-service email change would need to clear `emailVerifiedAt`, `_verified` and
+      // `googleSub` and confirm the new address first.
+      name: 'email',
+      type: 'email',
+      access: { update: adminOnlyField },
+    },
+    {
       // Payload's password, with the Konnected rules: 15 to 256 characters and not in a known
       // breach (src/lib/auth/password.ts). Virtual: only the hash and salt are stored. Payload
       // runs this on create, update and reset-password.
