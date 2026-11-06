@@ -12,6 +12,7 @@ import {
   graphql,
   login,
   PASSWORD,
+  readyFields,
   resetDatabase,
   rest,
   sessionFor,
@@ -831,23 +832,22 @@ describe('changing a company', () => {
   })
 })
 
-describe('a pending company can do nothing else yet', () => {
-  it('no project and no brief file until Konnected approves it', async () => {
+describe('a pending company writes drafts, but sends nothing until Konnected approves it', () => {
+  it('drafts and brief files now, sending for review only after approval', async () => {
     const { user, company } = await registered()
     const me = await fresh(user)
     const cookie = await login(user.email)
-    await expect(
-      w.payload.create({
-        collection: 'projects',
-        data: { title: 'Early', description: 'd', company: company.id, status: 'draft' },
-        ...as(me),
-      }),
-    ).rejects.toThrow()
-    expect((await rest.post('projects', { title: 'Early', description: 'd' }, cookie)).status).toBe(
-      403,
-    )
+    const local = await w.payload.create({
+      collection: 'projects',
+      data: { title: 'Early', company: company.id, status: 'draft' },
+      ...as(me),
+    })
+    expect(local.status).toBe('draft')
+    const viaRest = await rest.post('projects', { ...readyFields(), title: 'Early REST' }, cookie)
+    expect(viaRest.status).toBe(201)
+    const id = (viaRest.json.doc as { id: number }).id
     const brief = { data: makePdf('brief.pdf'), name: 'brief.pdf', type: 'application/pdf' }
-    expect((await rest.upload('brief-files', brief, {}, cookie)).status).toBe(403)
+    expect((await rest.upload('brief-files', brief, {}, cookie)).status).toBe(201)
     // Its own logo is part of the profile, so it can upload one.
     expect(
       (
@@ -859,12 +859,13 @@ describe('a pending company can do nothing else yet', () => {
         )
       ).status,
     ).toBe(201)
+    // Sending for review waits for approval, through every way in.
+    expect((await rest.patch(`projects/${id}`, { status: 'submitted' }, cookie)).status).toBe(403)
+    expect((await w.payload.findByID({ collection: 'projects', id })).status).toBe('draft')
 
     await approve(company.id)
-    expect((await rest.post('projects', { title: 'Now', description: 'd' }, cookie)).status).toBe(
-      201,
-    )
-    expect((await rest.upload('brief-files', brief, {}, cookie)).status).toBe(201)
+    expect((await rest.patch(`projects/${id}`, { status: 'submitted' }, cookie)).status).toBe(200)
+    expect((await w.payload.findByID({ collection: 'projects', id })).status).toBe('submitted')
   })
 })
 

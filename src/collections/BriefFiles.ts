@@ -1,6 +1,6 @@
 import { type Access, APIError, type CollectionConfig, type Where } from 'payload'
 
-import { approvedCompanyId } from '@/access/companies'
+import { draftingCompanyId } from '@/access/companies'
 import { briefIdsForStudent, idIn, lockedBriefIdsForCompany } from '@/access/files'
 import {
   adminOnlyField,
@@ -49,8 +49,8 @@ const deleteAccess: Access = async ({ req }) => {
  * Files a company attaches to a project brief (`projects.attachments`).
  *
  * Read: the owning company, admins, and only the student Konnected selected for a project that
- * lists the file. Other students never get them, even on a published project. Create: an approved
- * company user for its own company, and admins. Change: admins only. Delete: see `deleteAccess`.
+ * lists the file. Other students never get them, even on a published project. Create: a pending
+ * or approved company user for its own company, and admins. Change: admins only. Delete: see `deleteAccess`.
  */
 export const BriefFiles: CollectionConfig = {
   slug: 'brief-files',
@@ -66,8 +66,9 @@ export const BriefFiles: CollectionConfig = {
       if (isStudent(user)) return idIn(await briefIdsForStudent(req, user!.id))
       return false
     },
-    // Only an approved company uploads brief files (nothing but the profile works before that).
-    create: async ({ req }) => isAdmin(req.user) || Boolean(await approvedCompanyId(req)),
+    // A pending or approved company uploads brief files for its draft projects (owner decision:
+    // a pending company may write drafts). A rejected company cannot.
+    create: async ({ req }) => isAdmin(req.user) || Boolean(await draftingCompanyId(req)),
     update: ({ req: { user } }) => isAdmin(user),
     delete: deleteAccess,
   },

@@ -12,14 +12,22 @@ export const STATUS_TONE: Record<CompanyStatusKey, 'warn' | 'ok' | 'bad'> = {
   rejected: 'bad',
 }
 
-/** Menu items a company cannot open before Konnected approves it. */
-const LOCKED_UNTIL_APPROVED: readonly SiteNavKey[] = ['projects', 'submit', 'payments']
+/**
+ * Menu items a company cannot open yet. A pending company may already write draft projects
+ * (owner decision), so only payments wait for approval. A company Konnected did not approve can
+ * still read its projects but not start new ones.
+ */
+const LOCKED: Record<CompanyStatusKey, readonly SiteNavKey[]> = {
+  pending: ['payments'],
+  approved: [],
+  rejected: ['submit', 'payments'],
+}
 
 /** The SiteShell settings every company page shares: the menu, what is locked, the account. */
 export function companyShellProps(user: SessionUser, company: Company) {
   return {
     role: 'company' as const,
-    locked: company.status === 'approved' ? [] : LOCKED_UNTIL_APPROVED,
+    locked: LOCKED[company.status],
     // The account's name is the contact person's (copied from the company by a hook).
     user: accountMenuUser({
       name: user.name || company.contactName || company.name,

@@ -13,6 +13,7 @@ import {
   login,
   sessionFor,
   PASSWORD,
+  readyFields,
   resetDatabase,
   rest,
   SENTINEL,
@@ -248,7 +249,7 @@ describe('company', () => {
     ).rejects.toThrow()
   })
 
-  it('a company that is not approved cannot create a project, not even a draft; once approved it can', async () => {
+  it('a pending company writes drafts but sends them only after approval; a rejected one writes nothing', async () => {
     const user = (await w.payload.create({
       collection: 'users',
       data: { email: 'pending.company@company.test', password: PASSWORD, role: 'company' },
@@ -263,18 +264,31 @@ describe('company', () => {
     const draft = () =>
       w.payload.create({
         collection: 'projects',
-        data: { title: 'Mine', description: 'd', company: company.id, status: 'draft' },
+        data: { ...readyFields(), title: 'Mine', company: company.id, status: 'draft' },
         ...as(me),
       })
-    await expect(draft()).rejects.toThrow()
-    expect(
-      (
-        await w.payload.count({
-          collection: 'projects',
-          where: { company: { equals: company.id } },
-        })
-      ).totalDocs,
-    ).toBe(0)
+    const project = await draft()
+    expect(project.status).toBe('draft')
+    // It can keep editing its draft.
+    const edited = await w.payload.update({
+      collection: 'projects',
+      id: project.id,
+      data: { title: 'Mine, edited' },
+      ...as(me),
+    })
+    expect(edited.title).toBe('Mine, edited')
+    // Sending for review waits for approval.
+    await expect(
+      w.payload.update({
+        collection: 'projects',
+        id: project.id,
+        data: { status: 'submitted' },
+        ...as(me),
+      }),
+    ).rejects.toThrow(/approved/)
+    expect((await w.payload.findByID({ collection: 'projects', id: project.id })).status).toBe(
+      'draft',
+    )
 
     await w.payload.update({
       collection: 'companies',
@@ -283,8 +297,6 @@ describe('company', () => {
       user: asUser(w.admin),
       overrideAccess: false,
     })
-    const project = await draft()
-    expect(project.status).toBe('draft')
     const submitted = await w.payload.update({
       collection: 'projects',
       id: project.id,
@@ -293,7 +305,8 @@ describe('company', () => {
     })
     expect(submitted.status).toBe('submitted')
 
-    // Konnected takes the approval back: the company cannot submit again.
+    // Konnected takes the approval back: the company cannot write drafts or edit them any more.
+    const second = await draft()
     await w.payload.update({
       collection: 'companies',
       id: company.id,
@@ -302,6 +315,14 @@ describe('company', () => {
       overrideAccess: false,
     })
     await expect(draft()).rejects.toThrow()
+    await expect(
+      w.payload.update({
+        collection: 'projects',
+        id: second.id,
+        data: { title: 'after rejection' },
+        ...as(me),
+      }),
+    ).rejects.toThrow()
   })
 
   it('creates projects only for its own company and only as draft', async () => {
@@ -333,7 +354,7 @@ describe('company', () => {
   it('cannot approve, publish or match, and cannot edit after submitting', async () => {
     const draft = await w.payload.create({
       collection: 'projects',
-      data: { title: 'D', description: 'd' } as never,
+      data: { ...readyFields(), title: 'D' } as never,
       ...as(w.companyA.user),
     })
     await expect(
@@ -374,7 +395,7 @@ describe('project status rules', () => {
   it('follows the whole chain in order and only admin makes the admin moves', async () => {
     const p = await w.payload.create({
       collection: 'projects',
-      data: { company: w.companyA.company.id, title: 'Chain', description: 'd', status: 'draft' },
+      data: { ...readyFields(), company: w.companyA.company.id, title: 'Chain', status: 'draft' },
       overrideAccess: true,
     })
     await move(p.id, 'submitted', w.companyA.user)
