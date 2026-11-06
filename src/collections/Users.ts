@@ -1,14 +1,42 @@
-import type { Where } from 'payload'
+import type { PayloadRequest, Where } from 'payload'
 import { APIError, AuthenticationError, type CollectionConfig } from 'payload'
 
 import { isAdminEmail } from '@/access/adminEmails'
 import { adminOnlyField, isAdmin } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
-import { resetEmailHTML, resetEmailSubject } from '@/lib/email/passwordReset'
+import { dummyPasswordHash, validatePassword } from '@/lib/auth/password'
+import { confirmEmailToken } from '@/lib/auth/verification'
+import {
+  resetEmailHTML,
+  resetEmailSubject,
+  verifyEmailHTML,
+  verifyEmailSubject,
+} from '@/lib/email/authEmails'
+
+const selfOrAdmin = ({ req: { user }, id }: { req: PayloadRequest; id?: number | string }) =>
+  isAdmin(user) || (user != null && user.id === id)
 
 /**
- * Accounts. Sign-in methods (Google, magic link, password) are provisional and belong to the auth
- * card. This collection keeps Payload's local strategy (email and password) enabled.
+ * Same timing for every failed password sign-in. Payload answers an unknown email or a locked
+ * account without hashing the password, which is measurably faster than a wrong password and
+ * would show which addresses have an account. Hash a throwaway password in those cases.
+ */
+async function equalizeLoginTiming(req: PayloadRequest, email: unknown): Promise<void> {
+  if (typeof email !== 'string') return
+  const user = await req.payload.db.findOne<{ id: number; lockUntil?: string | null }>({
+    collection: 'users',
+    where: { email: { equals: email.trim().toLowerCase() } },
+    req,
+  })
+  const locked = Boolean(user?.lockUntil && new Date(user.lockUntil).getTime() > Date.now())
+  if (!user || locked) await dummyPasswordHash(req.payload)
+}
+
+/**
+ * Accounts. Sign-in with Google, an email link or a password (provisional, owner decision
+ * 5 Nov 2026). Payload's local strategy (email and password) stays on for the password, with
+ * email verification: a password account cannot sign in before its address is confirmed.
+ * `_verified` (Payload's gate) and `emailVerifiedAt` (our record) are kept in step by a hook.
  *
  * Student personal data does NOT live here. It lives in `student-profiles`, which companies
  * cannot read. A user record only carries what is needed to sign in and to check access.
@@ -29,6 +57,12 @@ export const Users: CollectionConfig = {
       expiration: 60 * 60 * 1000,
       generateEmailHTML: resetEmailHTML,
       generateEmailSubject: resetEmailSubject,
+    },
+    // A password account confirms its email before the first sign-in. The link opens
+    // /{locale}/verify/{token}, a page with a button (mail scanners open links).
+    verify: {
+      generateEmailHTML: verifyEmailHTML,
+      generateEmailSubject: verifyEmailSubject,
     },
   },
   admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
@@ -59,18 +93,71 @@ export const Users: CollectionConfig = {
       method: 'post',
       handler: () => Response.json({ message: 'Not available' }, { status: 403 }),
     },
+    // Payload's own verify endpoint sets `_verified` straight in the database. This one does the
+    // same through confirmEmailToken, which also records `emailVerifiedAt`.
+    {
+      path: '/verify/:token',
+      method: 'post',
+      handler: async (req) => {
+        const token = String(req.routeParams?.token ?? '')
+        const ok = await confirmEmailToken(req.payload, token)
+        return ok
+          ? Response.json({ message: 'Email verified successfully.' })
+          : Response.json(
+              { errors: [{ message: 'Verification token is invalid.' }] },
+              { status: 403 },
+            )
+      },
+    },
   ],
   hooks: {
-    // Admins sign in with Google only (owner decision, 5 Nov 2026). Payload runs this after the
-    // password check, so the error is the same generic one a wrong password gets.
+    beforeOperation: [
+      async ({ args, operation, req }) => {
+        if (operation === 'login') await equalizeLoginTiming(req, args.data?.email)
+        // A reset link proves the address, like a confirmation link (see beforeValidate).
+        if (operation === 'resetPassword') req.context.passwordReset = true
+        return args
+      },
+    ],
+    beforeValidate: [
+      ({ data, req }) => {
+        if (data && req.context.passwordReset) {
+          data._verified = true
+          data.emailVerifiedAt ??= new Date().toISOString()
+        }
+        return data
+      },
+    ],
+    // Admins sign in with Google only (owner decision, 5 Nov 2026), by role and by the
+    // ADMIN_EMAILS list. Payload runs this after the password check, so the error is the same
+    // generic one a wrong password gets. It also stops a reset link from signing an admin in.
     beforeLogin: [
       ({ req, user }) => {
-        if (user?.role === 'admin') throw new AuthenticationError(req.t)
+        if (user?.role === 'admin' || isAdminEmail(user?.email)) {
+          throw new AuthenticationError(req.t)
+        }
         return user
+      },
+    ],
+    // Payload's "account locked" error would tell a stranger that the address has an account.
+    // Answer with the same error as a wrong password.
+    afterError: [
+      ({ error, req }) => {
+        if (error.name !== 'LockedAuth') return
+        const generic = new AuthenticationError(req.t)
+        return { status: generic.status, response: { errors: [{ message: generic.message }] } }
       },
     ],
     beforeChange: [
       ({ data, originalDoc }) => {
+        // Keep Payload's `_verified` and our `emailVerifiedAt` in step: either one proves the
+        // address. Field access still applies afterwards, so only server code or an admin can
+        // set them.
+        if (data.emailVerifiedAt && !originalDoc?._verified) data._verified = true
+        if (data._verified === true && !data.emailVerifiedAt && !originalDoc?.emailVerifiedAt) {
+          data.emailVerifiedAt = new Date().toISOString()
+        }
+
         const role = data.role ?? originalDoc?.role
         if (role === 'admin') {
           const email: string | undefined = data.email ?? originalDoc?.email
@@ -86,6 +173,24 @@ export const Users: CollectionConfig = {
     afterDelete: [logActivityAfterDelete()],
   },
   fields: [
+    {
+      // Payload's password, with the Konnected rules: 15 to 256 characters and not in a known
+      // breach (src/lib/auth/password.ts). Virtual: only the hash and salt are stored. Payload
+      // runs this on create, update and reset-password.
+      name: 'password',
+      type: 'text',
+      virtual: true,
+      hidden: true,
+      admin: { hidden: true },
+      validate: validatePassword as never,
+    },
+    {
+      // Payload's verification flag, made admin-only to write. Payload's default would let any
+      // signed-in user set it on their own record.
+      name: '_verified',
+      type: 'checkbox',
+      access: { read: selfOrAdmin, create: adminOnlyField, update: adminOnlyField },
+    },
     {
       name: 'role',
       type: 'select',

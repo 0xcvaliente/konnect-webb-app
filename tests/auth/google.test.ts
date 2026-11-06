@@ -312,18 +312,25 @@ describe('accounts: who gets which role and which account', () => {
   it('takes over an account whose email was never proved: old password dead, old sessions ended', async () => {
     const payload = await getTestPayload()
     // Someone registers the address with a password they chose, without proving they own it.
-    await payload.create({
+    const squatter = (await payload.create({
       collection: 'users',
       data: { email: 'someone@example.test', password: PASSWORD, role: 'student' },
       overrideAccess: true,
-    })
-    const attackerCookie = await login('someone@example.test')
-    expect((await rest.get('users/me', attackerCookie)).json.user).toBeTruthy()
-
-    await login$() // the real owner signs in with Google
-
+      disableVerificationEmail: true,
+    })) as User
+    // They cannot sign in with it: the address is not confirmed.
     await expect(login('someone@example.test')).rejects.toThrow()
-    expect((await rest.get('users/me', attackerCookie)).json.user).toBeNull()
+    // Even a session they somehow held is refused while the account is unverified.
+    const squatterCookie = cookiePair(await createSessionCookie(payload, squatter.id))
+    expect((await rest.get('users/me', squatterCookie)).json.user).toBeNull()
+
+    await login$() // the real owner signs in with Google, which proves the address
+
+    // Now the account is verified, but the squatter's password was replaced and sessions ended.
+    await expect(login('someone@example.test')).rejects.toThrow()
+    expect((await rest.get('users/me', squatterCookie)).json.user).toBeNull()
+    const [owner] = await usersNamed('someone@example.test')
+    expect(owner).toMatchObject({ googleSub: 'g-1', _verified: true })
   })
 
   it('refuses an email already linked to a different Google account', async () => {
@@ -354,8 +361,14 @@ describe('the session', () => {
     const payload = await getTestPayload()
     const user = (await payload.create({
       collection: 'users',
-      data: { email: 'student.one@example.test', password: PASSWORD, role: 'student' },
+      data: {
+        email: 'student.one@example.test',
+        password: PASSWORD,
+        role: 'student',
+        _verified: true,
+      },
       overrideAccess: true,
+      disableVerificationEmail: true,
     })) as User
     const cookie = cookiePair(await createSessionCookie(payload, user.id))
     expect((await rest.get('users/me', cookie)).json.user).toMatchObject({ id: user.id })
@@ -368,8 +381,14 @@ describe('the session', () => {
     const payload = await getTestPayload()
     const user = (await payload.create({
       collection: 'users',
-      data: { email: 'student.two@example.test', password: PASSWORD, role: 'student' },
+      data: {
+        email: 'student.two@example.test',
+        password: PASSWORD,
+        role: 'student',
+        _verified: true,
+      },
       overrideAccess: true,
+      disableVerificationEmail: true,
     })) as User
     const cookie = cookiePair(await createSessionCookie(payload, user.id))
     const res = await fetchMeFrom('https://evil.example', cookie)

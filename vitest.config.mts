@@ -9,6 +9,8 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     globalSetup: ['./tests/setup/global.ts'],
+    // Never call the real breached-password service from a test.
+    setupFiles: ['./tests/setup/hibp.ts'],
     // One database, so run files one after another.
     fileParallelism: false,
     testTimeout: 30_000,
@@ -26,6 +28,8 @@ export default defineConfig({
       GOOGLE_CLIENT_SECRET: 'test-client-secret-not-real',
       // No SMTP in tests: email is built but sent nowhere, even if a developer's .env sets it.
       SMTP_HOST: '',
+      // Sign-in answers wait at least this long (900 ms in production). Short in tests.
+      AUTH_TIMING_FLOOR_MS: '120',
     },
   },
 })

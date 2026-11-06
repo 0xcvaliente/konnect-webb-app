@@ -2,6 +2,7 @@ import * as migration_20261104_233443_initial from './20261104_233443_initial';
 import * as migration_20261105_023035_role_pending from './20261105_023035_role_pending';
 import * as migration_20261105_023036_role_pending_default from './20261105_023036_role_pending_default';
 import * as migration_20261106_142300_locales from './20261106_142300_locales';
+import * as migration_20261106_161202_sign_in_email from './20261106_161202_sign_in_email';
 
 export const migrations = [
   {
@@ -22,6 +23,11 @@ export const migrations = [
   {
     up: migration_20261106_142300_locales.up,
     down: migration_20261106_142300_locales.down,
-    name: '20261106_142300_locales'
+    name: '20261106_142300_locales',
+  },
+  {
+    up: migration_20261106_161202_sign_in_email.up,
+    down: migration_20261106_161202_sign_in_email.down,
+    name: '20261106_161202_sign_in_email'
   },
 ];

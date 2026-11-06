@@ -36,10 +36,12 @@ const ensureUser = async (
     overrideAccess: true,
   })
   if (found.docs[0]) return found.docs[0]
+  // Seed accounts count as verified, so they can sign in with the password straight away.
   return (await payload.create({
     collection: 'users',
-    data: { email, password: DEV_PASSWORD, role, ...extra } as never,
+    data: { email, password: DEV_PASSWORD, role, _verified: true, ...extra } as never,
     overrideAccess: true,
+    disableVerificationEmail: true,
   })) as User
 }
 

@@ -11,13 +11,9 @@ async function makeUser(email: string, role: 'admin' | 'student') {
   const payload = await getTestPayload()
   return payload.create({
     collection: 'users',
-    data: {
-      email,
-      password: PASSWORD,
-      role,
-      ...(role === 'admin' ? { emailVerifiedAt: new Date().toISOString() } : {}),
-    } as never,
+    data: { email, password: PASSWORD, role, emailVerifiedAt: new Date().toISOString() } as never,
     overrideAccess: true,
+    disableVerificationEmail: true,
   })
 }
 
