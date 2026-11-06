@@ -4,7 +4,7 @@ import path from 'node:path'
 import { createLocalReq } from 'payload'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { MB } from '@/lib/uploads/fileRules'
+import { attachmentHeader, downloadName, MB } from '@/lib/uploads/fileRules'
 import { MAX_UNUSED_FILES, removeUnusedFiles, UNUSED_FILE_DAYS } from '@/lib/uploads/unused'
 import type { User } from '@/payload-types'
 
@@ -16,6 +16,7 @@ import {
   login,
   resetDatabase,
   rest,
+  SENTINEL,
   sessionFor,
   type World,
 } from '../helpers/world'
@@ -36,7 +37,7 @@ const SINGULAR: Record<FileSlug, string> = {
   'brief-files': 'BriefFile',
 }
 
-type FileDoc = { id: number; filename?: string | null }
+type FileDoc = { id: number; filename?: string | null; originalName?: string | null }
 
 let w: World
 let cookies: Record<Who, string | undefined>
@@ -81,11 +82,15 @@ async function reads(slug: FileSlug, doc: FileDoc, who: Who) {
   const gql = await graphql(`{ ${name}(id: ${doc.id}) { id } }`, cookies[who])
   const gqlDoc = (gql.json.data as Record<string, { id: number } | null> | undefined)?.[name]
   const file = await rest.get(`${slug}/file/${doc.filename}`, cookies[who])
+  // A file that is sent always downloads under the name it was uploaded with, never sniffed.
+  const named =
+    file.headers.get('content-disposition') === `attachment; filename="${doc.originalName}"` &&
+    file.headers.get('x-content-type-options') === 'nosniff'
   return {
     local,
     rest: byId.status === 200 && byId.json.id === doc.id,
     graphql: gqlDoc?.id === doc.id,
-    file: file.status === 200,
+    file: file.status === 200 && named,
   }
 }
 
@@ -372,14 +377,16 @@ describe('upload checks: real type, matching name, size', () => {
   it('every file is sent as a download the browser must not sniff or cache', async () => {
     const res = await rest.get(`cvs/file/${w.alphaCv.filename}`, cookies.alpha)
     expect(res.status).toBe(200)
-    expect(res.headers.get('content-disposition')).toBe('attachment')
+    expect(res.headers.get('content-disposition')).toBe(
+      `attachment; filename="${SENTINEL.alpha.cvName}"`,
+    )
     expect(res.headers.get('x-content-type-options')).toBe('nosniff')
     expect(res.headers.get('cache-control')).toBe('private, no-store')
     expect(res.headers.get('content-type')).toBe('application/pdf')
     expect(res.text.startsWith('%PDF-')).toBe(true)
 
     const brief = await rest.get(`brief-files/file/${w.briefA.filename}`, cookies.companyA)
-    expect(brief.headers.get('content-disposition')).toBe('attachment')
+    expect(brief.headers.get('content-disposition')).toBe('attachment; filename="brief-a.png"')
     expect(brief.headers.get('x-content-type-options')).toBe('nosniff')
   })
 
@@ -763,5 +770,137 @@ describe('files not in use: a limit per account, and a nightly clean-up', () => 
       expect(list.status, `list as ${who}`).toBe(403)
     }
     expect((await rest.get('payload-jobs/run?queue=maintenance', cookies.admin)).status).toBe(200)
+  })
+})
+
+describe('downloads keep the uploaded file name', () => {
+  beforeAll(setup)
+
+  type Download = { status: number; disposition: string | null; nosniff: boolean; body: string }
+  const download = async (slug: FileSlug, doc: FileDoc, who: Who): Promise<Download> => {
+    const res = await rest.get(`${slug}/file/${doc.filename}`, cookies[who])
+    return {
+      status: res.status,
+      disposition: res.headers.get('content-disposition'),
+      nosniff: res.headers.get('x-content-type-options') === 'nosniff',
+      body: res.text,
+    }
+  }
+
+  /** Each role in `allowed` gets the file under its name; every other role gets a 403 only. */
+  async function expectDownloads(slug: FileSlug, doc: FileDoc, allowed: Who[], name: string) {
+    for (const who of ROLES) {
+      const got = await download(slug, doc, who)
+      if (allowed.includes(who)) {
+        expect(got, `${slug} as ${who}`).toMatchObject({
+          status: 200,
+          disposition: `attachment; filename="${name}"`,
+          nosniff: true,
+        })
+      } else {
+        expect(got.status, `${slug} as ${who}`).toBe(403)
+        expect(got.disposition ?? '', `${slug} as ${who}`).not.toContain(name)
+        expect(got.body, `${slug} as ${who}`).not.toContain('%PDF')
+      }
+    }
+  }
+
+  it('a CV: its student, admins, and a company only once the student is selected and shares', async () => {
+    const name = SENTINEL.alpha.cvName
+    await expectDownloads('cvs', w.alphaCv, ['admin', 'alpha'], name)
+    await shareCv('alpha', true)
+    await expectDownloads('cvs', w.alphaCv, ['admin', 'alpha', 'companyA'], name)
+    // Shared but not selected: still no company.
+    await shareCv('beta', true)
+    await expectDownloads('cvs', w.betaCv, ['admin', 'beta'], SENTINEL.beta.cvName)
+    await shareCv('alpha', false)
+    await expectDownloads('cvs', w.alphaCv, ['admin', 'alpha'], name)
+  })
+
+  it('a deliverable file: the company only after release', async () => {
+    await expectDownloads(
+      'deliverable-files',
+      w.fileReleased,
+      ['admin', 'alpha', 'companyA'],
+      'final-report.pdf',
+    )
+    await expectDownloads('deliverable-files', w.fileHidden, ['admin', 'alpha'], 'draft-report.pdf')
+  })
+
+  it('a brief file: the company, admins and the selected student', async () => {
+    await expectDownloads('brief-files', w.briefA, ['admin', 'companyA', 'alpha'], 'brief-a.png')
+    await expectDownloads('brief-files', w.briefOpen, ['admin', 'companyA'], 'brief-open.png')
+  })
+
+  it('a name with a path, quotes, control characters and Norwegian letters', async () => {
+    const doc = await w.payload.create({
+      collection: 'cvs',
+      data: {} as never,
+      file: pdf('../../etc/Ødegård CV\u0007 "final".pdf'),
+      ...as('alpha'),
+    })
+    const got = await download('cvs', doc, 'alpha')
+    expect(got.status).toBe(200)
+    expect(got.disposition).toBe(
+      `attachment; filename="_degard CV final.pdf"; filename*=UTF-8''%C3%98deg%C3%A5rd%20CV%20final.pdf`,
+    )
+    expect(got.nosniff).toBe(true)
+    // Still the same access: another student and the companies get nothing.
+    for (const who of ['beta', 'companyA', 'companyB', 'anonymous'] as const) {
+      expect((await download('cvs', doc, who)).status).toBe(403)
+    }
+  })
+
+  it('nobody can copy another person’s file into an upload of their own', async () => {
+    // Payload's "client upload": a multipart request whose `file` field names a stored file. It
+    // calls the upload handlers without any access check, so ours must not answer it.
+    const before = await w.payload.count({ collection: 'cvs', overrideAccess: true })
+    for (const who of ['beta', 'alpha', 'admin'] as const) {
+      const form = new FormData()
+      form.append(
+        'file',
+        JSON.stringify({
+          filename: w.betaCv.filename,
+          mimeType: 'application/pdf',
+          size: 100,
+        }),
+      )
+      form.append('_payload', JSON.stringify({ owner: w.alpha.user.id }))
+      const res = await rest.post('cvs', form, cookies[who])
+      expect(res.status, who).toBeGreaterThanOrEqual(400)
+    }
+    expect(await w.payload.count({ collection: 'cvs', overrideAccess: true })).toEqual(before)
+  })
+})
+
+describe('download names', () => {
+  it('strip path parts, control characters, quotes and direction marks', () => {
+    expect(downloadName('C:\\Users\\ola\\My CV.pdf', 'x.pdf')).toBe('My CV.pdf')
+    expect(downloadName('/home/ola/../cv.pdf', 'x.pdf')).toBe('cv.pdf')
+    expect(downloadName('a\u0000b\nc\u007f\u0085.pdf', 'x.pdf')).toBe('abc.pdf')
+    expect(downloadName(`"Ola's" \`cv\`.pdf`, 'x.pdf')).toBe('Olas cv.pdf')
+    // U+202E would show "cv‮fdp.exe" as "cvexe.pdf".
+    expect(downloadName('cv\u202Efdp.exe', 'x.pdf')).toBe('cvfdp.exe.pdf')
+  })
+
+  it('always end in an extension of the real type, also after shortening', () => {
+    expect(downloadName('report', 'x.docx')).toBe('report.docx')
+    expect(downloadName('photo.JPEG', 'x.jpg')).toBe('photo.JPEG')
+    expect(downloadName('cv.exe', 'x.pdf')).toBe('cv.exe.pdf')
+    expect(downloadName(null, 'abc.pdf')).toBe('abc.pdf')
+    expect(downloadName('"..."', 'x.pdf')).toBe('file.pdf')
+    const long = downloadName(`${'å'.repeat(300)}.pdf`, 'x.pdf')
+    expect(long).toBe(`${'å'.repeat(150)}.pdf`)
+  })
+
+  it('header: plain ASCII as is, anything else also as RFC 5987 filename*', () => {
+    expect(attachmentHeader('My CV.pdf')).toBe('attachment; filename="My CV.pdf"')
+    expect(attachmentHeader('Søknad 100%; ok.pdf')).toBe(
+      `attachment; filename="S_knad 100__ ok.pdf"; filename*=UTF-8''S%C3%B8knad%20100%25%3B%20ok.pdf`,
+    )
+    expect(attachmentHeader("it's (1)*.pdf")).toBe(`attachment; filename="it's (1)*.pdf"`)
+    expect(attachmentHeader('简历.pdf')).toBe(
+      `attachment; filename="__.pdf"; filename*=UTF-8''%E7%AE%80%E5%8E%86.pdf`,
+    )
   })
 })

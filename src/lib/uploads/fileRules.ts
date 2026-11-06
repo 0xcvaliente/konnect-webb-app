@@ -1,11 +1,16 @@
 import { randomUUID } from 'node:crypto'
+import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
+import path from 'node:path'
+import { Readable } from 'node:stream'
 
 import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type'
 import {
   APIError,
   type CollectionBeforeChangeHook,
   type CollectionBeforeOperationHook,
+  type CollectionSlug,
+  type PayloadRequest,
   type UploadConfig,
 } from 'payload'
 
@@ -145,7 +150,8 @@ export const setOriginalName: CollectionBeforeChangeHook = ({ data, originalDoc,
 
 /**
  * Headers for every file response. Always a download, never shown inline: the browser must not
- * guess the type, run anything, or keep a copy in a shared cache.
+ * guess the type, run anything, or keep a copy in a shared cache. `serveFile` below replaces the
+ * plain `attachment` with one that carries the uploaded file name.
  */
 export const privateFileHeaders = ({ headers }: { headers: Headers }): Headers => {
   headers.set('Content-Disposition', 'attachment')
@@ -156,12 +162,148 @@ export const privateFileHeaders = ({ headers }: { headers: Headers }): Headers =
   return headers
 }
 
+const MAX_NAME_LENGTH = 150
+
+/**
+ * The name a file downloads with: the name the person uploaded, made safe. Path parts, control
+ * characters, quotes, angle brackets and the Unicode direction marks that can disguise an
+ * extension are removed. The name always ends in an extension of the stored file's real type
+ * (`stored` is the random stored name, such as `<uuid>.pdf`), so cutting a long name or a name
+ * without one never changes what the file opens as.
+ */
+export function downloadName(original: string | null | undefined, stored: string): string {
+  const storedExtension = extensionOf(stored)
+  const allowed: readonly string[] = Object.values(FILE_TYPES).find((t) =>
+    (t.extensions as readonly string[]).includes(storedExtension),
+  )?.extensions ?? [storedExtension]
+
+  // A file without a recorded name downloads under its stored name.
+  let name = (original || stored)
+    .split(/[\\/]/)
+    .pop()!
+    .replace(/[\u0000-\u001f\u007f-\u009f"'`<>\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '')
+    .normalize('NFC')
+    .replace(/^[\s.]+|[\s.]+$/g, '')
+
+  if (!allowed.includes(extensionOf(name))) name = `${name}.${storedExtension}`
+  // Keep the extension as written when shortening, and never cut a character in half.
+  const dot = name.lastIndexOf('.')
+  const extension = name.slice(dot)
+  const chars = Array.from(name.slice(0, dot))
+  const base =
+    chars.length > MAX_NAME_LENGTH
+      ? chars.slice(0, MAX_NAME_LENGTH).join('').trimEnd()
+      : chars.join('')
+  return `${base || 'file'}${extension}`
+}
+
+/** RFC 5987 `attr-char` encoding: percent-encode everything but letters, digits and !#$&+-.^_`|~ */
+const encodeRfc5987 = (value: string): string =>
+  encodeURIComponent(value).replace(
+    /['()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+  )
+
+/**
+ * `Content-Disposition: attachment` with the file name: a plain ASCII `filename` for every
+ * browser, and the exact name as RFC 5987 `filename*` when it has other characters (Ø, å, é).
+ */
+export function attachmentHeader(name: string): string {
+  const ascii = name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7e]/g, '_')
+    .replace(/[\\%;"]/g, '_')
+  const header = `attachment; filename="${ascii}"`
+  return ascii === name ? header : `${header}; filename*=UTF-8''${encodeRfc5987(name)}`
+}
+
+type StoredFile = {
+  filename?: string | null
+  originalName?: string | null
+  mimeType?: string | null
+}
+
+const KNOWN_MIME_TYPES = new Set<string>(Object.values(FILE_TYPES).map((t) => t.mime))
+
+type UploadHandler = NonNullable<UploadConfig['handlers']>[number]
+
+/**
+ * Payload upload handler that sends a private file with the name it was uploaded with.
+ *
+ * Payload's file route (`/api/<slug>/file/<name>`, see payload/dist/uploads/endpoints/getFile.js)
+ * applies the collection's read access first and only then calls this handler, with the
+ * document it found under that access (`doc`). When the access result is plain `true` (admins)
+ * Payload passes no document, so it is looked up here with access control on as the same user.
+ *
+ * Payload also calls upload handlers for "client uploads" (a multipart request whose `file`
+ * field names a file already in storage), with `doc: null` and no access check at all. This
+ * handler answers nothing there, so nobody can copy another person's file into an upload of
+ * their own; Payload then refuses the request.
+ *
+ * Range requests are not supported: the whole file is sent with 200, which HTTP allows.
+ */
+export const serveFile =
+  (slug: CollectionSlug): UploadHandler =>
+  (req, args) =>
+    // Payload's type lists Promise<Response> and Promise<void> but not their union; its file
+    // route (getFile.js) accepts either.
+    sendFile(slug, req, args) as Promise<void>
+
+async function sendFile(
+  slug: CollectionSlug,
+  req: PayloadRequest,
+  { doc, params }: { doc?: unknown; params: { filename: string } },
+): Promise<Response | undefined> {
+  if (req.method !== 'GET' || doc === null) return
+  const { filename } = params
+
+  let file = doc as StoredFile | undefined
+  if (!file) {
+    file = (
+      await req.payload.find({
+        collection: slug,
+        where: { filename: { equals: filename } },
+        depth: 0,
+        limit: 1,
+        overrideAccess: false,
+        user: req.user,
+        req,
+      })
+    ).docs[0] as StoredFile | undefined
+  }
+  if (!file || file.filename !== filename) return
+
+  const directory = path.resolve(staticDirFor(slug))
+  const filePath = path.resolve(directory, filename)
+  // Same guard as Payload's own file route. Anything odd falls back to Payload's answer.
+  if (!filePath.startsWith(directory + path.sep)) return
+  let size: number
+  try {
+    size = (await fs.stat(filePath)).size
+  } catch {
+    return
+  }
+
+  const headers = privateFileHeaders({ headers: new Headers() })
+  headers.set('Content-Disposition', attachmentHeader(downloadName(file.originalName, filename)))
+  headers.set(
+    'Content-Type',
+    file.mimeType && KNOWN_MIME_TYPES.has(file.mimeType)
+      ? file.mimeType
+      : 'application/octet-stream',
+  )
+  headers.set('Content-Length', String(size))
+  const body = Readable.toWeb(createReadStream(filePath)) as ReadableStream<Uint8Array>
+  return new Response(body, { headers, status: 200 })
+}
+
 /**
  * The upload settings every private file collection shares: stored on the local disk under
  * MEDIA_DIR, accepted types listed for Payload's own check too, no resizing, cropping or
- * previews, no fetching from a URL, and download-only responses.
+ * previews, no fetching from a URL, and download-only responses with the uploaded file name.
  */
-export const privateUpload = (slug: string, rule: UploadRule): UploadConfig => ({
+export const privateUpload = (slug: CollectionSlug, rule: UploadRule): UploadConfig => ({
   staticDir: staticDirFor(slug),
   mimeTypes: rule.kinds.map((k) => FILE_TYPES[k].mime),
   // No imageSizes: nothing is resized. (An empty list breaks the GraphQL schema.)
@@ -170,5 +312,6 @@ export const privateUpload = (slug: string, rule: UploadRule): UploadConfig => (
   displayPreview: false,
   bulkUpload: false,
   pasteURL: false,
+  handlers: [serveFile(slug)],
   modifyResponseHeaders: privateFileHeaders,
 })

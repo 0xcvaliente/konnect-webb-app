@@ -6,7 +6,8 @@ import { isAdmin } from '@/access/roles'
  * Email sign-in links. Each row is one link: a SHA-256 hash of 32 random bytes (the token itself
  * is only in the email), the address it was sent to, when it expires (15 minutes) and when it was
  * used. A link works once: using it is one atomic UPDATE that matches only an unused, unexpired
- * row (src/lib/auth/magicLink.ts).
+ * row (src/lib/auth/emailSignIn.ts). Only the newest link for an address works: asking for a new
+ * one marks every unused one expired, in the same transaction that stores the new one.
  *
  * Only server code creates and uses rows. Through the API nobody can create or change one, and
  * only admins can read or delete them. Hidden from the admin menu and from GraphQL.

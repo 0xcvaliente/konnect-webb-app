@@ -379,6 +379,121 @@ describe('sign-in link: using it', () => {
 })
 
 // ---------------------------------------------------------------------------------------------
+describe('sign-in link: only the newest one works', () => {
+  const EMAIL = 'newest@example.test'
+  const ask = async (ip = IP) => {
+    const result = await requestMagicLink(await getTestPayload(), { email: EMAIL, ...req({ ip }) })
+    expect(result).toEqual({ ok: true })
+    return tokenIn(lastMail(), 'magic')
+  }
+  /** Links for EMAIL that are unused and unexpired, read straight from the table. */
+  const validLinks = async () =>
+    (
+      await (
+        await getTestPayload()
+      ).find({
+        collection: 'magic-links',
+        where: {
+          and: [
+            { email: { equals: EMAIL } },
+            { usedAt: { exists: false } },
+            { expiresAt: { greater_than: new Date().toISOString() } },
+          ],
+        },
+        overrideAccess: true,
+      })
+    ).docs
+
+  it('an earlier link stops working as soon as a new one is asked for', async () => {
+    const payload = await getTestPayload()
+    const first = await ask()
+    expect(await magicLinkUsable(payload, first)).toBe(true)
+    const second = await ask()
+
+    expect(await magicLinkUsable(payload, first)).toBe(false)
+    expect(await consumeMagicLink(payload, { token: first, ...req() })).toEqual({
+      ok: false,
+      error: 'invalid_link',
+    })
+    expect(await usersNamed(EMAIL)).toHaveLength(0)
+    // Marked expired, not removed: the row stays until the daily clean-up.
+    const rows = await payload.find({
+      collection: 'magic-links',
+      where: { email: { equals: EMAIL } },
+      overrideAccess: true,
+    })
+    expect(rows.docs).toHaveLength(2)
+    expect(await validLinks()).toHaveLength(1)
+    expect(await magicLinkUsable(payload, second)).toBe(true)
+  })
+
+  it('the new link works once', async () => {
+    const payload = await getTestPayload()
+    await ask()
+    const second = await ask()
+    expect((await consumeMagicLink(payload, { token: second, ...req() })).ok).toBe(true)
+    expect(await consumeMagicLink(payload, { token: second, ...req() })).toEqual({
+      ok: false,
+      error: 'invalid_link',
+    })
+    expect(await validLinks()).toHaveLength(0)
+  })
+
+  it('a used link stays used, and a new link after it works', async () => {
+    const payload = await getTestPayload()
+    const first = await ask()
+    expect((await consumeMagicLink(payload, { token: first, ...req() })).ok).toBe(true)
+    const second = await ask()
+    expect((await consumeMagicLink(payload, { token: second, ...req() })).ok).toBe(true)
+    expect(await usersNamed(EMAIL)).toHaveLength(1)
+  })
+
+  it('requests at the same moment leave exactly one valid link', async () => {
+    const payload = await getTestPayload()
+    for (let round = 0; round < 3; round++) {
+      resetRateLimitsForTests()
+      send.mockClear()
+      // Three at once, from different clients, as far as the per-address limit allows.
+      const results = await Promise.all(
+        ['198.51.100.31', '198.51.100.32', '198.51.100.33'].map((ip) =>
+          requestMagicLink(payload, { email: EMAIL, ...req({ ip }) }),
+        ),
+      )
+      for (const result of results) expect(result).toEqual({ ok: true })
+      expect(mails()).toHaveLength(3)
+      expect(await validLinks()).toHaveLength(1)
+
+      const tokens = mails().map((mail) => tokenIn(mail, 'magic'))
+      const usable = []
+      for (const token of tokens) usable.push(await magicLinkUsable(payload, token))
+      expect(usable.filter(Boolean)).toHaveLength(1)
+    }
+    // And that one link signs in once.
+    const tokens = mails().map((mail) => tokenIn(mail, 'magic'))
+    const outcomes = await Promise.all(
+      tokens.map((token) => consumeMagicLink(payload, { token, ...req() })),
+    )
+    expect(outcomes.filter((o) => o.ok)).toHaveLength(1)
+    expect(await validLinks()).toHaveLength(0)
+  })
+
+  it('an address that joins the admin list gets no link, and its older link stops working', async () => {
+    const payload = await getTestPayload()
+    const email = 'soon.admin@example.test'
+    await requestMagicLink(payload, { email, ...req() })
+    const old = tokenIn(lastMail(), 'magic')
+    process.env.ADMIN_EMAILS = `${ADMIN_EMAIL},${email}`
+    try {
+      expect(await requestMagicLink(payload, { email, ...req() })).toEqual({ ok: true })
+      expect(lastMail().html).not.toContain('/magic/')
+      expect(await magicLinkUsable(payload, old)).toBe(false)
+    } finally {
+      process.env.ADMIN_EMAILS = ADMIN_EMAIL
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------------------------
 describe('password rules', () => {
   it('needs at least 15 characters and allows 256, counted as characters', async () => {
     const payload = await getTestPayload()
