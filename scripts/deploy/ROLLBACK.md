@@ -2,7 +2,8 @@
 
 ## A deploy that fails rolls itself back
 
-`deploy.sh` changes nothing for users until the new app container is healthy. If the migrations
+`deploy.sh` changes nothing for users until the new app container is healthy: until then it is
+kept off the network Caddy sends traffic on. If the migrations
 fail, or the new container never passes `/api/health`, the script removes the new container and
 exits with an error. The old container kept serving the whole time. Read the error, fix, deploy
 again.

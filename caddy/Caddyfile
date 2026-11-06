@@ -19,9 +19,11 @@
 	}
 
 	reverse_proxy {
-		# Every running "app" container. Docker's DNS returns one address per container, so
-		# during a deploy (scripts/deploy/deploy.sh) Caddy sees the old and the new container,
-		# and after the swap only the new one. Re-resolved every second.
+		# Every running "app" container on the "public" network. Docker's DNS returns one address
+		# per container, healthy or not, and Caddy runs no active health checks (health_uri) on
+		# dynamic upstreams. So deploy.sh keeps a new container off "public" until its Docker
+		# health check (/api/health) passes: during a deploy Caddy sees the old container, then
+		# the old and the healthy new one, then only the new one. Re-resolved every second.
 		dynamic a {
 			name app
 			port 3000
@@ -37,9 +39,8 @@
 		lb_try_interval 250ms
 
 		# Passive health check: a container that refused a connection is skipped for 10 s.
-		# Caddy runs no active checks (health_uri) on dynamic upstreams; whether a new container
-		# is healthy is decided by its Docker health check on /api/health, which deploy.sh waits
-		# for before the old container is stopped.
+		# Deliberately no unhealthy_status 5xx: outside a deploy there is one container, and one
+		# page error would then take the whole site offline for 10 s.
 		fail_duration 10s
 
 		# A new connection for every request, so a container that is shutting down is never

@@ -36,7 +36,9 @@ DOCX to PDF, deploys without downtime. EU-owned suppliers only.
 - **app** runs `node server.js` as the non-root `node` user. No `container_name` and no published
   port, so a second copy can run next to it during a deploy; Caddy finds every copy through
   Docker's DNS (`dynamic a app 3000`, refreshed every second) and retries a request on another copy
-  for up to 30 s when one cannot be reached. Health: `/api/health` every 10 s.
+  for up to 30 s when one cannot be reached. Health: `/api/health` every 10 s. Docker's DNS lists a
+  container whether it is healthy or not, and Caddy cannot health-check dynamic upstreams, so
+  `deploy.sh` keeps a new copy off the `public` network until its health check passes.
 - **worker** is the same image running `payload jobs:run --cron "* * * * *" --all-queues
 --handle-schedules` in `/app/cli`, with `TZ=Europe/Oslo` so the 03:15 file clean-up is Norwegian
   time. The app itself runs no jobs in production (`RUN_JOBS_IN_APP=false`), because two app
@@ -121,6 +123,11 @@ rm -rf ../konnected-trial
   `/api/health`): v1 to v2, 2928 requests, 0 failed; v2 to v3, 2472 requests, 0 failed. A broken
   image (never healthy) was removed after the timeout and the old container kept serving: 2496
   requests, 0 failed.
+- 7 Nov, small stand-in images: an image that starts and listens but answers 503 on `/api/health`
+  and 500 on pages. Before the fix the new container got traffic while it was still unhealthy:
+  1227 of 2877 requests to `/en` failed during the 40 s health timeout. With the new container
+  kept off `public` until healthy: 2802 requests, 0 failed, and it was removed. Healthy swaps after
+  the fix: 991 and 996 requests, 0 failed.
 - pgBackRest against the SFTP stand-in: stanza created, WAL archived, full, diff and incremental
   backups. Restore test: a row written after the last backup came back through WAL replay; every
   table matched live; the CV file referenced by the database was in the newest restic snapshot.
@@ -164,8 +171,9 @@ Not done yet; this is the list for when the server is ordered.
 ## Deploys
 
 `scripts/deploy/deploy.sh <sha>`: pull the image, incremental backup, migrations in a one-off
-container, a second app container next to the old one, wait for its health check, stop the old
-one (Next.js finishes the requests it started), restart the worker. If anything fails before the
+container, a second app container next to the old one but off Caddy's network, wait for its
+health check, put it on Caddy's network, stop the old one (Next.js finishes the requests it
+started), restart the worker. If anything fails before the
 swap, the old container keeps serving. Migrations must be backward compatible (expand, then
 contract), because the old app runs on the new schema during the swap and after a rollback. See
 `scripts/deploy/ROLLBACK.md`.
@@ -182,10 +190,14 @@ and must not be a build argument, so it is left open.
   (`aes-256-cbc`) before it leaves the server. Kept 14 days (`repo1-retention-full-type=time`),
   the period in the privacy policy: change both together or neither.
 - **Uploads**: restic snapshot of the `media` volume every 5 minutes, encrypted, kept 14 days.
-- **Restore test**: `scripts/deploy/restore-test.sh` restores the newest database backup into a
-  throwaway PostgreSQL 18 container (no published port, no named volume), replays all archived
-  WAL, compares row counts per table with live, and checks every upload in the restored database
-  is in the newest restic snapshot. Prints table names and counts only. Monthly from cron, and by
+- **Restore test**: `scripts/deploy/restore-test.sh` counts the rows of every table in live,
+  commits a marker transaction and waits until its WAL is archived (`pgbackrest check`). Then it
+  restores the newest database backup into a throwaway PostgreSQL 18 container (no published port,
+  no named volume) and replays the archived WAL up to that marker. It fails when the marker cannot
+  be reached (a gap in the archived WAL), when a table is missing or has fewer rows than live had
+  (more than `RESTORE_ROW_TOLERANCE`, default 5), when every application table is empty, or when
+  the migrations differ. It also checks every upload in the restored database is in the newest
+  restic snapshot. Prints table names and counts only. Monthly from cron, and by
   hand after any change to the backup setup. A restore test counts when it passes on a clean
   machine too; once agreements exist, add a signed PDF whose SHA-256 still matches.
 - **If WAL cannot be archived** (Storage Box down) WAL piles up on the server disk. Above 4 GiB
