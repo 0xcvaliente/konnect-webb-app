@@ -9,8 +9,8 @@ Stack: Next.js (App Router) + Payload CMS 3 (TypeScript) + PostgreSQL, Docker Co
 Order of authority, highest first. If two disagree, the higher one wins and the lower one gets fixed.
 
 1. Notion **About us**: product model and rules. https://app.notion.com/p/40e337b89c3d803180effbf1641edf2e
-2. Notion **Engineering draft**: build and hosting plan, data model, permission matrix, phases. https://app.notion.com/p/40e337b89c3d80a39075c62e80cee546
-3. Notion **Technical Kanban**: the work items. Database `7b19ac01-b3cf-4cb5-8b38-7225d9886592`, data source `9df9048f-f231-421e-8a0d-a71869aabb91`. https://app.notion.com/p/7b19ac01b3cf4cb58b387225d9886592
+2. **Engineering draft** (moved from Notion to the owner's Obsidian vault on 2026-11-06, Notion was out of space): `~/Documents/Obsidian Vault/Konnected/Engineering draft.md`. Build and hosting plan, data model, permission matrix, phases, decision log.
+3. **Technical Kanban** (same move): one note per card in `~/Documents/Obsidian Vault/Konnected/Technical Kanban/`, with `status`, `priority`, `phase`, `due` and `pr` in the frontmatter; the board is `Technical Kanban.base`. The old Notion database is read-only history.
 4. Notion **Business plan**: strategy, read on demand. https://app.notion.com/p/40e337b89c3d81069542eaa3a66a0990
 5. The `konnected-*` skills: copies of the rules plus dated research notes.
 6. This repo's code and tests: what is actually built.
@@ -38,7 +38,7 @@ For library behaviour, the installed version and its types beat any note or memo
 - Commit secrets, or put them in an image or a build argument. `.env` stays out of git. Only `NEXT_PUBLIC_*` values may be build args.
 - Log tokens, cookies, authorization headers or personal data.
 - Bypass access control without a written reason in the code.
-- Change Notion pages unless asked. The only allowed Notion write in a normal session is the Status of the card you are working on. The original "Task Management" database is read-only.
+- Change Notion pages unless asked. Notion (About us, Business plan, the old Task Management database) is read-only. In the Obsidian vault, the only change allowed in a normal session is the `status` (and `pr`) of the card you are working on; other engineering edits need the user's ask.
 - Expose student personal data to a company, even in a hidden field.
 
 ## Version 1 scope
