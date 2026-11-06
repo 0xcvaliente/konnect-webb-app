@@ -12,6 +12,9 @@ export default defineConfig({
     // One database, so run files one after another.
     fileParallelism: false,
     testTimeout: 30_000,
+    // next-intl imports "next/server" without ".js", which Node's ESM loader cannot resolve. Let
+    // Vite bundle it so the proxy can be tested.
+    server: { deps: { inline: ['next-intl'] } },
     hookTimeout: 120_000,
     env: {
       DATABASE_URL: testDatabaseUrl(),

@@ -1,13 +1,147 @@
 {
+  "Shell": {
+    "skipToContent": "Skip to content",
+    "mainMenu": "Main menu",
+    "notifications": "Notifications",
+    "teamMenu": "Team menu",
+    "language": "Language",
+    "languageName": {
+      "en": "English",
+      "no": "Norsk"
+    },
+    "account": {
+      "menu": "Account menu",
+      "profile": "Profile",
+      "settings": "Settings",
+      "help": "Help",
+      "logOut": "Log out"
+    },
+    "nav": {
+      "student": {
+        "home": "Home",
+        "projects": "Projects",
+        "applications": "My applications",
+        "payments": "Payments"
+      },
+      "company": {
+        "status": "Status",
+        "projects": "My projects",
+        "submit": "Submit a project",
+        "payments": "Payments"
+      }
+    },
+    "team": {
+      "open": "open",
+      "groups": {
+        "daily": "Daily work",
+        "records": "Records",
+        "settings": "Team and settings"
+      },
+      "items": {
+        "today": "Today",
+        "approvals": "Approvals",
+        "matching": "Matching",
+        "agreements": "Agreements",
+        "deliverables": "Deliverables",
+        "questions": "Questions",
+        "payments": "Payments",
+        "directory": "Directory",
+        "dataRequests": "Data requests",
+        "team": "Team",
+        "templates": "Agreement templates"
+      }
+    }
+  },
+  "Roles": {
+    "admin": "Konnected team",
+    "student": "Student",
+    "company": "Company",
+    "pending": "No role yet"
+  },
   "Home": {
-    "signedInAs": "Signed in as {email} ({role})",
+    "title": "Konnected",
+    "lede": "Short project assignments for students and startups. Konnected approves every project and matches the students.",
+    "signInTitle": "Sign in",
+    "signInBody": "Sign in or create an account with your Google account.",
+    "continueWithGoogle": "Continue with Google",
+    "signedInTitle": "You are signed in",
+    "signedInAs": "Signed in as {email}",
     "chooseRole": "Choose student or company",
     "signOut": "Sign out",
-    "continueWithGoogle": "Continue with Google"
+    "placeholder": "This page is a placeholder. The dashboards come in later steps."
   },
   "ChooseRole": {
     "title": "How will you use Konnected?",
+    "lede": "Signed in as {email}. Pick the option that fits. Konnected checks every student profile and every company before they take part.",
     "student": "I am a student",
-    "company": "I am a company"
+    "studentHint": "Find short projects, apply, and get matched by Konnected.",
+    "company": "I am a company",
+    "companyHint": "Submit a project. Konnected reviews it and finds the right student."
+  },
+  "DesignGuide": {
+    "title": "Design base",
+    "lede": "The Estuary tokens and components. This page exists only in development.",
+    "teamLink": "Team workspace layout",
+    "siteLink": "Student and startup layout",
+    "teamTitle": "Team workspace",
+    "teamLede": "The layout for the Konnected team, with the menu down the left.",
+    "colours": "Colours",
+    "type": "Type",
+    "typePageTitle": "Page title, 1.6 rem",
+    "typeSectionTitle": "Section title, 1 rem",
+    "typeBody": "Body text is 15 px with a line height of 1.5. Konnected approves every project before students see it.",
+    "typeSecondary": "Secondary text for labels, hints and dates.",
+    "typeNumbers": "Numbers use tabular figures",
+    "buttons": "Buttons",
+    "main": "Main action",
+    "normal": "Normal",
+    "secondary": "Secondary",
+    "text": "Text button",
+    "disabled": "Not available",
+    "onBand": "On the band",
+    "inputs": "Inputs",
+    "email": "Email",
+    "emailHint": "We send updates about your projects here.",
+    "description": "Short description",
+    "programme": "Study programme",
+    "programmePlaceholder": "Pick one",
+    "programmes": {
+      "design": "Design",
+      "computing": "Computer science",
+      "business": "Business"
+    },
+    "agree": "I agree to share my CV with the startup after Konnected selects me",
+    "pay": "Payment",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "pills": "Pills and tags",
+    "status": {
+      "submitted": "Submitted",
+      "published": "Published",
+      "dueSoon": "Due soon",
+      "rejected": "Rejected",
+      "closed": "Closed"
+    },
+    "tag": "Design",
+    "new": "New",
+    "tabs": "Tabs",
+    "mine": "Mine",
+    "everyone": "Everyone",
+    "mineBody": "Items you own.",
+    "everyoneBody": "Every item, with its owner.",
+    "cards": "Cards",
+    "cardTitle": "Landing page copy",
+    "cardBody": "Write the text for a new landing page. About 20 hours over 2 weeks.",
+    "cardAction": "Read more",
+    "overlays": "Dialog and toast",
+    "openDialog": "Open dialog",
+    "dialogTitle": "Withdraw your application?",
+    "dialogBody": "You cannot apply to this project again after you withdraw.",
+    "cancel": "Cancel",
+    "confirm": "Withdraw",
+    "close": "Close",
+    "showToast": "Show toast",
+    "toast": "Saved",
+    "loading": "Loading"
   }
 }
