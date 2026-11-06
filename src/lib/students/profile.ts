@@ -1,11 +1,14 @@
-import type { Payload } from 'payload'
+import { type Payload, ValidationError } from 'payload'
 
 import { isStudent, relationId } from '@/access/roles'
 import type { StudentProfile, User } from '@/payload-types'
 
 import {
+  EMAIL_PATTERN,
   INTEREST_KEYS,
   LIMITS,
+  PROFILE_FIELDS,
+  type ProfileField,
   PROJECT_TYPE_KEYS,
   type ProfileFieldErrors,
   type ProfileFormState,
@@ -44,7 +47,6 @@ const picks = <T extends string>(form: FormData, name: string, allowed: readonly
   return allowed.filter((key) => values.includes(key))
 }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE = /^\+?[0-9 ()-]{5,}$/
 
 type About = Pick<
@@ -106,7 +108,7 @@ function readDetails(form: FormData, errors: ProfileFieldErrors): Details {
   const experience = optional('experience', LIMITS.experience)
   const highlights = optional('highlights', LIMITS.highlights)
   const contactEmail = optional('contactEmail', LIMITS.contactEmail)
-  if (contactEmail && !errors.contactEmail && !EMAIL.test(contactEmail)) {
+  if (contactEmail && !errors.contactEmail && !EMAIL_PATTERN.test(contactEmail)) {
     errors.contactEmail = 'invalid'
   }
   const phone = optional('phone', LIMITS.phone)
@@ -168,6 +170,27 @@ const isDuplicate = (error: unknown): boolean => {
   return false
 }
 
+const isProfileField = (path: string): path is ProfileField =>
+  (PROFILE_FIELDS as readonly string[]).includes(path)
+
+/**
+ * A save Payload refused, as an answer for the page. A Server Action that throws sends the student
+ * to an error page and loses every unsaved edit, so it never does: a ValidationError on a form
+ * field marks that field, anything else is a general error. The log line has no form values.
+ */
+function refused(payload: Payload, error: unknown): Result {
+  if (error instanceof ValidationError) {
+    const fields: ProfileFieldErrors = {}
+    for (const { path } of error.data.errors) if (isProfileField(path)) fields[path] = 'invalid'
+    if (Object.keys(fields).length) return invalid(fields)
+  }
+  payload.logger.error({
+    msg: 'Student profile save failed',
+    reason: error instanceof Error ? error.name : 'unknown',
+  })
+  return fail('generic')
+}
+
 /** Remove a CV the student no longer uses. Best effort: the daily clean-up catches the rest. */
 async function removeOldCv(payload: Payload, user: SessionUser, id: number | undefined) {
   if (!id) return
@@ -207,7 +230,7 @@ export async function completeOnboarding(
   } catch (error) {
     if (statusOf(error) === 403 && cv) return invalid({ cv: 'invalid' })
     if (isDuplicate(error)) return fail('exists')
-    throw error
+    return refused(payload, error)
   }
   return ok()
 }
@@ -226,13 +249,17 @@ export async function saveProfile(
 
   const profile = await findOwnProfile(payload, user)
   if (!profile) return fail('no_profile')
-  await payload.update({
-    collection: 'student-profiles',
-    id: profile.id,
-    data: { ...about, ...details },
-    user,
-    overrideAccess: false,
-  })
+  try {
+    await payload.update({
+      collection: 'student-profiles',
+      id: profile.id,
+      data: { ...about, ...details },
+      user,
+      overrideAccess: false,
+    })
+  } catch (error) {
+    return refused(payload, error)
+  }
   return ok()
 }
 
@@ -245,13 +272,17 @@ export async function savePrivacy(
   if (!user || !isStudent(user)) return fail('forbidden')
   const profile = await findOwnProfile(payload, user)
   if (!profile) return fail('no_profile')
-  await payload.update({
-    collection: 'student-profiles',
-    id: profile.id,
-    data: { privacy: readPrivacy(form) },
-    user,
-    overrideAccess: false,
-  })
+  try {
+    await payload.update({
+      collection: 'student-profiles',
+      id: profile.id,
+      data: { privacy: readPrivacy(form) },
+      user,
+      overrideAccess: false,
+    })
+  } catch (error) {
+    return refused(payload, error)
+  }
   return ok()
 }
 
@@ -282,7 +313,7 @@ export async function setCv(
     })
   } catch (error) {
     if (statusOf(error) === 403) return invalid({ cv: 'invalid' })
-    throw error
+    return refused(payload, error)
   }
   await removeOldCv(payload, user, previous)
   return ok()

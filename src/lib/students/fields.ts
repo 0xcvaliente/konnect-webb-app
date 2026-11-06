@@ -77,21 +77,33 @@ export const splitSkills = (value: string): string[] => {
   return out
 }
 
+/**
+ * The check Payload's own `email` field runs (payload 3.93.0, fields/validations.js), copied here
+ * because that file needs a request and this one must stay safe for the browser. ASCII only, a
+ * top-level domain of 2 or more letters, no "..", no dot at either end of the name. If the form
+ * accepted an address Payload refuses, the save would fail instead of marking the field. A test
+ * checks this still agrees with Payload's validator.
+ */
+export const EMAIL_PATTERN =
+  /^(?!.*\.\.)[\w!#$%&'*+/=?^`{|}~-](?:[\w!#$%&'*+/=?^`{|}~.-]*[\w!#$%&'*+/=?^`{|}~-])?@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/i
+
 /** The field names a profile form can report a problem on. */
-export type ProfileField =
-  | 'name'
-  | 'school'
-  | 'programme'
-  | 'year'
-  | 'pitch'
-  | 'skills'
-  | 'interests'
-  | 'preferredProjectTypes'
-  | 'experience'
-  | 'highlights'
-  | 'contactEmail'
-  | 'phone'
-  | 'cv'
+export const PROFILE_FIELDS = [
+  'name',
+  'school',
+  'programme',
+  'year',
+  'pitch',
+  'skills',
+  'interests',
+  'preferredProjectTypes',
+  'experience',
+  'highlights',
+  'contactEmail',
+  'phone',
+  'cv',
+] as const
+export type ProfileField = (typeof PROFILE_FIELDS)[number]
 
 export type FieldProblem = 'required' | 'too_long' | 'invalid' | 'too_many'
 

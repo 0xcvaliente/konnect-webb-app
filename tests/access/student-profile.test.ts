@@ -1,6 +1,7 @@
+import { ValidationError, validations } from 'payload'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { SHARE_KEYS } from '@/lib/students/fields'
+import { EMAIL_PATTERN, SHARE_KEYS } from '@/lib/students/fields'
 import {
   completeOnboarding,
   savePrivacy,
@@ -529,6 +530,89 @@ describe('profile page (saveProfile, savePrivacy, setCv)', () => {
       status: 'error',
       fields: { contactEmail: 'invalid', phone: 'invalid' },
     })
+    expect((await profileOf(w.alpha.user.id))?.name).toBe(SENTINEL.alpha.name)
+  })
+
+  // Payload's own email field refuses these, so the server must too, or the save throws and the
+  // student lands on an error page with their edits gone.
+  it.each(['ola@gmail.c', 'ola@bølgen.no', 'ola..n@uio.no', 'ola.@uio.no'])(
+    'marks a contact email Payload would refuse (%s) instead of throwing',
+    async (contactEmail) => {
+      const result = await saveProfile(
+        w.payload,
+        session(w.alpha.user),
+        profileForm({ contactEmail }),
+      )
+      expect(result).toEqual({ status: 'error', fields: { contactEmail: 'invalid' } })
+      expect((await profileOf(w.alpha.user.id))?.name).toBe(SENTINEL.alpha.name)
+    },
+  )
+
+  it("the contact email check agrees with Payload's email validator", () => {
+    const options = {
+      req: { payload: { collections: {}, config: { collections: [] } }, t: (key: string) => key },
+      required: false,
+      siblingData: {},
+    } as unknown as Parameters<typeof validations.email>[1]
+    const samples = [
+      'ola@uio.no',
+      'ola.nordmann+konnected@student.ntnu.no',
+      'o_la-n@ex--ample.com',
+      'OLA@UIO.NO',
+      'ola@gmail.c',
+      'ola@bølgen.no',
+      'øla@uio.no',
+      'ola..n@uio.no',
+      'ola.@uio.no',
+      '.ola@uio.no',
+      'ola@-uio.no',
+      'ola@uio-.no',
+      'ola@uio..no',
+      '"ola"@uio.no',
+      'ola n@uio.no',
+      'ola@uio',
+      'ola@@uio.no',
+      'not an email',
+    ]
+    for (const sample of samples) {
+      expect(EMAIL_PATTERN.test(sample), sample).toBe(validations.email(sample, options) === true)
+    }
+  })
+
+  it('a save Payload refuses gives an answer, never an error thrown to the page', async () => {
+    const ctx = session(w.alpha.user)
+    const update = vi.spyOn(w.payload, 'update')
+    const logged = vi.spyOn(w.payload.logger, 'error').mockImplementation(() => undefined)
+    try {
+      const refusal = new ValidationError({
+        collection: 'student-profiles',
+        errors: [{ path: 'contactEmail', message: 'Bad email' }],
+      })
+      update.mockRejectedValueOnce(refusal)
+      expect(await saveProfile(w.payload, ctx, profileForm())).toEqual({
+        status: 'error',
+        fields: { contactEmail: 'invalid' },
+      })
+
+      update.mockRejectedValueOnce(
+        new ValidationError({ errors: [{ path: 'privacy.shareCv', message: 'Bad' }] }),
+      )
+      expect(await savePrivacy(w.payload, ctx, new FormData())).toEqual({
+        status: 'error',
+        error: 'generic',
+      })
+
+      update.mockRejectedValueOnce(new Error('connection lost'))
+      expect(await saveProfile(w.payload, ctx, profileForm())).toEqual({
+        status: 'error',
+        error: 'generic',
+      })
+      // The log line names the error kind only, never the form values.
+      expect(JSON.stringify(logged.mock.calls)).not.toContain('alpha.contact@example.test')
+    } finally {
+      update.mockRestore()
+      logged.mockRestore()
+    }
     expect((await profileOf(w.alpha.user.id))?.name).toBe(SENTINEL.alpha.name)
   })
 
