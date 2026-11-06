@@ -10,6 +10,7 @@ import { ActivityLogs } from './collections/ActivityLogs'
 import { Applications } from './collections/Applications'
 import { Companies } from './collections/Companies'
 import { Deliverables } from './collections/Deliverables'
+import { MagicLinks } from './collections/MagicLinks'
 import { Matches } from './collections/Matches'
 import { Payments } from './collections/Payments'
 import { Projects } from './collections/Projects'
@@ -37,6 +38,7 @@ export default buildConfig({
     Deliverables,
     Payments,
     ActivityLogs,
+    MagicLinks,
   ],
   // Content that differs per language (none yet) is stored per locale, with English as fallback.
   localization: {

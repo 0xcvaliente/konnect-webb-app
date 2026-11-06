@@ -1,5 +1,32 @@
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import nodemailer from 'nodemailer'
+import type { EmailAdapter } from 'payload'
+
+/**
+ * A plain-text version of an HTML email, for messages Payload builds itself (verification and
+ * reset emails sent through its own endpoints), which pass HTML only. Links keep their address.
+ */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<(head|style|title)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(
+      /<a\s[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi,
+      (_m, href: string, label: string) => {
+        const text = label.replace(/<[^>]+>/g, '').trim()
+        return text && text !== href ? `${text}: ${href}` : href
+      },
+    )
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|h[1-6]|div|li)>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
 
 /**
  * Email goes out over SMTP: Mailjet in production, Mailpit on a developer's machine
@@ -9,14 +36,14 @@ import nodemailer from 'nodemailer'
  * logged: no addresses, no bodies, no links. Never log an email's content, it can hold a sign-in
  * link or personal data.
  */
-export function emailAdapter() {
+export async function emailAdapter(): Promise<EmailAdapter> {
   const production = process.env.NODE_ENV === 'production'
   const host = process.env.SMTP_HOST
   const port = Number(process.env.SMTP_PORT ?? 587)
   const user = process.env.SMTP_USER
   const pass = process.env.SMTP_PASSWORD
 
-  return nodemailerAdapter({
+  const base = await nodemailerAdapter({
     defaultFromAddress: process.env.EMAIL_FROM ?? 'no-reply@konnected.no',
     defaultFromName: 'Konnected',
     // Do not open an SMTP connection when the app starts.
@@ -41,4 +68,18 @@ export function emailAdapter() {
           })
         : nodemailer.createTransport({ jsonTransport: true }),
   })
+
+  // Every email gets a plain-text part next to the HTML.
+  return (args) => {
+    const adapter = base(args)
+    return {
+      ...adapter,
+      sendEmail: (message) =>
+        adapter.sendEmail(
+          message.text || typeof message.html !== 'string'
+            ? message
+            : { ...message, text: htmlToText(message.html) },
+        ),
+    }
+  }
 }

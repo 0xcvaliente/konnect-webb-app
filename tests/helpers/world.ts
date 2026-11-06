@@ -72,8 +72,9 @@ export async function createWorld() {
   const makeUser = async (email: string, role: User['role'], extra: Partial<User> = {}) =>
     payload.create({
       collection: 'users',
-      data: { email, password: PASSWORD, role, ...extra } as never,
+      data: { email, password: PASSWORD, role, _verified: true, ...extra } as never,
       overrideAccess: true,
+      disableVerificationEmail: true,
     }) as Promise<User>
 
   const admin = await makeUser(ADMIN_EMAIL, 'admin', { emailVerifiedAt: new Date().toISOString() })

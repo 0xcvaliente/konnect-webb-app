@@ -28,3 +28,10 @@ export function isSameOrigin(request: Request, appUrl: string): boolean {
   const origin = request.headers.get('origin')
   return !origin || origin === new URL(appUrl).origin
 }
+
+/** The app's public address from APP_URL, without a trailing slash. Links in emails start here. */
+export function appUrl(): string {
+  const url = process.env.APP_URL?.replace(/\/+$/, '')
+  if (!url) throw new Error('APP_URL must be set')
+  return url
+}

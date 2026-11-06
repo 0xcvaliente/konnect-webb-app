@@ -76,6 +76,7 @@ export interface Config {
     deliverables: Deliverable;
     payments: Payment;
     'activity-logs': ActivityLog;
+    'magic-links': MagicLink;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -92,6 +93,7 @@ export interface Config {
     deliverables: DeliverablesSelect<false> | DeliverablesSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'activity-logs': ActivityLogsSelect<false> | ActivityLogsSelect<true>;
+    'magic-links': MagicLinksSelect<false> | MagicLinksSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -137,6 +139,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  password?: string | null;
   role: 'admin' | 'student' | 'company' | 'pending';
   company?: (number | null) | Company;
   language?: ('en' | 'no') | null;
@@ -150,6 +153,8 @@ export interface User {
   salt?: string | null;
   hash?: string | null;
   resetPasswordRequestedAt?: string | null;
+  _verified?: boolean | null;
+  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -159,7 +164,6 @@ export interface User {
         expiresAt: string;
       }[]
     | null;
-  password?: string | null;
   collection: 'users';
 }
 /**
@@ -322,6 +326,19 @@ export interface ActivityLog {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "magic-links".
+ */
+export interface MagicLink {
+  id: number;
+  tokenHash: string;
+  email: string;
+  expiresAt: string;
+  usedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -379,6 +396,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'activity-logs';
         value: number | ActivityLog;
+      } | null)
+    | ({
+        relationTo: 'magic-links';
+        value: number | MagicLink;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -427,6 +448,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  password?: T;
   role?: T;
   company?: T;
   language?: T;
@@ -440,6 +462,8 @@ export interface UsersSelect<T extends boolean = true> {
   salt?: T;
   hash?: T;
   resetPasswordRequestedAt?: T;
+  _verified?: T;
+  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -591,6 +615,18 @@ export interface ActivityLogsSelect<T extends boolean = true> {
   targetId?: T;
   fromStatus?: T;
   toStatus?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "magic-links_select".
+ */
+export interface MagicLinksSelect<T extends boolean = true> {
+  tokenHash?: T;
+  email?: T;
+  expiresAt?: T;
+  usedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

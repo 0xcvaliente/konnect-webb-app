@@ -208,8 +208,14 @@ describe('company', () => {
   it('a new company starts pending, is linked to its user, and cannot approve itself', async () => {
     const user = (await w.payload.create({
       collection: 'users',
-      data: { email: 'new.company@company.test', password: PASSWORD, role: 'company' },
+      data: {
+        email: 'new.company@company.test',
+        password: PASSWORD,
+        role: 'company',
+        _verified: true,
+      },
       overrideAccess: true,
+      disableVerificationEmail: true,
     })) as User
     const company = await w.payload.create({
       collection: 'companies',
