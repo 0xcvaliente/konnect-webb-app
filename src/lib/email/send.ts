@@ -5,7 +5,15 @@ import type { RenderedEmail } from './templates'
 
 /** Which email it was. The only detail about an email that may be logged, with the user id. */
 export type EmailType =
-  'verify' | 'magic_link' | 'account_exists' | 'team_no_link' | 'password_reset'
+  | 'verify'
+  | 'magic_link'
+  | 'account_exists'
+  | 'team_no_link'
+  | 'password_reset'
+  | 'method_added'
+  | 'account_paused'
+  | 'account_reactivated'
+  | 'role_changed'
 
 /**
  * Send a sign-in email after the answer has gone back to the browser, so the answer takes the

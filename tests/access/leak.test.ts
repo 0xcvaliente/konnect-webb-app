@@ -46,7 +46,8 @@ const FORBIDDEN = [
 ]
 
 const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
-  users: '{ Users(limit: 100) { docs { id email role company { id } } } }',
+  users:
+    '{ Users(limit: 100) { docs { id email name role accountStatus lastSignInAt company { id } } } }',
   'student-profiles':
     '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt privacy { shareName shareSchool shareContactEmail sharePhone } user { id email } } } }',
   companies:
@@ -144,6 +145,30 @@ describe.each(['local', 'rest', 'graphql'] as const)(
     })
   },
 )
+
+describe('the account name (users.name) never reaches a company', () => {
+  it('the student user record carries the profile name, and only the team sees it', async () => {
+    // The name is copied from the profile onto the user record (copyNameToUser).
+    const adminView = await rest.get(`users/${world.alpha.user.id}?depth=0`, adminCookie)
+    expect(adminView.json.name).toBe(SENTINEL.alpha.name)
+    const adminGql = await graphql(`{ User(id: ${world.alpha.user.id}) { name } }`, adminCookie)
+    expect(adminGql.text).toContain(SENTINEL.alpha.name)
+
+    const direct = await rest.get(`users/${world.alpha.user.id}?depth=0`, companyCookie)
+    expect([403, 404]).toContain(direct.status)
+    expect(direct.text).not.toContain(SENTINEL.alpha.name)
+    const gql = await graphql(`{ User(id: ${world.alpha.user.id}) { name email } }`, companyCookie)
+    expect(gql.text).not.toContain(SENTINEL.alpha.name)
+    await expect(
+      world.payload.findByID({
+        collection: 'users',
+        id: world.alpha.user.id,
+        user: asUser(world.companyA.user),
+        overrideAccess: false,
+      }),
+    ).rejects.toThrow()
+  })
+})
 
 describe('company cannot reach student collections directly', () => {
   it('REST: student profiles and applications are forbidden', async () => {

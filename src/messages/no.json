@@ -49,7 +49,8 @@
         "directory": "Katalog",
         "dataRequests": "Personvernforespørsler",
         "team": "Team",
-        "templates": "Avtalemaler"
+        "templates": "Avtalemaler",
+        "users": "Kontoer"
       }
     }
   },
@@ -65,7 +66,9 @@
     "signedInTitle": "Du er logget inn",
     "signedInAs": "Logget inn som {email}",
     "signOut": "Logg ut",
-    "placeholder": "Denne siden er midlertidig. Oversiktene kommer i senere steg."
+    "placeholder": "Denne siden er midlertidig. Oversiktene kommer i senere steg.",
+    "teamEndedTitle": "Teamtilgangen din er avsluttet",
+    "teamEndedBody": "Denne adressen står ikke lenger på Konnecteds teamliste. Spør teamet hvis du trenger tilgang igjen."
   },
   "ChooseRole": {
     "title": "Hvordan vil du bruke Konnected?",
@@ -116,7 +119,11 @@
     "spamHint": "Ingenting i innboksen? Se i søppelpostmappen.",
     "verifySentTitle": "Bekreft e-postadressen din",
     "verifySentBody": "Vi har sendt en melding til <b>{email}</b>. Åpne lenken i den for å bekrefte adressen. Etter det kan du logge inn med passordet ditt.",
-    "verifySentNote": "Du kan ikke logge inn med passord før du har bekreftet e-postadressen."
+    "verifySentNote": "Du kan ikke logge inn med passord før du har bekreftet e-postadressen.",
+    "signedOutTitle": "Du er logget ut.",
+    "signedOutBody": "Logg inn igjen for å fortsette.",
+    "sessionEndedTitle": "Du ble logget ut.",
+    "sessionEndedBody": "Økten din er avsluttet. Logg inn igjen for å fortsette."
   },
   "AuthErrors": {
     "emailInvalid": "Skriv inn en e-postadresse, for eksempel navn@eksempel.no.",
@@ -131,7 +138,9 @@
     "unverifiedTitle": "Bekreft e-postadressen først",
     "unverified": "Vi har sendt deg en ny lenke. Åpne den for å bekrefte adressen, og logg så inn.",
     "tooMany": "For mange forsøk. Vent noen minutter og prøv igjen.",
-    "generic": "Noe gikk galt. Prøv igjen."
+    "generic": "Noe gikk galt. Prøv igjen.",
+    "pausedTitle": "Denne kontoen er satt på pause",
+    "paused": "Skriv til Konnected hvis du mener dette er feil."
   },
   "MagicLink": {
     "title": "Logg inn på Konnected",
@@ -175,7 +184,8 @@
   "Email": {
     "common": {
       "linkFallback": "Hvis knappen ikke virker, kan du kopiere denne adressen inn i nettleseren:",
-      "footer": "Konnected, konnected.no. Du får denne e-posten fordi adressen ble brukt på innloggingssiden til Konnected."
+      "footer": "Konnected, konnected.no. Du får denne e-posten fordi adressen ble brukt på innloggingssiden til Konnected.",
+      "accountFooter": "Konnected, konnected.no. Du får denne e-posten fordi du har en konto hos Konnected."
     },
     "verify": {
       "subject": "Bekreft e-postadressen din for Konnected",
@@ -213,6 +223,38 @@
       "body": "Noen ba om å tilbakestille passordet for denne Konnected-kontoen. Bruk knappen innen en time. Lenken virker én gang.",
       "button": "Velg nytt passord",
       "ignore": "Hvis det ikke var deg, kan du se bort fra denne e-posten. Passordet ditt er ikke endret."
+    },
+    "methodAdded": {
+      "subject": "En ny måte å logge inn på ble lagt til",
+      "heading": "En ny måte å logge inn på Konnected",
+      "google": "Google er nå koblet til Konnected-kontoen din. Fra nå av kan du logge inn med Google.",
+      "password": "Det ble satt et passord for Konnected-kontoen din. Fra nå av kan du logge inn med e-postadressen din og dette passordet.",
+      "body": "Konnected kobler en innloggingsmåte bare når den bruker den samme bekreftede e-postadressen som kontoen din.",
+      "button": "Åpne Konnected",
+      "notYou": "Hvis dette ikke var deg, skriv til Konnected-teamet med en gang, så sikrer vi kontoen din."
+    },
+    "accountPaused": {
+      "subject": "Konnected-kontoen din er satt på pause",
+      "heading": "Kontoen din er satt på pause",
+      "body": "Konnected-teamet har satt kontoen din på pause. Du kan ikke logge inn før teamet aktiverer den igjen. Ingenting er slettet.",
+      "contact": "Hvis du mener dette er feil, skriv til Konnected-teamet.",
+      "ignore": "Du får denne e-posten slik at du vet hvorfor du ikke kan logge inn."
+    },
+    "accountReactivated": {
+      "subject": "Konnected-kontoen din er aktiv igjen",
+      "heading": "Kontoen din er aktiv igjen",
+      "body": "Konnected-teamet har aktivert kontoen din igjen. Du kan logge inn som før.",
+      "button": "Logg inn på Konnected",
+      "ignore": "Hvis du ikke ventet dette, skriv til Konnected-teamet."
+    },
+    "roleChanged": {
+      "subject": "Kontotypen din hos Konnected ble endret",
+      "heading": "Kontotypen din ble endret",
+      "student": "Konnected-teamet endret kontoen din til en studentkonto.",
+      "company": "Konnected-teamet endret kontoen din til en bedriftskonto.",
+      "body": "Svarene du ga for den andre kontotypen ble fjernet. Neste gang du logger inn, stiller Konnected spørsmålene for den nye kontotypen.",
+      "button": "Åpne Konnected",
+      "ignore": "Hvis du ikke ba om dette, skriv til Konnected-teamet."
     }
   },
   "DesignGuide": {
@@ -601,6 +643,168 @@
       "generic": "Noe gikk galt, og ingenting ble lagret. Prøv igjen.",
       "forbidden": "Økten din er utløpt. Logg inn på nytt.",
       "notEditable": "Bedriften kan ikke lenger endres her. Skriv til Konnected-teamet."
+    }
+  },
+  "SignInMethods": {
+    "google": "Google",
+    "link": "E-postlenke",
+    "password": "Passord"
+  },
+  "AccountStatus": {
+    "active": "Aktiv",
+    "paused": "På pause"
+  },
+  "RoleWords": {
+    "student": "student",
+    "company": "bedrift",
+    "pending": "ingen rolle",
+    "admin": "team"
+  },
+  "MethodAdded": {
+    "googleTitle": "Google er nå koblet til kontoen din",
+    "passwordTitle": "Kontoen din har nå et passord",
+    "googleLede": "Konnected-kontoen din og Google-kontoen din bruker den samme bekreftede e-postadressen, {email}, så Google er nå enda en måte å logge inn på.",
+    "passwordLede": "Det ble satt et passord for {email}, så du kan også logge inn med e-postadressen og det passordet.",
+    "methodsTitle": "Måter du kan logge inn på",
+    "new": "Ny",
+    "continue": "Fortsett til Konnected",
+    "note": "Konnected kobler innloggingsmåter bare når de bruker den samme bekreftede e-postadressen, og sender deg en e-post når en blir lagt til.",
+    "notYou": "Ikke deg? Logg ut, og skriv så til Konnected-teamet.",
+    "signOut": "Logg ut"
+  },
+  "TeamHome": {
+    "title": "I dag",
+    "lede": "Teamets daglige arbeid. Køene for godkjenninger, matching og betalinger kommer hit etter hvert.",
+    "twoStepTitle": "Ha totrinnsbekreftelse på for Google-kontoen din",
+    "twoStepBody": "Teamkontoer logger inn bare med Google, så Google-kontoen din beskytter alle opplysninger om bedrifter og studenter. Konnected kan ikke se om totrinnsbekreftelse er på: sjekk det i Google-kontoen din.",
+    "twoStepLink": "Åpne sikkerhetsinnstillingene i Google",
+    "accountsTitle": "Kontoer",
+    "accountsBody": "Finn en student- eller bedriftskonto, rett en feil rolle, sett en konto på pause eller logg den ut overalt.",
+    "accountsLink": "Åpne kontoer",
+    "panelTitle": "Adminpanel for innhold",
+    "panelBody": "Payloads eget adminpanel ligger fortsatt på /admin, som reserve for teamet.",
+    "panelLink": "Åpne adminpanelet"
+  },
+  "TeamAccounts": {
+    "title": "Kontoer",
+    "lede": "Alle som har registrert seg. Åpne en konto for å rette rollen, sette den på pause eller logge den ut overalt.",
+    "searchLabel": "Søk i kontoer",
+    "searchPlaceholder": "Søk på navn eller e-post",
+    "search": "Søk",
+    "filterLabel": "Filtrer kontoer",
+    "filters": {
+      "all": "Alle",
+      "student": "Studenter",
+      "company": "Bedrifter",
+      "pending": "Ingen rolle ennå",
+      "admin": "Team",
+      "paused": "På pause"
+    },
+    "count": "{count, plural, one {# konto} other {# kontoer}}",
+    "name": "Navn",
+    "role": "Rolle",
+    "status": "Status",
+    "signedUp": "Registrert",
+    "noName": "Ikke noe navn ennå",
+    "emptyTitle": "Ingen kontoer passer.",
+    "emptyBody": "Tøm søket eller velg et annet filter.",
+    "pagination": "Sider",
+    "previous": "Forrige",
+    "next": "Neste",
+    "page": "Side {page} av {pages}"
+  },
+  "TeamAccount": {
+    "back": "Tilbake til kontoer",
+    "signedUp": "Registrert {date}.",
+    "work": {
+      "student": "{count, plural, =0 {Ingen søknader ennå.} one {# søknad.} other {# søknader.}}",
+      "company": "{count, plural, =0 {Ingen prosjekter ennå.} one {# prosjekt.} other {# prosjekter.}}",
+      "noProfile": "Ingen studentprofil ennå.",
+      "noCompany": "Ingen bedriftsopplysninger ennå.",
+      "pending": "Har ikke valgt rolle ennå.",
+      "admin": "Medlem av Konnected-teamet."
+    },
+    "roleTitle": "Rolle",
+    "roleBody": "Rollen kommer fra Konnecteds egne opplysninger, ikke fra innloggingsmåten. Endre den bare når noen valgte feil ved registrering.",
+    "changeTo": {
+      "student": "Endre til student",
+      "company": "Endre til bedrift"
+    },
+    "confirmTitle": {
+      "student": "Endre {name} til student?",
+      "company": "Endre {name} til bedrift?"
+    },
+    "confirmRemoved": {
+      "student": "Bedriftsopplysningene {name} ga, blir fjernet.",
+      "company": "Studentprofilen og CV-en {name} ga, blir fjernet."
+    },
+    "confirmNext": {
+      "student": "Ved neste innlogging svarer {name} på spørsmålene for studenter.",
+      "company": "Ved neste innlogging svarer {name} på spørsmålene for bedrifter."
+    },
+    "confirmReview": {
+      "student": "Konnected går gjennom studentprofilen før matching, som for alle.",
+      "company": "Konnected godkjenner bedriften før den kan sende inn prosjekter."
+    },
+    "confirmLog": "{name} får en e-post, og endringen skrives i aktivitetsloggen.",
+    "confirmChange": "Bekreft endring",
+    "cancel": "Avbryt",
+    "roleLocked": "Ikke mulig når kontoen har søknader eller prosjekter.",
+    "rolePending": "Denne kontoen har ikke valgt rolle ennå. Personen velger den ved neste innlogging.",
+    "roleTeam": "Teamkontoer kommer fra teamlisten. Rollen kan ikke endres her.",
+    "adminNote": "Admintilgang kommer bare fra teamlisten, aldri fra denne siden.",
+    "roleChanged": {
+      "student": "Rollen er endret til student. {name} får en e-post.",
+      "company": "Rollen er endret til bedrift. {name} får en e-post."
+    },
+    "pauseTitle": "Sett kontoen på pause",
+    "pauseBody": "Ved misbruk eller mistanke om sikkerhetsproblemer. {name} kan ikke logge inn før teamet aktiverer kontoen igjen. Ingenting slettes.",
+    "pause": "Sett på pause",
+    "reason": "Begrunnelse",
+    "reasonHint": "Lagres i aktivitetsloggen. {name} får en e-post om at kontoen er satt på pause, uten begrunnelsen.",
+    "pauseConfirm": "Sett på pause og logg ut",
+    "pausedToast": "Kontoen er satt på pause. {name} er logget ut overalt.",
+    "pausedTitle": "Kontoen er satt på pause",
+    "pausedBody": "{name} kan ikke logge inn. Aktiver kontoen igjen når saken er avklart.",
+    "pausedReason": "Begrunnelse: {reason}",
+    "reactivate": "Aktiver kontoen igjen",
+    "reactivatedToast": "Kontoen er aktiv igjen. {name} får en e-post.",
+    "pauseTeam": "Teamkontoer kan ikke settes på pause her. Ta adressen av teamlisten i stedet.",
+    "signInTitle": "Innlogging",
+    "email": "E-post",
+    "verified": "Bekreftet",
+    "notVerified": "Ikke bekreftet ennå",
+    "methods": "Måter",
+    "lastSignIn": "Siste innlogging",
+    "never": "Ikke ennå",
+    "signOutEverywhere": "Logg ut overalt",
+    "signOutTitle": "Logge {name} ut overalt?",
+    "signOutBody": "{name} blir logget ut på alle enheter og må logge inn igjen.",
+    "signOutSelf": "Dette er din egen konto: du blir også logget ut.",
+    "signedOutToast": "{name} er logget ut på alle enheter.",
+    "recovery": "Gjenoppretting av konto, for noen som har mistet tilgang til e-posten sin, er ikke bestemt ennå.",
+    "activityTitle": "Aktivitet",
+    "activityEmpty": "Ingenting er logget ennå.",
+    "system": "Systemet",
+    "actions": {
+      "create": "Konto opprettet",
+      "role": "Rollen endret fra {from} til {to}",
+      "paused": "Satt på pause",
+      "reactivated": "Aktivert igjen",
+      "signOutEverywhere": "Logget ut overalt",
+      "methodGoogle": "Google lagt til som innloggingsmåte",
+      "methodPassword": "Passord satt",
+      "delete": "Slettet",
+      "other": "Endret"
+    },
+    "errors": {
+      "forbidden": "Bare Konnected-teamet kan gjøre dette.",
+      "notFound": "Denne kontoen finnes ikke lenger.",
+      "hasWork": "Denne kontoen har søknader eller prosjekter nå, så rollen kan ikke endres.",
+      "notAllowed": "Denne endringen er ikke mulig for denne kontoen.",
+      "reasonRequired": "Skriv en begrunnelse.",
+      "reasonTooLong": "Bruk høyst {max} tegn.",
+      "generic": "Noe gikk galt. Prøv igjen."
     }
   }
 }

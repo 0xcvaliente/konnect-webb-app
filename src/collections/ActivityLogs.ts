@@ -21,11 +21,18 @@ export const ActivityLogs: CollectionConfig = {
       name: 'action',
       type: 'select',
       required: true,
-      options: ['create', 'status_change', 'delete'],
+      options: ['create', 'status_change', 'delete', 'sign_out_everywhere', 'sign_in_method_added'],
     },
     { name: 'targetCollection', type: 'text', required: true, index: true },
-    { name: 'targetId', type: 'text', required: true },
+    { name: 'targetId', type: 'text', required: true, index: true },
+    // Which field a status change was on, when a collection logs more than one (users: `role`
+    // and `accountStatus`). Empty on rows written before it existed: then it is the collection's
+    // main status field.
+    { name: 'field', type: 'text' },
     { name: 'fromStatus', type: 'text' },
     { name: 'toStatus', type: 'text' },
+    // The team's reason for an action, for example why an account was paused. Admin-only like the
+    // rest of the log. Written by the server from what the team member typed.
+    { name: 'note', type: 'textarea', maxLength: 500 },
   ],
 }

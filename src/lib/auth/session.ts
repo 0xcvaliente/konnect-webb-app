@@ -1,6 +1,8 @@
 import { createLocalReq, getFieldsToSign, jwtSign, type Payload } from 'payload'
 import { addSessionToUser, generatePayloadCookie } from 'payload/shared'
 
+import { AccountPausedError, isPaused } from './paused'
+
 /** The Payload session cookie as separate parts, for `cookies().set()` in a Server Action. */
 export type SessionCookie = {
   name: string
@@ -39,7 +41,8 @@ export function sessionCookieFor(payload: Payload, token: string): SessionCookie
  * user, sign a JWT that carries that session id, and build the cookie. Because it is a real
  * Payload session, the admin panel, REST, GraphQL and logout all work without a custom strategy.
  *
- * Returns the signed token. Never log it: it is the user's session.
+ * A paused account is refused (AccountPausedError). Returns the signed token. Never log it: it is
+ * the user's session.
  */
 export async function createSessionToken(payload: Payload, userId: number): Promise<string> {
   const collectionConfig = payload.collections.users.config
@@ -52,6 +55,8 @@ export async function createSessionToken(payload: Payload, userId: number): Prom
     req,
   })
   if (!user) throw new Error('Cannot start a session for a user that does not exist')
+  // A paused account gets no session, whichever way it proved who it is.
+  if (isPaused(user as { accountStatus?: string })) throw new AccountPausedError()
 
   const { sid } = await addSessionToUser({
     collectionConfig,
@@ -69,6 +74,14 @@ export async function createSessionToken(payload: Payload, userId: number): Prom
     fieldsToSign,
     secret: payload.secret,
     tokenExpiration: collectionConfig.auth.tokenExpiration,
+  })
+  // Bypass: a direct write of the server-kept sign-in time (admin-only field in the API).
+  await payload.db.updateOne({
+    collection: 'users',
+    where: { id: { equals: userId } },
+    data: { lastSignInAt: new Date().toISOString() },
+    returning: false,
+    req,
   })
   return token
 }

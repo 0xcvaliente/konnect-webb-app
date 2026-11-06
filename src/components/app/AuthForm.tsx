@@ -48,6 +48,7 @@ export function ErrorBanner({ error }: { error?: AuthError }) {
     invalid_credentials: { title: t('signInFailed'), body: t('signInFailedHint') },
     locked: { title: t('lockedTitle'), body: t('locked') },
     unverified: { title: t('unverifiedTitle'), body: t('unverified') },
+    paused: { title: t('pausedTitle'), body: t('paused') },
     too_many: { title: t('tooMany') },
     generic: { title: t('generic') },
   }

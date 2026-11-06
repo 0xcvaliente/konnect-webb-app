@@ -9,6 +9,7 @@ import { getPayload } from 'payload'
 import { Banner } from '@/components/app/Banner'
 import type { CvInfo } from '@/components/app/CvField'
 import { SiteShell } from '@/components/app/SiteShell'
+import { accountMenuUser } from '@/lib/account'
 import { redirect } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { SHARE_KEYS, type ShareKey } from '@/lib/students/fields'
@@ -70,7 +71,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   return (
     <SiteShell
       role="student"
-      user={{ name: profile.name, detail: user.email }}
+      user={accountMenuUser({ name: user.name || profile.name, email: user.email })}
       title={t('title')}
       lede={t('lede')}
       overlap={false}

@@ -5,6 +5,8 @@ import type { Payload } from 'payload'
 import { isAdminEmail } from '@/access/adminEmails'
 import type { User } from '@/payload-types'
 
+import { isPaused } from './paused'
+
 import type { GoogleClaims } from './google'
 import type { AuthErrorCode } from './messages'
 import type { PasswordContext } from './password'
@@ -72,7 +74,13 @@ async function proveEmail(payload: Payload, user: User, extra: Partial<User> = {
 /** A new account with a proved email and no role yet. Payload sends no verification email. */
 const createProvedAccount = async (
   payload: Payload,
-  data: { email: string; role: User['role']; googleSub?: string; language?: User['language'] },
+  data: {
+    email: string
+    role: User['role']
+    googleSub?: string
+    language?: User['language']
+    name?: string
+  },
 ): Promise<User> =>
   (await payload.create({
     collection: 'users',
@@ -106,39 +114,62 @@ export async function completeGoogleLogin(payload: Payload, claims: GoogleClaims
   if (!claims.emailVerified || !claims.email) throw new AuthFlowError('unverified_email')
   const email = normalizeEmail(claims.email)
   const now = new Date().toISOString()
+  // Team members get their name from Google; students and companies give it in the onboarding.
+  const googleName = claims.name?.trim().slice(0, 120) || undefined
 
   const promoteIfAdmin = async (user: User): Promise<User> => {
-    if (user.role === 'admin' || !isAdminEmail(user.email)) return user
+    const team = user.role === 'admin' || isAdminEmail(user.email)
+    if (!team) return user
+    const data: Partial<User> = {}
+    if (user.role !== 'admin') {
+      data.role = 'admin'
+      data.emailVerifiedAt = user.emailVerifiedAt ?? now
+    }
+    if (googleName && user.name !== googleName) data.name = googleName
+    if (!Object.keys(data).length) return user
     return (await payload.update({
       collection: 'users',
       id: user.id,
-      data: { role: 'admin', emailVerifiedAt: user.emailVerifiedAt ?? now },
+      data,
       depth: 0,
       overrideAccess: true,
     })) as User
   }
 
+  /**
+   * A paused account proves who it is like anyone else, but gets no session. Nor does a team
+   * account whose address was taken off the ADMIN_EMAILS list: its access has ended.
+   */
+  const unlessPaused = (user: User): User => {
+    if (isPaused(user)) throw new AuthFlowError('account_paused')
+    if (user.role === 'admin' && !isAdminEmail(user.email)) throw new AuthFlowError('team_removed')
+    return user
+  }
+
   const bySub = await findUser(payload, { googleSub: { equals: claims.sub } })
-  if (bySub) return promoteIfAdmin(bySub)
+  if (bySub) return promoteIfAdmin(unlessPaused(bySub))
 
   const byEmail = await findUser(payload, { email: { equals: email } })
   if (byEmail) {
     if (byEmail.googleSub && byEmail.googleSub !== claims.sub) {
       throw new AuthFlowError('account_conflict')
     }
+    unlessPaused(byEmail)
     return promoteIfAdmin(await proveEmail(payload, byEmail, { googleSub: claims.sub }))
   }
 
+  const team = isAdminEmail(email)
   try {
     return await createProvedAccount(payload, {
       email,
       googleSub: claims.sub,
-      role: isAdminEmail(email) ? 'admin' : 'pending',
+      role: team ? 'admin' : 'pending',
+      ...(team && googleName ? { name: googleName } : {}),
     })
   } catch (error) {
     // Two callbacks for the same new person at the same moment: the second hits the unique index.
     const raced = await findUser(payload, { googleSub: { equals: claims.sub } })
-    if (raced) return raced
+    if (raced) return unlessPaused(raced)
     throw error
   }
 }
@@ -147,7 +178,8 @@ export async function completeGoogleLogin(payload: Payload, claims: GoogleClaims
  * Find or create the account for someone who just used an email sign-in link, which proves they
  * control the address. Same linking rules as Google: an existing account is linked by this
  * verified email, an account that never proved its email loses its password and sessions, and a
- * new address gets a `pending` account. Never for admins (Google only): returns null.
+ * new address gets a `pending` account. Never for admins (Google only): returns null. A paused
+ * account throws AuthFlowError('account_paused').
  *
  * Bypass: `overrideAccess: true`, for the same reason as completeGoogleLogin.
  */
@@ -159,6 +191,7 @@ export async function completeEmailLinkLogin(
   const email = normalizeEmail(rawEmail)
   if (isAdminEmail(email)) return null
   const existing = await findUser(payload, { email: { equals: email } })
+  if (existing && isPaused(existing)) throw new AuthFlowError('account_paused')
   if (existing) return existing.role === 'admin' ? null : proveEmail(payload, existing)
   try {
     return await createProvedAccount(payload, { email, role: 'pending', language })

@@ -15,7 +15,7 @@ import {
 } from '@/lib/email/templates'
 import type { User } from '@/payload-types'
 
-import { completeEmailLinkLogin } from './accounts'
+import { AuthFlowError, completeEmailLinkLogin } from './accounts'
 import { appUrl } from './env'
 import {
   dummyPasswordHash,
@@ -24,6 +24,7 @@ import {
   type PasswordContext,
   type PasswordProblem,
 } from './password'
+import { AccountPausedError } from './paused'
 import { clearRateLimit, limitReached, rateLimited } from './rateLimit'
 import { createSession, type SessionCookie, sessionCookieFor } from './session'
 import { withTimingFloor } from './timing'
@@ -77,7 +78,13 @@ const hitBoth = (
 }
 
 export type AuthError =
-  'too_many' | 'invalid_credentials' | 'locked' | 'unverified' | 'invalid_link' | 'generic'
+  | 'too_many'
+  | 'invalid_credentials'
+  | 'locked'
+  | 'unverified'
+  | 'invalid_link'
+  | 'paused'
+  | 'generic'
 export type FieldErrors = {
   email?: 'invalid'
   password?: PasswordProblem | 'required'
@@ -143,6 +150,14 @@ export async function requestMagicLink(
       })
       return { ok: true }
     }
+
+    // Only the newest link works (owner decision): links sent earlier for this address and not
+    // used yet stop working now.
+    await payload.delete({
+      collection: 'magic-links',
+      where: { and: [{ email: { equals: email } }, { usedAt: { exists: false } }] },
+      overrideAccess: true,
+    })
 
     // 32 random bytes. Only the SHA-256 is stored; the token itself is only in the email.
     const token = randomBytes(32).toString('base64url')
@@ -216,9 +231,18 @@ export async function consumeMagicLink(
   })
   if (!link) return { ok: false, error: 'invalid_link' }
 
-  const user = await completeEmailLinkLogin(payload, String(link.email), locale)
-  if (!user) return { ok: false, error: 'invalid_link' }
-  return { ok: true, user, cookie: await createSession(payload, user.id) }
+  try {
+    const user = await completeEmailLinkLogin(payload, String(link.email), locale)
+    if (!user) return { ok: false, error: 'invalid_link' }
+    return { ok: true, user, cookie: await createSession(payload, user.id) }
+  } catch (error) {
+    // The link proved the address, so its owner may learn that the account is paused.
+    if (error instanceof AccountPausedError) return { ok: false, error: 'paused' }
+    if (error instanceof AuthFlowError && error.code === 'account_paused') {
+      return { ok: false, error: 'paused' }
+    }
+    throw error
+  }
 }
 
 // ---------- Password sign-up ----------
@@ -364,6 +388,11 @@ export async function signInWithPassword(
         if (user) await sendVerification(payload, user, locale)
       }
       return { ok: false, error: 'unverified' }
+    }
+    // Only after the right password (Users `beforeLogin`), so only the owner learns it.
+    if (name === 'AccountPaused') {
+      clearRateLimit(failures)
+      return { ok: false, error: 'paused' }
     }
     if (name === 'AuthenticationError' || name === 'LockedAuth') {
       // Payload's own lock is treated like a wrong password, so "locked" means only our

@@ -49,7 +49,8 @@
         "directory": "Directory",
         "dataRequests": "Data requests",
         "team": "Team",
-        "templates": "Agreement templates"
+        "templates": "Agreement templates",
+        "users": "Accounts"
       }
     }
   },
@@ -65,7 +66,9 @@
     "signedInTitle": "You are signed in",
     "signedInAs": "Signed in as {email}",
     "signOut": "Sign out",
-    "placeholder": "This page is a placeholder. The dashboards come in later steps."
+    "placeholder": "This page is a placeholder. The dashboards come in later steps.",
+    "teamEndedTitle": "Your team access has ended",
+    "teamEndedBody": "This address is no longer on the Konnected team list. Ask the team if you need access again."
   },
   "ChooseRole": {
     "title": "How will you use Konnected?",
@@ -116,7 +119,11 @@
     "spamHint": "Nothing in your inbox? Look in your spam folder.",
     "verifySentTitle": "Confirm your email",
     "verifySentBody": "We sent a message to <b>{email}</b>. Open the link in it to confirm your address. After that you can sign in with your password.",
-    "verifySentNote": "You cannot sign in with a password before you confirm your email."
+    "verifySentNote": "You cannot sign in with a password before you confirm your email.",
+    "signedOutTitle": "You are signed out.",
+    "signedOutBody": "Sign in again to continue.",
+    "sessionEndedTitle": "You were signed out.",
+    "sessionEndedBody": "Your session has ended. Sign in again to continue."
   },
   "AuthErrors": {
     "emailInvalid": "Enter an email address, like name@example.no.",
@@ -131,7 +138,9 @@
     "unverifiedTitle": "Confirm your email first",
     "unverified": "We sent you a new link. Open it to confirm your address, then sign in.",
     "tooMany": "Too many attempts. Please wait a few minutes and try again.",
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "pausedTitle": "This account is paused",
+    "paused": "Write to Konnected if you think this is a mistake."
   },
   "MagicLink": {
     "title": "Sign in to Konnected",
@@ -175,7 +184,8 @@
   "Email": {
     "common": {
       "linkFallback": "If the button does not work, copy this address into your browser:",
-      "footer": "Konnected, konnected.no. You get this email because this address was used on the Konnected sign-in page."
+      "footer": "Konnected, konnected.no. You get this email because this address was used on the Konnected sign-in page.",
+      "accountFooter": "Konnected, konnected.no. You get this email because you have a Konnected account."
     },
     "verify": {
       "subject": "Confirm your email for Konnected",
@@ -213,6 +223,38 @@
       "body": "Someone asked to reset the password for this Konnected account. Use the button within an hour. The link works once.",
       "button": "Choose a new password",
       "ignore": "If you did not ask for this, ignore this email. Your password has not changed."
+    },
+    "methodAdded": {
+      "subject": "A new way to sign in was added",
+      "heading": "A new way to sign in to Konnected",
+      "google": "Google is now linked to your Konnected account. From now on you can sign in with Google.",
+      "password": "A password was set for your Konnected account. From now on you can sign in with your email and this password.",
+      "body": "Konnected links a way to sign in only when it uses the same verified email address as your account.",
+      "button": "Open Konnected",
+      "notYou": "If this was not you, write to the Konnected team right away so we can secure your account."
+    },
+    "accountPaused": {
+      "subject": "Your Konnected account is paused",
+      "heading": "Your account is paused",
+      "body": "The Konnected team has paused your account. You cannot sign in until the team makes it active again. Nothing has been deleted.",
+      "contact": "If you think this is a mistake, write to the Konnected team.",
+      "ignore": "You get this email so you know why you cannot sign in."
+    },
+    "accountReactivated": {
+      "subject": "Your Konnected account is active again",
+      "heading": "Your account is active again",
+      "body": "The Konnected team has made your account active again. You can sign in as before.",
+      "button": "Sign in to Konnected",
+      "ignore": "If you did not expect this, write to the Konnected team."
+    },
+    "roleChanged": {
+      "subject": "Your Konnected account type was changed",
+      "heading": "Your account type was changed",
+      "student": "The Konnected team changed your account to a student account.",
+      "company": "The Konnected team changed your account to a company account.",
+      "body": "The answers you gave for the other account type were removed. Next time you sign in, Konnected asks the questions for your new account type.",
+      "button": "Open Konnected",
+      "ignore": "If you did not ask for this, write to the Konnected team."
     }
   },
   "DesignGuide": {
@@ -601,6 +643,168 @@
       "generic": "Something went wrong and nothing was saved. Try again.",
       "forbidden": "Your session has ended. Sign in again.",
       "notEditable": "Your company can no longer be changed here. Write to the Konnected team."
+    }
+  },
+  "SignInMethods": {
+    "google": "Google",
+    "link": "Email link",
+    "password": "Password"
+  },
+  "AccountStatus": {
+    "active": "Active",
+    "paused": "Paused"
+  },
+  "RoleWords": {
+    "student": "student",
+    "company": "company",
+    "pending": "no role",
+    "admin": "team"
+  },
+  "MethodAdded": {
+    "googleTitle": "Google is now linked to your account",
+    "passwordTitle": "Your account now has a password",
+    "googleLede": "Your Konnected account and your Google account use the same verified email, {email}, so Google is now one more way to sign in.",
+    "passwordLede": "A password was set for {email}, so you can also sign in with your email and that password.",
+    "methodsTitle": "Ways you can sign in",
+    "new": "New",
+    "continue": "Continue to Konnected",
+    "note": "Konnected links ways to sign in only when they use the same verified email, and emails you when one is added.",
+    "notYou": "Not you? Sign out, then write to the Konnected team.",
+    "signOut": "Sign out"
+  },
+  "TeamHome": {
+    "title": "Today",
+    "lede": "The team's daily work. The queues for approvals, matching and payments are added here step by step.",
+    "twoStepTitle": "Keep 2-step verification on for your Google account",
+    "twoStepBody": "Team accounts sign in with Google only, so your Google account protects every company and student record. Konnected cannot see whether 2-step verification is on: check it in your Google account.",
+    "twoStepLink": "Open Google security settings",
+    "accountsTitle": "Accounts",
+    "accountsBody": "Find a student or company account, fix a wrong role, pause an account or sign it out everywhere.",
+    "accountsLink": "Open accounts",
+    "panelTitle": "Content admin panel",
+    "panelBody": "Payload's own admin panel is still at /admin, as a fallback for the team.",
+    "panelLink": "Open the admin panel"
+  },
+  "TeamAccounts": {
+    "title": "Accounts",
+    "lede": "Everyone who has signed up. Open an account to fix its role, pause it or sign it out everywhere.",
+    "searchLabel": "Search accounts",
+    "searchPlaceholder": "Search by name or email",
+    "search": "Search",
+    "filterLabel": "Filter accounts",
+    "filters": {
+      "all": "All",
+      "student": "Students",
+      "company": "Companies",
+      "pending": "No role yet",
+      "admin": "Team",
+      "paused": "Paused"
+    },
+    "count": "{count, plural, one {# account} other {# accounts}}",
+    "name": "Name",
+    "role": "Role",
+    "status": "Status",
+    "signedUp": "Signed up",
+    "noName": "No name yet",
+    "emptyTitle": "No accounts match.",
+    "emptyBody": "Clear the search or pick another filter.",
+    "pagination": "Pages",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {pages}"
+  },
+  "TeamAccount": {
+    "back": "Back to accounts",
+    "signedUp": "Signed up {date}.",
+    "work": {
+      "student": "{count, plural, =0 {No applications yet.} one {# application.} other {# applications.}}",
+      "company": "{count, plural, =0 {No projects yet.} one {# project.} other {# projects.}}",
+      "noProfile": "No student profile yet.",
+      "noCompany": "No company details yet.",
+      "pending": "Has not picked a role yet.",
+      "admin": "Konnected team member."
+    },
+    "roleTitle": "Role",
+    "roleBody": "The role comes from Konnected's own records, not from the sign-in method. Change it only when someone picked the wrong one at sign-up.",
+    "changeTo": {
+      "student": "Change to student",
+      "company": "Change to company"
+    },
+    "confirmTitle": {
+      "student": "Change {name} to student?",
+      "company": "Change {name} to company?"
+    },
+    "confirmRemoved": {
+      "student": "The company details {name} gave are removed.",
+      "company": "The student profile and CV {name} gave are removed."
+    },
+    "confirmNext": {
+      "student": "At the next sign-in, {name} answers the student questions.",
+      "company": "At the next sign-in, {name} answers the company questions."
+    },
+    "confirmReview": {
+      "student": "Konnected reviews the student profile before matching, as for everyone.",
+      "company": "Konnected approves the company before it can submit projects."
+    },
+    "confirmLog": "{name} gets an email, and the change is written to the activity log.",
+    "confirmChange": "Confirm change",
+    "cancel": "Cancel",
+    "roleLocked": "Not possible once an account has applications or projects.",
+    "rolePending": "This account has not picked a role yet. The person picks it at the next sign-in.",
+    "roleTeam": "Team accounts come from the team list. Their role cannot change here.",
+    "adminNote": "Admin access comes only from the team list, never from this page.",
+    "roleChanged": {
+      "student": "Role changed to student. {name} gets an email.",
+      "company": "Role changed to company. {name} gets an email."
+    },
+    "pauseTitle": "Pause the account",
+    "pauseBody": "For misuse or a security worry. {name} cannot sign in until the team reactivates the account. Nothing is deleted.",
+    "pause": "Pause account",
+    "reason": "Reason",
+    "reasonHint": "Kept in the activity log. {name} gets an email that the account is paused, without the reason.",
+    "pauseConfirm": "Pause and sign out",
+    "pausedToast": "Account paused. {name} is signed out everywhere.",
+    "pausedTitle": "The account is paused",
+    "pausedBody": "{name} cannot sign in. Reactivate the account when the matter is settled.",
+    "pausedReason": "Reason: {reason}",
+    "reactivate": "Reactivate account",
+    "reactivatedToast": "Account active again. {name} gets an email.",
+    "pauseTeam": "Team accounts cannot be paused here. Take the address off the team list instead.",
+    "signInTitle": "Sign-in",
+    "email": "Email",
+    "verified": "Verified",
+    "notVerified": "Not verified yet",
+    "methods": "Methods",
+    "lastSignIn": "Last sign-in",
+    "never": "Not yet",
+    "signOutEverywhere": "Sign out everywhere",
+    "signOutTitle": "Sign {name} out everywhere?",
+    "signOutBody": "{name} is signed out on every device and has to sign in again.",
+    "signOutSelf": "This is your own account: you are signed out too.",
+    "signedOutToast": "{name} is signed out on every device.",
+    "recovery": "Account recovery, for someone who has lost access to their email, is not decided yet.",
+    "activityTitle": "Activity",
+    "activityEmpty": "Nothing logged yet.",
+    "system": "System",
+    "actions": {
+      "create": "Account created",
+      "role": "Role changed from {from} to {to}",
+      "paused": "Paused",
+      "reactivated": "Reactivated",
+      "signOutEverywhere": "Signed out everywhere",
+      "methodGoogle": "Google added as a way to sign in",
+      "methodPassword": "Password set",
+      "delete": "Deleted",
+      "other": "Changed"
+    },
+    "errors": {
+      "forbidden": "Only the Konnected team can do this.",
+      "notFound": "This account no longer exists.",
+      "hasWork": "This account has applications or projects now, so its role cannot change.",
+      "notAllowed": "This change is not possible for this account.",
+      "reasonRequired": "Write a reason.",
+      "reasonTooLong": "Use at most {max} characters.",
+      "generic": "Something went wrong. Please try again."
     }
   }
 }

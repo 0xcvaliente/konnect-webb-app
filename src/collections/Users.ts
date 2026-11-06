@@ -2,10 +2,29 @@ import type { PayloadRequest, Where } from 'payload'
 import { APIError, AuthenticationError, type CollectionConfig } from 'payload'
 
 import { isAdminEmail } from '@/access/adminEmails'
-import { adminOnlyField, isAdmin } from '@/access/roles'
+import { adminOnlyField, effectiveRole, isAdmin, type Role } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
-import { dummyPasswordHash, validatePassword } from '@/lib/auth/password'
+import {
+  announceMethodAdded,
+  announcePaused,
+  announceReactivated,
+  announceRoleChanged,
+  endAllSessions,
+  removeOldRoleData,
+  workCount,
+} from '@/lib/accounts/effects'
+import { dummyPasswordHash, type PasswordContext, validatePassword } from '@/lib/auth/password'
+import { AccountPausedError, isPaused } from '@/lib/auth/paused'
 import { confirmEmailToken } from '@/lib/auth/verification'
+import type { SignInMethod } from '@/lib/email/templates'
+import {
+  ACCOUNT_TRANSITIONS,
+  type AccountStatus,
+  assertInitialStatus,
+  assertTransition,
+  ROLE_TRANSITIONS,
+} from '@/lib/transitions'
+import type { User } from '@/payload-types'
 import {
   resetEmailHTML,
   resetEmailSubject,
@@ -15,6 +34,31 @@ import {
 
 const selfOrAdmin = ({ req: { user }, id }: { req: PayloadRequest; id?: number | string }) =>
   isAdmin(user) || (user != null && user.id === id)
+
+/** What the hooks pass on to the afterChange and afterOperation steps of the same request. */
+type AccountContext = PasswordContext & {
+  passwordReset?: boolean
+  /** A sign-in method linked by this change (set in beforeChange or beforeValidate). */
+  methodAdded?: SignInMethod
+}
+
+export const NAME_MAX = 120
+
+/** Record the time of a sign-in. Never fails the sign-in itself. */
+async function recordSignIn(req: PayloadRequest, userId: number): Promise<void> {
+  try {
+    // Bypass: a direct write of the server-kept sign-in time; nobody writes it through the API.
+    await req.payload.db.updateOne({
+      collection: 'users',
+      where: { id: { equals: userId } },
+      data: { lastSignInAt: new Date().toISOString() },
+      returning: false,
+      req,
+    })
+  } catch {
+    req.payload.logger.warn({ msg: 'Could not record the sign-in time', userId })
+  }
+}
 
 /**
  * Same timing for every failed password sign-in. Payload answers an unknown email or a locked
@@ -65,7 +109,7 @@ export const Users: CollectionConfig = {
       generateEmailSubject: verifyEmailSubject,
     },
   },
-  admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
+  admin: { useAsTitle: 'email', defaultColumns: ['email', 'name', 'role', 'accountStatus'] },
   access: {
     // A user reads only their own record. Nobody can list other users, so a company cannot list
     // students. Sign-up is done by server code with `overrideAccess`, never by a public request.
@@ -124,6 +168,15 @@ export const Users: CollectionConfig = {
         if (data && req.context.passwordReset) {
           data._verified = true
           data.emailVerifiedAt ??= new Date().toISOString()
+          // Payload's reset writes the whole row straight to the database after this hook, so
+          // the password bookkeeping for a reset happens here, not in beforeChange. A reset on
+          // an account that had no password of its own (Google or email-link only) adds a way to
+          // sign in: the email and notice follow in afterOperation.
+          if (!data.passwordSetAt) {
+            data.methodAddedNotice = 'password'
+            ;(req.context as AccountContext).methodAdded = 'password'
+          }
+          data.passwordSetAt = new Date().toISOString()
         }
         return data
       },
@@ -136,7 +189,26 @@ export const Users: CollectionConfig = {
         if (user?.role === 'admin' || isAdminEmail(user?.email)) {
           throw new AuthenticationError(req.t)
         }
+        // A paused account cannot sign in. This runs after the password check, so only the
+        // person who knows the password learns that the account is paused.
+        if (isPaused(user)) throw new AccountPausedError()
         return user
+      },
+    ],
+    afterLogin: [
+      async ({ req, user }) => {
+        await recordSignIn(req, user.id)
+        return user
+      },
+    ],
+    // The email and log row for a password set through a reset link (see beforeValidate).
+    afterOperation: [
+      async ({ operation, req, result }) => {
+        const added = (req.context as AccountContext).methodAdded
+        if (operation !== 'resetPassword' || !added) return result
+        const user = (result as unknown as { user?: User } | undefined)?.user
+        if (user) await announceMethodAdded(req, user, added)
+        return result
       },
     ],
     // Payload's "account locked" error would tell a stranger that the address has an account.
@@ -168,11 +240,119 @@ export const Users: CollectionConfig = {
         }
         return data
       },
+      // Role fixes, pausing, the name and the sign-in method bookkeeping.
+      async ({ data, originalDoc, operation, req }) => {
+        const context = req.context as AccountContext
+        const actor = req.user
+        const actorRole = effectiveRole(actor)
+
+        if (typeof data.name === 'string') data.name = data.name.trim().slice(0, NAME_MAX) || null
+
+        if (operation === 'create') {
+          assertInitialStatus<AccountStatus>('active', data.accountStatus, 'A new account')
+          data.accountStatus = 'active'
+        } else if (actor) {
+          // Server code without a signed-in user (the sign-in code) sets roles itself, under the
+          // admin rule above. A signed-in user's change follows the maps in transitions.ts.
+          const fromRole = originalDoc?.role as Role
+          const toRole = (data.role ?? fromRole) as Role
+          if (fromRole !== toRole) {
+            assertTransition(ROLE_TRANSITIONS, fromRole, toRole, actorRole, 'Role')
+            if (actorRole === 'admin' && (await workCount(req, originalDoc)) > 0) {
+              throw new APIError(
+                'Role: not possible once the account has applications or projects',
+                409,
+              )
+            }
+          }
+
+          const fromStatus = (originalDoc?.accountStatus ?? 'active') as AccountStatus
+          const toStatus = (data.accountStatus ?? fromStatus) as AccountStatus
+          if (fromStatus !== toStatus) {
+            assertTransition(ACCOUNT_TRANSITIONS, fromStatus, toStatus, actorRole, 'Account')
+            // Team accounts come from the ADMIN_EMAILS list; take an address off the list
+            // instead. This also keeps a team member from locking themselves out.
+            if (toStatus === 'paused' && (toRole === 'admin' || isAdminEmail(originalDoc?.email))) {
+              throw new APIError('Account: a team account cannot be paused', 403)
+            }
+          }
+
+          // Only the person can see and clear their own notice; nobody but the server sets it.
+          if (!isAdmin(actor) && data.methodAddedNotice) {
+            data.methodAddedNotice = originalDoc?.methodAddedNotice ?? null
+          }
+        }
+
+        // A password the person chose (sign-up, the admin panel, Payload's own endpoints) is a
+        // way to sign in. A random one from the server (Google or link accounts, or replacing a
+        // password nobody proved) is not, and clears the record.
+        if (typeof data.password === 'string' && data.password) {
+          if (context.generatedPassword) {
+            data.passwordSetAt = null
+          } else {
+            if (operation === 'update' && !originalDoc?.passwordSetAt) {
+              data.methodAddedNotice = 'password'
+              context.methodAdded = 'password'
+            }
+            data.passwordSetAt = new Date().toISOString()
+          }
+        }
+
+        // Google linked to an account that already existed.
+        if (operation === 'update' && data.googleSub && !originalDoc?.googleSub) {
+          data.methodAddedNotice = 'google'
+          context.methodAdded = 'google'
+        }
+        return data
+      },
     ],
-    afterChange: [logActivityAfterChange({ statusField: 'role' })],
+    afterChange: [
+      logActivityAfterChange({ statusField: 'role', alsoLog: ['accountStatus'] }),
+      async ({ doc, previousDoc, operation, req }) => {
+        const context = req.context as AccountContext
+        if (context.methodAdded && operation === 'update') {
+          const method = context.methodAdded
+          // One announcement per change, even if Payload runs the hooks again on this request.
+          delete context.methodAdded
+          await announceMethodAdded(req, doc, method)
+        }
+        if (operation !== 'update' || !previousDoc) return doc
+
+        if (doc.accountStatus !== previousDoc.accountStatus) {
+          if (doc.accountStatus === 'paused') {
+            await endAllSessions(req, doc.id)
+            await announcePaused(req, doc)
+          } else {
+            await announceReactivated(req, doc)
+          }
+        }
+
+        // A role fix by the team (student <-> company; the hook above allowed nothing else).
+        const from = previousDoc.role
+        const to = doc.role
+        if (
+          from !== to &&
+          (from === 'student' || from === 'company') &&
+          (to === 'student' || to === 'company')
+        ) {
+          await removeOldRoleData(req, previousDoc, from)
+          await announceRoleChanged(req, doc, to)
+        }
+        return doc
+      },
+    ],
     afterDelete: [logActivityAfterDelete()],
   },
   fields: [
+    {
+      // The person's name, shown in the account menu and to the team. Students give it in the
+      // onboarding (copied from their profile), companies as the contact person, and team
+      // members get it from Google. Only the person and the team read it (collection access);
+      // companies can never read users.
+      name: 'name',
+      type: 'text',
+      maxLength: NAME_MAX,
+    },
     {
       // Payload's email, made admin-only to change (merged with Payload's base email field).
       // Email-link and Google sign-in link to an existing account by email, so a user who could
@@ -246,6 +426,43 @@ export const Users: CollectionConfig = {
       unique: true,
       index: true,
       access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+    },
+    {
+      // Active, or paused by the Konnected team (misuse or a security worry). A paused account
+      // cannot sign in and its access functions return nothing. Changed only by the team, through
+      // ACCOUNT_TRANSITIONS in the hook above.
+      name: 'accountStatus',
+      type: 'select',
+      // Not `required` so creates need not send it: the default and the hook set `active`, and an
+      // empty value counts as active everywhere (isActive checks for `paused` only).
+      defaultValue: 'active',
+      options: ['active', 'paused'],
+      index: true,
+      access: { create: adminOnlyField, update: adminOnlyField },
+    },
+    {
+      // When the person chose a password. Empty for Google and email-link accounts, whose
+      // password is random and unknown to anyone.
+      name: 'passwordSetAt',
+      type: 'date',
+      access: { read: selfOrAdmin, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true },
+    },
+    {
+      // The last time a session was started, by any method.
+      name: 'lastSignInAt',
+      type: 'date',
+      access: { read: selfOrAdmin, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true },
+    },
+    {
+      // A way to sign in that was added and not yet shown to the person. Set only by the server
+      // (see the hook); the person clears it by closing the notice.
+      name: 'methodAddedNotice',
+      type: 'select',
+      options: ['google', 'password'],
+      access: { read: selfOrAdmin, create: adminOnlyField, update: selfOrAdmin },
+      admin: { readOnly: true },
     },
     {
       // Set by the server when an email is proven (Google email_verified, a clicked magic link).

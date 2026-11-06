@@ -30,11 +30,22 @@ type Parts = {
   paragraphs: string[]
   action?: { label: string; href: string }
   ignore: string
+  /** The last line. Sign-in emails say the address was used on the sign-in page. */
+  footer?: string
 }
 
 /** One plain layout for every email: word mark, heading, text, one button, the small print. */
-function render({ locale, subject, heading, paragraphs, action, ignore }: Parts): RenderedEmail {
+function render({
+  locale,
+  subject,
+  heading,
+  paragraphs,
+  action,
+  ignore,
+  footer: footerText,
+}: Parts): RenderedEmail {
   const common = MESSAGES[locale].common
+  const footer = footerText ?? common.footer
   const small = 'margin:0 0 12px;font-size:13px;line-height:1.5;color:#4B676D'
   const html = [
     '<!doctype html>',
@@ -55,7 +66,7 @@ function render({ locale, subject, heading, paragraphs, action, ignore }: Parts)
         ]
       : []),
     `<p style="${small}">${escapeHtml(ignore)}</p>`,
-    `<p style="${small}">${escapeHtml(common.footer)}</p>`,
+    `<p style="${small}">${escapeHtml(footer)}</p>`,
     '</div></body></html>',
   ].join('')
 
@@ -66,7 +77,7 @@ function render({ locale, subject, heading, paragraphs, action, ignore }: Parts)
     ...(action ? [`${action.label}: ${action.href}`, ''] : []),
     ignore,
     '',
-    common.footer,
+    footer,
   ].join('\n')
 
   return { subject, html, text }
@@ -143,5 +154,72 @@ export function resetEmail(locale: EmailLocale, href: string): RenderedEmail {
     paragraphs: [m.body],
     action: { label: m.button, href },
     ignore: m.ignore,
+  })
+}
+
+// ---------- Account notices: sent to the account's own address, never to anyone else ----------
+
+export type SignInMethod = 'google' | 'password'
+
+/** "A new way to sign in was added": Google linked to the account, or a password set. */
+export function methodAddedEmail(
+  locale: EmailLocale,
+  method: SignInMethod,
+  href: string,
+): RenderedEmail {
+  const m = MESSAGES[locale].methodAdded
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs: [m[method], m.body],
+    action: { label: m.button, href },
+    ignore: m.notYou,
+    footer: MESSAGES[locale].common.accountFooter,
+  })
+}
+
+/** The team paused the account. The reason stays with the team; the email says what it means. */
+export function accountPausedEmail(locale: EmailLocale): RenderedEmail {
+  const m = MESSAGES[locale].accountPaused
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs: [m.body, m.contact],
+    ignore: m.ignore,
+    footer: MESSAGES[locale].common.accountFooter,
+  })
+}
+
+/** The team made a paused account active again. */
+export function accountReactivatedEmail(locale: EmailLocale, href: string): RenderedEmail {
+  const m = MESSAGES[locale].accountReactivated
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs: [m.body],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: MESSAGES[locale].common.accountFooter,
+  })
+}
+
+/** The team fixed a wrong role pick. The person answers the new role's questions next time. */
+export function roleChangedEmail(
+  locale: EmailLocale,
+  role: 'student' | 'company',
+  href: string,
+): RenderedEmail {
+  const m = MESSAGES[locale].roleChanged
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs: [m[role], m.body],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: MESSAGES[locale].common.accountFooter,
   })
 }

@@ -5,6 +5,7 @@ import {
   adminOnlyField,
   adminOrCompanyField,
   companyIdOf,
+  effectiveRole,
   isAdmin,
   isCompany,
   isStudent,
@@ -64,7 +65,7 @@ export const Projects: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, originalDoc, operation, req }) => {
-        const role = req.user?.role
+        const role = effectiveRole(req.user)
 
         if (operation === 'create') {
           assertInitialStatus<ProjectStatus>('draft', data.status, 'A new project')
