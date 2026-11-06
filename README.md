@@ -71,16 +71,23 @@ subdirectory per upload collection:
   3 CVs not on the student's profile, 20 brief files not on a submitted project (files on a draft
   count), 20 deliverable files not on a deliverable. Further uploads get `429` until the person uses
   or deletes some. Admins have no limit. A job removes files nothing has used for 7 days every night
-  at 03:15 (each student keeps their newest CV); the app schedules and runs it itself
-  (`src/jobs`, started from `src/instrumentation.ts`). Rules: `src/lib/uploads/unused.ts`.
+  at 03:15 (each student keeps their newest CV). In development the app schedules and runs it
+  itself (`src/jobs`, started from `src/instrumentation.ts`); in production the `worker` container
+  does, and `RUN_JOBS_IN_APP=false` keeps it out of the app. Rules: `src/lib/uploads/unused.ts`.
 - Who can read what: `src/collections/Cvs.ts`, `DeliverableFiles.ts`, `BriefFiles.ts` and
   `src/access/files.ts`. Tests: `tests/access/files.test.ts`.
 
-Backups (production, see the deploy card): the database backup alone is not enough. Back up
+Backups (production, see [docs/production.md](docs/production.md)): the database backup alone is not enough. Back up
 `MEDIA_DIR` off the server on the same schedule and retention as the database (14 days,
 encrypted), and restore both together: a row in `cvs`, `deliverable_files` or `brief_files`
 without its file gives an error on download. In Docker, mount `MEDIA_DIR` as a named volume so a new
 image keeps the files. A restore test counts only when a downloaded file opens.
+
+## Production
+
+Docker Compose on one server: Caddy, the app, a job worker, PostgreSQL 18 with pgBackRest, and
+Gotenberg. `GET /api/health` answers `{"status":"ok"}` or `503`. How to run the production stack on
+this laptop, deploy without downtime, back up and test a restore: [docs/production.md](docs/production.md).
 
 ## Notes
 

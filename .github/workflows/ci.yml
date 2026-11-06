@@ -1,9 +1,11 @@
 name: CI
 
-# Runs on every push to any branch and on every pull request.
+# Runs on every push to any branch and on every pull request. deploy.yml also calls it (as a
+# reusable workflow) before it builds the production image.
 on:
   push:
   pull_request:
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

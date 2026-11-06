@@ -8,10 +8,14 @@ import path from 'node:path'
  * The directory must never be served directly (no static route, no Caddy file_server, never
  * under `public/`): every file goes out through Payload's file route, which checks the
  * collection's read access first.
+ *
+ * `turbopackIgnore`: these paths are only known at run time. Without the comment the build's file
+ * tracer treats them as files the server needs and copies the whole project, uploads included,
+ * into the standalone output (`next build` with `output: 'standalone'`).
  */
 export function mediaRoot(): string {
-  const root = path.resolve(process.env.MEDIA_DIR || './media')
-  const publicDir = path.resolve('public')
+  const root = path.resolve(/* turbopackIgnore: true */ process.env.MEDIA_DIR || './media')
+  const publicDir = path.resolve(/* turbopackIgnore: true */ 'public')
   if (root === publicDir || root.startsWith(publicDir + path.sep)) {
     throw new Error('MEDIA_DIR must be outside public/: files there would be served to anyone')
   }

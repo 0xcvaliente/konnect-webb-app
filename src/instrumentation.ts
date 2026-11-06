@@ -1,7 +1,8 @@
 /**
  * Runs once when the Next.js server starts. Starts Payload with its job scheduler, so the nightly
  * clean-up of unused files (src/jobs) runs without waiting for someone to open the admin panel.
- * Payload skips the scheduler during `next build`.
+ * Payload skips the scheduler during `next build`. In production RUN_JOBS_IN_APP=false leaves
+ * the scheduler empty and the `worker` container runs the jobs (docs/production.md).
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
