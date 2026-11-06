@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@12.16.1",
   "type": "module",
-  "description": "Konnected: managed platform where startups submit paid project assignments and university students deliver them.",
+  "description": "Konnected: managed platform where startups submit project assignments, paid or unpaid, and university students deliver them.",
   "scripts": {
     "dev": "pnpm db:up && pnpm migrate && next dev",
     "build": "next build",
