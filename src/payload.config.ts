@@ -19,6 +19,8 @@ import { Payments } from './collections/Payments'
 import { Projects } from './collections/Projects'
 import { StudentProfiles } from './collections/StudentProfiles'
 import { Users } from './collections/Users'
+import { isAdmin } from './access/roles'
+import { MAINTENANCE_QUEUE, removeUnusedFilesTask } from './jobs/removeUnusedFiles'
 import { emailAdapter } from './lib/email/adapter'
 import { MAX_UPLOAD_BYTES, MB } from './lib/uploads/fileRules'
 
@@ -62,6 +64,20 @@ export default buildConfig({
     fallbackLanguage: 'en',
   },
   email: emailAdapter(),
+  // Background jobs: the nightly clean-up of unused files. Once an hour the app queues any job
+  // that is due and runs the maintenance queue (one long-running server, see instrumentation.ts).
+  // Only admins may queue, run or cancel jobs through the API; the jobs collection itself stays
+  // closed (Payload's default).
+  jobs: {
+    tasks: [removeUnusedFilesTask],
+    autoRun: [{ cron: '0 * * * *', queue: MAINTENANCE_QUEUE }],
+    deleteJobOnComplete: true,
+    access: {
+      cancel: ({ req }) => isAdmin(req.user),
+      queue: ({ req }) => isAdmin(req.user),
+      run: ({ req }) => isAdmin(req.user),
+    },
+  },
   // Uploads: the parser stops any file above the largest per-collection limit (deliverable files,
   // 50 MB) and any request above that plus room for the form fields. Each collection then checks
   // its own, smaller limit (see lib/uploads/fileRules.ts).

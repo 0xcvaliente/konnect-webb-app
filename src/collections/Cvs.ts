@@ -10,6 +10,7 @@ import {
   setOriginalName,
   type UploadRule,
 } from '@/lib/uploads/fileRules'
+import { limitUnusedFiles } from '@/lib/uploads/unused'
 
 export const CV_RULE: UploadRule = { kinds: ['pdf'], maxBytes: 10 * MB }
 
@@ -47,7 +48,7 @@ export const Cvs: CollectionConfig = {
     delete: ownerOrAdmin,
   },
   hooks: {
-    beforeOperation: [checkUpload(CV_RULE)],
+    beforeOperation: [limitUnusedFiles('cvs'), checkUpload(CV_RULE)],
     beforeChange: [
       setOriginalName,
       ({ data, originalDoc, operation, req }) => {

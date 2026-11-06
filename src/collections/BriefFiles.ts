@@ -18,6 +18,7 @@ import {
   setOriginalName,
   type UploadRule,
 } from '@/lib/uploads/fileRules'
+import { limitUnusedFiles } from '@/lib/uploads/unused'
 
 /** Company brief attachments: PDF, Word, Excel, PowerPoint and images (PNG/JPG), 20 MB. */
 export const BRIEF_FILE_RULE: UploadRule = {
@@ -69,7 +70,7 @@ export const BriefFiles: CollectionConfig = {
     delete: deleteAccess,
   },
   hooks: {
-    beforeOperation: [checkUpload(BRIEF_FILE_RULE)],
+    beforeOperation: [limitUnusedFiles('brief-files'), checkUpload(BRIEF_FILE_RULE)],
     beforeChange: [
       setOriginalName,
       ({ data, originalDoc, operation, req }) => {

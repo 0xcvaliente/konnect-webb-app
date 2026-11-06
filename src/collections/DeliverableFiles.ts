@@ -17,6 +17,7 @@ import {
   setOriginalName,
   type UploadRule,
 } from '@/lib/uploads/fileRules'
+import { limitUnusedFiles } from '@/lib/uploads/unused'
 
 /** Owner decision 6 Nov 2026: PDF, Word, Excel, PowerPoint, PNG/JPG and zip, 50 MB a file. */
 export const DELIVERABLE_FILE_RULE: UploadRule = {
@@ -67,7 +68,7 @@ export const DeliverableFiles: CollectionConfig = {
     delete: deleteAccess,
   },
   hooks: {
-    beforeOperation: [checkUpload(DELIVERABLE_FILE_RULE)],
+    beforeOperation: [limitUnusedFiles('deliverable-files'), checkUpload(DELIVERABLE_FILE_RULE)],
     beforeChange: [
       setOriginalName,
       async ({ data, originalDoc, operation, req }) => {

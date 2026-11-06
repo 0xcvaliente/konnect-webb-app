@@ -1,9 +1,11 @@
 import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 
+import { createLocalReq } from 'payload'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { MB } from '@/lib/uploads/fileRules'
+import { MAX_UNUSED_FILES, removeUnusedFiles, UNUSED_FILE_DAYS } from '@/lib/uploads/unused'
 import type { User } from '@/payload-types'
 
 import { fileOf, makeDocx, makePdf, makePng, makeZip } from '../helpers/files'
@@ -574,5 +576,172 @@ describe('brief files as each role', () => {
         (await rest.patch(`brief-files/${w.briefA.id}`, { company: 1 }, cookies[who])).status,
       ).toBe(403)
     }
+  })
+})
+
+describe('files not in use: a limit per account, and a nightly clean-up', () => {
+  beforeAll(setup)
+
+  const pdfFile = (name: string) => ({ data: makePdf(name), name, type: 'application/pdf' })
+  /** Upload as `who` through the Local API with access control on. */
+  const add = (slug: FileSlug, who: Who, name: string, data: object = {}) =>
+    w.payload.create({
+      collection: slug,
+      data: data as never,
+      file: pdf(name),
+      depth: 0,
+      ...as(who),
+    })
+
+  it('a student holds at most 3 CVs that are not on the profile', async () => {
+    const spares = []
+    for (let i = 0; i < MAX_UNUSED_FILES.cvs; i++)
+      spares.push(await add('cvs', 'alpha', `s${i}.pdf`))
+    const res = await rest.upload('cvs', pdfFile('one-more.pdf'), {}, cookies.alpha)
+    expect(res.status).toBe(429)
+    expect(res.text).toMatch(/not in use/)
+    // Another student is not affected; admins have no limit.
+    expect((await rest.upload('cvs', pdfFile('b.pdf'), {}, cookies.beta)).status).toBe(201)
+    await add('cvs', 'admin', 'by-admin.pdf', { owner: w.alpha.user.id })
+    // Companies and anonymous visitors still get no upload at all.
+    expect((await rest.upload('cvs', pdfFile('x.pdf'), {}, cookies.companyA)).status).toBe(403)
+    expect((await rest.upload('cvs', pdfFile('x.pdf'), {}, undefined)).status).toBe(403)
+
+    // The admin's upload counts for alpha too, so alpha deletes two spares to free a place.
+    for (const spare of spares.slice(0, 2)) {
+      await w.payload.delete({ collection: 'cvs', id: spare.id, ...as('alpha') })
+    }
+    expect((await rest.upload('cvs', pdfFile('again.pdf'), {}, cookies.alpha)).status).toBe(201)
+  })
+
+  it('a company holds at most 20 brief files not on a submitted project; drafts count', async () => {
+    const made = []
+    for (let i = 0; i < MAX_UNUSED_FILES['brief-files'] - 1; i++) {
+      made.push(await add('brief-files', 'companyB', `b${i}.pdf`))
+    }
+    // Listing files on a draft does not free places: a draft is not reviewed by anyone yet.
+    await w.payload.update({
+      collection: 'projects',
+      id: w.projectB.id,
+      data: { attachments: made.slice(0, 10).map((d) => d.id) },
+      ...as('companyB'),
+    })
+    expect(
+      (await rest.upload('brief-files', pdfFile('last.pdf'), {}, cookies.companyB)).status,
+    ).toBe(201)
+    const res = await rest.upload('brief-files', pdfFile('over.pdf'), {}, cookies.companyB)
+    expect(res.status).toBe(429)
+    // Company A (with its own files on submitted projects) and admins are not affected.
+    expect((await rest.upload('brief-files', pdfFile('a.pdf'), {}, cookies.companyA)).status).toBe(
+      201,
+    )
+    await add('brief-files', 'admin', 'by-admin.pdf', { company: w.companyB.company.id })
+    for (const who of ['alpha', 'anonymous'] as const) {
+      expect((await rest.upload('brief-files', pdfFile('x.pdf'), {}, cookies[who])).status).toBe(
+        403,
+      )
+    }
+
+    // Once Konnected has the project (submitted), its files no longer count.
+    await w.payload.update({
+      collection: 'projects',
+      id: w.projectB.id,
+      data: { status: 'submitted' },
+      ...as('companyB'),
+    })
+    expect(
+      (await rest.upload('brief-files', pdfFile('next.pdf'), {}, cookies.companyB)).status,
+    ).toBe(201)
+  })
+
+  it('a student holds at most 20 deliverable files not on a deliverable', async () => {
+    const data = { match: w.match.id }
+    const made = []
+    for (let i = 0; i < MAX_UNUSED_FILES['deliverable-files']; i++) {
+      made.push(await add('deliverable-files', 'alpha', `d${i}.pdf`, data))
+    }
+    const res = await rest.upload('deliverable-files', pdfFile('over.pdf'), data, cookies.alpha)
+    expect(res.status).toBe(429)
+    await add('deliverable-files', 'admin', 'by-admin.pdf', data)
+    for (const who of ['beta', 'companyA', 'anonymous'] as const) {
+      expect(
+        (await rest.upload('deliverable-files', pdfFile('x.pdf'), data, cookies[who])).status,
+      ).toBe(403)
+    }
+
+    // Handing files in on a deliverable frees their places.
+    await w.payload.create({
+      collection: 'deliverables',
+      data: { match: w.match.id, files: made.slice(0, 10).map((d) => d.id), status: 'submitted' },
+      ...as('alpha'),
+    })
+    expect(
+      (await rest.upload('deliverable-files', pdfFile('ok.pdf'), data, cookies.alpha)).status,
+    ).toBe(201)
+  })
+
+  it('the clean-up removes old files nothing uses, and keeps everything in use', async () => {
+    const unusedCv = await add('cvs', 'beta', 'old-unused.pdf')
+    const newestCv = await add('cvs', 'beta', 'newest.pdf')
+    const unusedBrief = await add('brief-files', 'companyA', 'loose.pdf')
+    const unusedFile = await add('deliverable-files', 'alpha', 'loose.pdf', { match: w.match.id })
+
+    const req = await createLocalReq({}, w.payload)
+    // Nothing is old enough yet.
+    expect(await removeUnusedFiles(req)).toEqual({
+      cvs: 0,
+      'brief-files': 0,
+      'deliverable-files': 0,
+    })
+
+    const later = new Date(Date.now() + (UNUSED_FILE_DAYS + 1) * 24 * 60 * 60 * 1000)
+    const removed = await removeUnusedFiles(req, { now: later })
+    expect(removed.cvs).toBeGreaterThan(0)
+    expect(removed['brief-files']).toBeGreaterThan(0)
+    expect(removed['deliverable-files']).toBeGreaterThan(0)
+
+    const exists = async (slug: FileSlug, id: number) =>
+      (await w.payload.find({ collection: slug, where: { id: { equals: id } }, depth: 0 }))
+        .totalDocs === 1
+    for (const [slug, doc] of [
+      ['cvs', unusedCv],
+      ['brief-files', unusedBrief],
+      ['deliverable-files', unusedFile],
+    ] as const) {
+      expect(await exists(slug, doc.id), `${slug} ${doc.id} removed`).toBe(false)
+      // The file on disk goes too.
+      expect(await readdir(path.join(process.env.MEDIA_DIR!, slug))).not.toContain(doc.filename)
+    }
+    // Kept: CVs on a profile, each student's newest CV, files on projects and deliverables.
+    for (const [slug, id] of [
+      ['cvs', w.alphaCv.id],
+      ['cvs', w.betaCv.id],
+      ['cvs', newestCv.id],
+      ['brief-files', w.briefA.id],
+      ['brief-files', w.briefOpen.id],
+      ['deliverable-files', w.fileReleased.id],
+      ['deliverable-files', w.fileHidden.id],
+    ] as const) {
+      expect(await exists(slug, id), `${slug} ${id} kept`).toBe(true)
+    }
+  })
+
+  it('the clean-up is a scheduled job; only admins may run jobs through the API', async () => {
+    const task = w.payload.config.jobs.tasks?.find((t) => t.slug === 'removeUnusedFiles')
+    expect(task?.schedule?.[0]?.cron).toBe('15 3 * * *')
+
+    await w.payload.jobs.queue({ task: 'removeUnusedFiles', input: {}, queue: 'maintenance' })
+    const result = await w.payload.jobs.run({ queue: 'maintenance' })
+    expect(Object.values(result.jobStatus ?? {})).toEqual([{ status: 'success' }])
+
+    for (const who of ['alpha', 'companyA', 'anonymous'] as const) {
+      const run = await rest.get('payload-jobs/run?queue=maintenance', cookies[who])
+      expect(run.status, `run as ${who}`).toBe(401)
+      const schedule = await rest.get('payload-jobs/handle-schedules', cookies[who])
+      expect(schedule.status, `schedule as ${who}`).toBe(401)
+      const list = await rest.get('payload-jobs', cookies[who])
+      expect(list.status, `list as ${who}`).toBe(403)
+    }
+    expect((await rest.get('payload-jobs/run?queue=maintenance', cookies.admin)).status).toBe(200)
   })
 })

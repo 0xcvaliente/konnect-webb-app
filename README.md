@@ -67,6 +67,12 @@ subdirectory per upload collection:
 - The type is checked from the file's first bytes, and the name must match it (a PNG called
   `cv.pdf` is refused). Word, Excel and PowerPoint means `.docx`, `.xlsx`, `.pptx` only. Stored files
   get a random name; the uploaded name is kept as `originalName` for display.
+- Files not in use are limited per account, so nobody can fill the disk (which PostgreSQL shares):
+  3 CVs not on the student's profile, 20 brief files not on a submitted project (files on a draft
+  count), 20 deliverable files not on a deliverable. Further uploads get `429` until the person uses
+  or deletes some. Admins have no limit. A job removes files nothing has used for 7 days every night
+  at 03:15 (each student keeps their newest CV); the app schedules and runs it itself
+  (`src/jobs`, started from `src/instrumentation.ts`). Rules: `src/lib/uploads/unused.ts`.
 - Who can read what: `src/collections/Cvs.ts`, `DeliverableFiles.ts`, `BriefFiles.ts` and
   `src/access/files.ts`. Tests: `tests/access/files.test.ts`.
 
