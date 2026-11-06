@@ -10,6 +10,7 @@ import { SiteShell } from '@/components/app/SiteShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { companyShellProps, STATUS_TONE } from '@/lib/companies/display'
 import { formatOrgNumber } from '@/lib/companies/fields'
@@ -102,8 +103,16 @@ export default async function CompanyProfilePage({
           </CardHeader>
           <CompanySteps status={status} approvedOn={approvedOn} />
           {status === 'pending' && (
-            <Button type="button" variant="secondary" className="w-full whitespace-normal" disabled>
-              {t('submitAfterApproval')}
+            <>
+              <Button asChild className="w-full whitespace-normal">
+                <Link href="/company/projects/new">{t('startDraft')}</Link>
+              </Button>
+              <p className="text-[0.85rem] text-muted-foreground">{t('startDraftHint')}</p>
+            </>
+          )}
+          {status === 'approved' && (
+            <Button asChild className="w-full whitespace-normal">
+              <Link href="/company/projects/new">{t('submitProject')}</Link>
             </Button>
           )}
         </Card>

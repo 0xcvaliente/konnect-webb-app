@@ -255,6 +255,15 @@
       "body": "The answers you gave for the other account type were removed. Next time you sign in, Konnected asks the questions for your new account type.",
       "button": "Open Konnected",
       "ignore": "If you did not ask for this, write to the Konnected team."
+    },
+    "projectSubmitted": {
+      "subject": "Konnected received your project",
+      "heading": "Your project is with Konnected",
+      "body": "Thank you. Konnected received “{title}” and will review it.",
+      "review": "We review projects within a few working days. Konnected may approve it, ask you for changes, or tell you why it cannot go ahead. Students see nothing until Konnected publishes it.",
+      "next": "You get an email when the review is done. You cannot edit the project while it is in review.",
+      "button": "See your project",
+      "ignore": "If you did not send this project, write to the Konnected team."
     }
   },
   "DesignGuide": {
@@ -605,13 +614,16 @@
     "next2Title": "Konnected approves your company",
     "next2Body": "Usually within a few working days. Your status changes on this page.",
     "next3Title": "You send in your first project",
-    "next3Body": "Describe the work. Konnected reviews every project before students see it.",
+    "next3Body": "Describe the work. You can start a draft now; Konnected reviews every project before students see it.",
     "editTitle": "Need to change something?",
     "editBody": "You can edit your company details while Konnected reviews them.",
     "edit": "Edit company details",
     "view": "See company profile",
-    "lockedNote": "Projects and payments open once Konnected approves your company.",
-    "registeredOn": "Registered {date}"
+    "lockedNote": "You can already write draft projects. You send them for review, and payments open, once Konnected approves your company.",
+    "registeredOn": "Registered {date}",
+    "startDraft": "Start a draft project",
+    "submitProject": "Submit a project",
+    "myProjects": "My projects"
   },
   "CompanySteps": {
     "label": "Where your company stands",
@@ -636,14 +648,16 @@
     "saving": "Saving…",
     "saved": "Company saved.",
     "statusTitle": "Status",
-    "submitAfterApproval": "Submit a project (after approval)",
     "readOnly": "Your company can no longer be changed here. Write to the Konnected team if something is wrong.",
     "errors": {
       "fix": "Some answers need a look. See the fields marked below.",
       "generic": "Something went wrong and nothing was saved. Try again.",
       "forbidden": "Your session has ended. Sign in again.",
       "notEditable": "Your company can no longer be changed here. Write to the Konnected team."
-    }
+    },
+    "startDraft": "Start a draft project",
+    "startDraftHint": "You can send it for review once Konnected approves your company.",
+    "submitProject": "Submit a project"
   },
   "SignInMethods": {
     "google": "Google",
@@ -806,5 +820,306 @@
       "reasonTooLong": "Use at most {max} characters.",
       "generic": "Something went wrong. Please try again."
     }
+  },
+  "Attachments": {
+    "listLabel": "Attached files",
+    "download": "Download",
+    "remove": "Remove",
+    "dropTitle": "Add files to the brief",
+    "choose": "Choose files",
+    "hint": "PDF, Word, Excel, PowerPoint or images (PNG, JPG). Up to {max} files, 20 MB each. {count} of {max} added.",
+    "whoSees": "Konnected sees these during review. Only the student Konnected selects gets them. Applicants never do.",
+    "uploading": "Uploading…",
+    "errors": {
+      "type": "Use a PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), PNG or JPG file. Older .doc, .xls and .ppt files are not accepted.",
+      "size": "The file is larger than 20 MB. Try a smaller one.",
+      "tooMany": "You have several uploaded files that are not on a project yet. Remove some, or send a project, then try again.",
+      "full": "A project can have at most {max} files. Remove one to add another.",
+      "generic": "The file could not be uploaded. Try again."
+    }
+  },
+  "ProjectFields": {
+    "title": "Project title",
+    "titleHint": "Short and specific.",
+    "description": "What needs to be done?",
+    "descriptionHint": "The background and the problem to solve. Students read this first.",
+    "tasks": "Main tasks",
+    "tasksOptional": "Main tasks (optional)",
+    "tasksHint": "One task per line.",
+    "desiredSkills": "Skills wanted",
+    "desiredSkillsHint": "Separate with commas, for example: Copywriting, Email marketing.",
+    "workloadHours": "Workload in hours",
+    "workloadHint": "The whole project. Most students give 5 to 10 hours a week.",
+    "durationWeeks": "Timeframe",
+    "chooseDuration": "Choose a timeframe",
+    "weeks": "{count, plural, one {# week} other {# weeks}}",
+    "hours": "{count, plural, one {# hour} other {# hours}}",
+    "startDate": "Earliest start",
+    "startDateHint": "After applications close. Konnected agrees the exact date with the student.",
+    "deadline": "Applications close",
+    "deadlineHint": "Konnected may change this when it reviews the project.",
+    "workMode": "Where is the work done?",
+    "chooseWorkMode": "Choose one",
+    "workModeOption": {
+      "remote": "Remote",
+      "on_site": "On site",
+      "hybrid": "Remote or on site"
+    },
+    "location": "Where?",
+    "locationHint": "The town or the address.",
+    "deliverable": "Expected deliverable",
+    "deliverableHint": "What you get back at the end, and in which format.",
+    "paidOrUnpaid": "Is the project paid?",
+    "payOption": {
+      "paid": "Paid",
+      "unpaid": "Unpaid"
+    },
+    "payBody": {
+      "paid": "The student is paid through Konnected. Konnected sets a fixed price when it reviews the project, and you see it before anything is published.",
+      "unpaid": "The student is not paid. Students see this before they apply."
+    },
+    "unpaidBenefit": "What does the student get from it?",
+    "unpaidBenefitShort": "What the student gets",
+    "unpaidBenefitHint": "Konnected reads this when it decides whether an unpaid project can go ahead.",
+    "unpaidBenefitPlaceholder": "For example a reference, or work to show in a portfolio",
+    "payNote": "You choose paid or unpaid. Konnected makes the final decision on whether the project goes ahead.",
+    "attachmentsOptional": "Attachments (optional)",
+    "attachments": "Attachments",
+    "download": "Download",
+    "payment": "Payment",
+    "notFilled": "Not filled in yet",
+    "errors": {
+      "required": "Fill this in before you send the project.",
+      "requiredOne": "Choose one before you send the project.",
+      "tooLong": "Use at most {max} characters.",
+      "tooManySkills": "List at most {max} skills.",
+      "tooManyFiles": "A project can have at most 10 files.",
+      "past": "Pick today or a later day.",
+      "beforeDeadline": "Pick a day after applications close.",
+      "hoursInvalid": "Use a whole number of hours from {min} to {max}.",
+      "dateInvalid": "Use a real date.",
+      "invalid": "This answer is not valid. Check it and try again."
+    }
+  },
+  "ProjectForm": {
+    "newTitle": "Submit a project",
+    "editTitle": "Edit your draft",
+    "changesPageTitle": "Edit and resubmit",
+    "lede": "Describe the work and what you expect back. Konnected reviews it before any student sees it.",
+    "rejectedTitle": "Your company cannot send in projects",
+    "rejectedBody": "Konnected could not approve your company. See your status page for what to do next.",
+    "toStatus": "Go to your status page",
+    "changesTitle": "Konnected asks for changes",
+    "changesBody": "Konnected asked for changes. Check the project, then send it for review again.",
+    "pendingTitle": "You can write the draft now",
+    "pendingBody": "Konnected is still checking your company. Your draft is saved as you type, and you can send it for review once your company is approved.",
+    "send": "Send for review",
+    "saveDraft": "Save draft",
+    "preview": "Preview",
+    "sendLocked": "Sending opens once Konnected approves your company.",
+    "draftSaved": "Draft saved.",
+    "autosave": {
+      "saving": "Saving the draft…",
+      "saved": "Draft saved at {time}. Only you can see it.",
+      "needsTitle": "Add a title and the draft saves itself.",
+      "error": "The draft could not be saved. Check the marked fields, or try again.",
+      "idle": "The draft saves itself as you type. Only you can see it.",
+      "new": "The draft saves itself as you type, once it has a title."
+    },
+    "errors": {
+      "fix": "Some answers need a look before the project can be sent. See the fields marked below.",
+      "forbidden": "Your session has ended. Sign in again.",
+      "not_editable": "This project can no longer be changed here. Konnected has it now.",
+      "not_approved": "Your draft is saved. You can send it for review once Konnected approves your company.",
+      "not_found": "This project could not be found.",
+      "generic": "Something went wrong and nothing was sent. Try again."
+    },
+    "nextTitle": "What happens next",
+    "next1Title": "Konnected reviews",
+    "next1Body": "It checks the work and your paid or unpaid choice, and makes the final decision. It may ask for changes.",
+    "next2Title": "Students can apply",
+    "next2Body": "Once the project is published.",
+    "next3Title": "Konnected picks a student",
+    "next3Body": "By hand, from the applications.",
+    "next4Title": "You receive the result",
+    "next4Body": "Konnected releases the deliverable to you.",
+    "reviewPromise": "We review projects within a few working days.",
+    "close": "Close",
+    "previewTitle": "Preview",
+    "previewLede": "This is how students see the project once Konnected publishes it.",
+    "previewFiles": "Students do not see the attachments. Only the student Konnected selects gets them.",
+    "untitled": "Untitled project",
+    "confirmTitle": "Send this project for review?",
+    "confirmBody": "Konnected reviews it within a few working days. You cannot edit it while it is in review; Konnected tells you if anything needs to change.",
+    "confirmCancel": "Keep editing",
+    "confirmSend": "Send for review",
+    "sending": "Sending…"
+  },
+  "ProjectStatus": {
+    "pill": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "changes_requested": "Changes requested",
+      "rejected": "Rejected",
+      "approved": "Approved",
+      "published": "Published",
+      "matched": "Matched",
+      "in_progress": "In progress",
+      "delivered": "Delivered",
+      "closed": "Closed"
+    },
+    "line": {
+      "draft": "Only you can see this draft.",
+      "submitted": "Konnected is reviewing it.",
+      "changes_requested": "Konnected asked for changes.",
+      "rejected": "Konnected did not approve it.",
+      "approved": "Approved. Konnected prepares it for students.",
+      "published": "Students can apply. Konnected will pick one.",
+      "matched": "Konnected selected a student.",
+      "in_progress": "The student is working.",
+      "delivered": "Delivered. Konnected checks the work.",
+      "closed": "Finished."
+    },
+    "stage": {
+      "draft": "Draft",
+      "review": "In review",
+      "published": "Published",
+      "matched": "Matched",
+      "in_progress": "In progress",
+      "delivered": "Delivered",
+      "closed": "Closed"
+    },
+    "stageOf": "Stage {n} of {total}: {stage}",
+    "offTrack": "Rejected projects do not go further. You can submit a new project.",
+    "history": {
+      "created": "Draft created",
+      "submitted": "Sent for review",
+      "changes_requested": "Konnected asked for changes",
+      "rejected": "Konnected did not approve it",
+      "approved": "Approved by Konnected",
+      "published": "Published",
+      "matched": "Student selected",
+      "in_progress": "Work started",
+      "delivered": "Delivered",
+      "closed": "Closed"
+    },
+    "historyBody": {
+      "created": "Only you can see it."
+    },
+    "upcoming": {
+      "send": {
+        "title": "Send for review",
+        "body": "Konnected reviews every project before students see it."
+      },
+      "published": {
+        "title": "Published",
+        "body": "Students can apply."
+      },
+      "review": {
+        "title": "Konnected reviews",
+        "body": "We review projects within a few working days. Konnected may approve the project, ask for changes or reject it."
+      },
+      "resubmit": {
+        "title": "Send it again",
+        "body": "Edit the project and send it for review again."
+      },
+      "publish": {
+        "title": "Konnected publishes it",
+        "body": "Then students can apply."
+      },
+      "select": {
+        "title": "Konnected picks a student",
+        "body": "By hand, from the applications."
+      },
+      "work": {
+        "title": "Work starts",
+        "body": "Konnected agrees the scope and the due date with the student."
+      },
+      "deliver": {
+        "title": "Final delivery",
+        "body": "Konnected checks the work before it is released to you."
+      },
+      "release": {
+        "title": "Konnected checks and releases",
+        "body": "You see the result only after release."
+      }
+    },
+    "now": "Now",
+    "stepDone": "done",
+    "stepCurrent": "current step"
+  },
+  "CompanyProjects": {
+    "title": "My projects",
+    "lede": "You follow the status here. Konnected handles the students.",
+    "submit": "Submit a project",
+    "emptyTitle": "No projects yet",
+    "emptyBody": "Describe the work you need. Konnected reviews it before any student sees it.",
+    "emptyAction": "Submit your first project",
+    "listLabel": "Your projects",
+    "updated": "Updated {date}.",
+    "asks": "Konnected asks:",
+    "asksFallback": "Check the project and send it for review again.",
+    "finish": "Finish the draft",
+    "resubmit": "Edit and resubmit"
+  },
+  "CompanyProject": {
+    "back": "Back to my projects",
+    "sentTitle": "Sent to Konnected for review",
+    "sentBody": "We review projects within a few working days. We sent you a confirmation by email, and you get another when the review is done.",
+    "banner": {
+      "draft": {
+        "title": "Only you can see this draft",
+        "body": "Konnected sees a project only after you send it for review.",
+        "pending": "Konnected sees a project only after you send it for review. You can send it once Konnected approves your company."
+      },
+      "submitted": {
+        "title": "Konnected is reviewing this project",
+        "body": "We review projects within a few working days. You get an email when it is done. You cannot edit the project while it is in review."
+      },
+      "changes_requested": {
+        "title": "Konnected asks for changes",
+        "body": "See the note from Konnected, edit the project and send it again."
+      },
+      "rejected": {
+        "title": "Konnected did not approve this project",
+        "body": "See the note from Konnected. You can submit a new project."
+      },
+      "approved": {
+        "title": "Approved by Konnected",
+        "body": "Konnected prepares the project for students. You get an email when it is published."
+      },
+      "published": {
+        "title": "Students can apply",
+        "body": "Konnected assesses the applications and picks one student. You see the student after Konnected selects one."
+      },
+      "matched": {
+        "title": "Konnected selected a student",
+        "body": "Konnected agrees the scope and the due date with the student, and keeps you updated."
+      },
+      "in_progress": {
+        "title": "The student is working",
+        "body": "Konnected checks the work before it is released to you."
+      },
+      "delivered": {
+        "title": "Delivered",
+        "body": "Konnected checks the work before it is released to you."
+      },
+      "closed": {
+        "title": "Finished",
+        "body": "This project is closed."
+      }
+    },
+    "latestTitle": "Latest from Konnected",
+    "latestEmpty": "Nothing yet. When Konnected has something to tell you about this project, you find it here.",
+    "latestFrom": "The Konnected team",
+    "historyTitle": "History",
+    "askedTitle": "What you asked for",
+    "progressTitle": "Progress",
+    "actionsTitle": "What you can do",
+    "finish": "Finish the draft",
+    "resubmit": "Edit and resubmit",
+    "newProject": "Submit a new project",
+    "nothing": "Nothing right now. Konnected has the next step.",
+    "pendingHint": "You can send it for review once Konnected approves your company."
   }
 }

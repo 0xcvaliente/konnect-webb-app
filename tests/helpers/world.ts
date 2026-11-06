@@ -78,6 +78,29 @@ export const companyDetails = (name: string) => ({
   description: `${name} description`,
 })
 
+/** A day `days` from today, stored the way the project form stores days (noon UTC). */
+export const dayFromNow = (days: number): string => {
+  const date = new Date()
+  date.setUTCDate(date.getUTCDate() + days)
+  return `${date.toISOString().slice(0, 10)}T12:00:00.000Z`
+}
+
+/**
+ * Everything a company must fill in before it can send a project for review: applications close
+ * in a week, the work starts a week later.
+ */
+export const readyFields = () => ({
+  description: 'What needs to be done',
+  deliverable: 'A short report',
+  desiredSkills: ['Research'],
+  workloadHours: 20,
+  durationWeeks: 2,
+  workMode: 'remote' as const,
+  paidOrUnpaid: 'paid' as const,
+  deadline: dayFromNow(7),
+  startDate: dayFromNow(14),
+})
+
 /** A user document shaped for the Local API `user` option. */
 export const asUser = (user: User) => ({ ...user, collection: 'users' as const })
 
@@ -194,6 +217,7 @@ export async function createWorld() {
     let project = await payload.create({
       collection: 'projects',
       data: {
+        ...readyFields(),
         company: company.company.id,
         title,
         description: `${title} description`,

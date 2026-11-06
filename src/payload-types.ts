@@ -295,16 +295,24 @@ export interface Project {
   companyName?: string | null;
   companyLogo?: (number | null) | CompanyLogo;
   title: string;
-  description: string;
+  description?: string | null;
   tasks?: string | null;
   deliverable?: string | null;
   desiredSkills?: string[] | null;
-  workload?: string | null;
-  duration?: string | null;
+  workloadHours?: number | null;
+  durationWeeks?: number | null;
+  startDate?: string | null;
+  workMode?: ('remote' | 'on_site' | 'hybrid') | null;
   location?: string | null;
+  paidOrUnpaid?: ('paid' | 'unpaid') | null;
+  unpaidBenefit?: string | null;
   fee?: number | null;
   deadline?: string | null;
   attachments?: (number | BriefFile)[] | null;
+  noteToCompany?: string | null;
+  noteToCompanyAt?: string | null;
+  workload?: string | null;
+  duration?: string | null;
   status:
     | 'draft'
     | 'submitted'
@@ -793,12 +801,20 @@ export interface ProjectsSelect<T extends boolean = true> {
   tasks?: T;
   deliverable?: T;
   desiredSkills?: T;
-  workload?: T;
-  duration?: T;
+  workloadHours?: T;
+  durationWeeks?: T;
+  startDate?: T;
+  workMode?: T;
   location?: T;
+  paidOrUnpaid?: T;
+  unpaidBenefit?: T;
   fee?: T;
   deadline?: T;
   attachments?: T;
+  noteToCompany?: T;
+  noteToCompanyAt?: T;
+  workload?: T;
+  duration?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;

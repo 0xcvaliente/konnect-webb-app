@@ -1,4 +1,4 @@
-import { LockIcon } from 'lucide-react'
+import { ChevronLeftIcon, LockIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 
@@ -23,6 +23,7 @@ export async function SiteShell({
   user,
   title,
   lede,
+  crumb,
   actions,
   overlap = true,
   children,
@@ -39,6 +40,8 @@ export async function SiteShell({
   user?: AccountUser | null
   title: ReactNode
   lede?: ReactNode
+  /** A link back to the list the page belongs to, above the title. */
+  crumb?: { href: string; label: string }
   /** Buttons next to the title, on the band. Use the "band" button variant for the main one. */
   actions?: ReactNode
   /** Pull the first block of the page up over the band. Turn off when it is not a card. */
@@ -136,6 +139,15 @@ export async function SiteShell({
       >
         <div className="mx-auto flex max-w-[1044px] flex-wrap items-end justify-between gap-x-6 gap-y-4">
           <div className="grid min-w-0 gap-1.5">
+            {crumb && (
+              <Link
+                href={crumb.href}
+                className="inline-flex min-h-11 w-fit items-center gap-1 text-[0.88rem] font-semibold text-band-link sm:min-h-8"
+              >
+                <ChevronLeftIcon aria-hidden="true" className="size-4" />
+                {crumb.label}
+              </Link>
+            )}
             <h1 className="text-[1.6rem] leading-[1.2] text-band-foreground sm:text-[1.9rem]">
               {title}
             </h1>

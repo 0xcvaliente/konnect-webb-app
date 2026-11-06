@@ -16,9 +16,10 @@ import { companyShellProps, STATUS_TONE } from '@/lib/companies/display'
 import { requireOwnCompany } from '@/lib/companies/session'
 
 // The company's status page, the start of the company area. While Konnected reviews the company
-// it is the "waiting for approval" page: what happens next, and a way to edit the details.
-// Nothing else of the company area opens until approval (the menu shows it locked, and the
-// project and file collections refuse a company that is not approved).
+// it is the "waiting for approval" page: what happens next, and a way to edit the details. A
+// pending company may already write draft projects (owner decision); sending one for review and
+// payments wait for approval (the menu shows payments locked, and the project collection refuses
+// a send from a company that is not approved).
 export const dynamic = 'force-dynamic'
 
 export default async function CompanyStatusPage({
@@ -124,11 +125,24 @@ export default async function CompanyStatusPage({
                 {t('edit')}
               </Link>
             </Button>
+            <Button asChild variant="secondary" className="w-full whitespace-normal">
+              <Link href="/company/projects/new">{t('startDraft')}</Link>
+            </Button>
             <p className="text-[0.85rem] text-muted-foreground">{t('lockedNote')}</p>
           </Card>
         </div>
       ) : (
         <div className="flex flex-wrap gap-3">
+          {status === 'approved' && (
+            <>
+              <Button asChild>
+                <Link href="/company/projects/new">{t('submitProject')}</Link>
+              </Button>
+              <Button asChild variant="normal">
+                <Link href="/company/projects">{t('myProjects')}</Link>
+              </Button>
+            </>
+          )}
           <Button asChild variant="secondary">
             <Link href="/company/profile">{t('view')}</Link>
           </Button>

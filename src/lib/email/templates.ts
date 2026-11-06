@@ -2,7 +2,7 @@ import en from '@/messages/en.json'
 import no from '@/messages/no.json'
 
 /**
- * Sign-in emails in English and Norwegian. Every string comes from the message files
+ * Emails in English and Norwegian. Every string comes from the message files
  * (`Email.*`), so both languages stay complete (a test checks that the two files have the same
  * keys). Each email has a subject, an HTML body and a plain-text body. No tracking pixels, no
  * images, no link rewriting. Links are built from APP_URL by the caller.
@@ -218,6 +218,29 @@ export function roleChangedEmail(
     subject: m.subject,
     heading: m.heading,
     paragraphs: [m[role], m.body],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: MESSAGES[locale].common.accountFooter,
+  })
+}
+
+// ---------- Project notices: sent to the company's own address ----------
+
+/**
+ * "We received your project": the company sent a project for review. Says what happens next and
+ * links to the project page. The title is the company's own text; nothing about any student.
+ */
+export function projectSubmittedEmail(
+  locale: EmailLocale,
+  title: string,
+  href: string,
+): RenderedEmail {
+  const m = MESSAGES[locale].projectSubmitted
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs: [m.body.replace('{title}', title), m.review, m.next],
     action: { label: m.button, href },
     ignore: m.ignore,
     footer: MESSAGES[locale].common.accountFooter,
