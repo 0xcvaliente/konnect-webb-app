@@ -1,0 +1,13 @@
+{
+  "Home": {
+    "signedInAs": "Logget inn som {email} ({role})",
+    "chooseRole": "Velg student eller bedrift",
+    "signOut": "Logg ut",
+    "continueWithGoogle": "Fortsett med Google"
+  },
+  "ChooseRole": {
+    "title": "Hvordan vil du bruke Konnected?",
+    "student": "Jeg er student",
+    "company": "Jeg er en bedrift"
+  }
+}

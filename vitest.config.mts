@@ -21,6 +21,8 @@ export default defineConfig({
       APP_URL: 'http://localhost:3000',
       GOOGLE_CLIENT_ID: 'test-client-id.apps.googleusercontent.com',
       GOOGLE_CLIENT_SECRET: 'test-client-secret-not-real',
+      // No SMTP in tests: email is built but sent nowhere, even if a developer's .env sets it.
+      SMTP_HOST: '',
     },
   },
 })

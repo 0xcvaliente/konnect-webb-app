@@ -38,3 +38,6 @@ client_secret*.json
 service-account*.json
 *.key
 *.p12
+
+# Playwright MCP screenshots (may show seed personal data)
+.playwright-mcp/

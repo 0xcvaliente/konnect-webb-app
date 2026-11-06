@@ -5,6 +5,7 @@ import {
   createWorld,
   graphql,
   login,
+  sessionFor,
   resetDatabase,
   rest,
   SENTINEL,
@@ -66,7 +67,7 @@ beforeAll(async () => {
   await resetDatabase()
   world = await createWorld()
   companyCookie = await login(world.companyA.user.email)
-  adminCookie = await login(world.admin.email)
+  adminCookie = await sessionFor(world.admin.id)
 })
 
 /** Run one query through the Local API. A denied collection throws, which counts as no data. */

@@ -10,6 +10,7 @@ import {
   createWorld,
   getTestPayload,
   login,
+  sessionFor,
   PASSWORD,
   resetDatabase,
   rest,
@@ -681,7 +682,7 @@ describe('activity log', () => {
         ...as(w.admin),
       }),
     ).rejects.toThrow()
-    const cookie = await login(w.admin.email)
+    const cookie = await sessionFor(w.admin.id)
     const res = await rest.post(
       'activity-logs',
       { action: 'create', targetCollection: 'x', targetId: '1' },

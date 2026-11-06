@@ -1,9 +1,10 @@
 import type { Where } from 'payload'
-import { APIError, type CollectionConfig } from 'payload'
+import { APIError, AuthenticationError, type CollectionConfig } from 'payload'
 
 import { isAdminEmail } from '@/access/adminEmails'
 import { adminOnlyField, isAdmin } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { resetEmailHTML, resetEmailSubject } from '@/lib/email/passwordReset'
 
 /**
  * Accounts. Sign-in methods (Google, magic link, password) are provisional and belong to the auth
@@ -22,6 +23,13 @@ export const Users: CollectionConfig = {
     depth: 0,
     // The session cookie: HttpOnly (Payload default), Lax, and Secure on https in production.
     cookies: { secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' },
+    // Reset links last an hour and work once. Admins get an email without a link (see
+    // resetEmailHTML), so a reset request looks the same whoever the address belongs to.
+    forgotPassword: {
+      expiration: 60 * 60 * 1000,
+      generateEmailHTML: resetEmailHTML,
+      generateEmailSubject: resetEmailSubject,
+    },
   },
   admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
   access: {
@@ -53,6 +61,14 @@ export const Users: CollectionConfig = {
     },
   ],
   hooks: {
+    // Admins sign in with Google only (owner decision, 5 Nov 2026). Payload runs this after the
+    // password check, so the error is the same generic one a wrong password gets.
+    beforeLogin: [
+      ({ req, user }) => {
+        if (user?.role === 'admin') throw new AuthenticationError(req.t)
+        return user
+      },
+    ],
     beforeChange: [
       ({ data, originalDoc }) => {
         const role = data.role ?? originalDoc?.role
