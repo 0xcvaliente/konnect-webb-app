@@ -1,0 +1,147 @@
+{
+  "Shell": {
+    "skipToContent": "Gå til innholdet",
+    "mainMenu": "Hovedmeny",
+    "notifications": "Varsler",
+    "teamMenu": "Teammeny",
+    "language": "Språk",
+    "languageName": {
+      "en": "English",
+      "no": "Norsk"
+    },
+    "account": {
+      "menu": "Kontomeny",
+      "profile": "Profil",
+      "settings": "Innstillinger",
+      "help": "Hjelp",
+      "logOut": "Logg ut"
+    },
+    "nav": {
+      "student": {
+        "home": "Hjem",
+        "projects": "Prosjekter",
+        "applications": "Mine søknader",
+        "payments": "Betalinger"
+      },
+      "company": {
+        "status": "Status",
+        "projects": "Mine prosjekter",
+        "submit": "Send inn prosjekt",
+        "payments": "Betalinger"
+      }
+    },
+    "team": {
+      "open": "åpne",
+      "groups": {
+        "daily": "Daglig arbeid",
+        "records": "Oversikt",
+        "settings": "Team og innstillinger"
+      },
+      "items": {
+        "today": "I dag",
+        "approvals": "Godkjenninger",
+        "matching": "Matching",
+        "agreements": "Avtaler",
+        "deliverables": "Leveranser",
+        "questions": "Spørsmål",
+        "payments": "Betalinger",
+        "directory": "Katalog",
+        "dataRequests": "Personvernforespørsler",
+        "team": "Team",
+        "templates": "Avtalemaler"
+      }
+    }
+  },
+  "Roles": {
+    "admin": "Konnected-teamet",
+    "student": "Student",
+    "company": "Bedrift",
+    "pending": "Ingen rolle ennå"
+  },
+  "Home": {
+    "title": "Konnected",
+    "lede": "Korte prosjektoppdrag for studenter og oppstartsbedrifter. Konnected godkjenner hvert prosjekt og matcher studentene.",
+    "signInTitle": "Logg inn",
+    "signInBody": "Logg inn eller opprett en konto med Google-kontoen din.",
+    "continueWithGoogle": "Fortsett med Google",
+    "signedInTitle": "Du er logget inn",
+    "signedInAs": "Logget inn som {email}",
+    "chooseRole": "Velg student eller bedrift",
+    "signOut": "Logg ut",
+    "placeholder": "Denne siden er midlertidig. Oversiktssidene kommer i senere steg."
+  },
+  "ChooseRole": {
+    "title": "Hvordan vil du bruke Konnected?",
+    "lede": "Logget inn som {email}. Velg det som passer. Konnected sjekker hver studentprofil og hver bedrift før de blir med.",
+    "student": "Jeg er student",
+    "studentHint": "Finn korte prosjekter, søk, og bli matchet av Konnected.",
+    "company": "Jeg er en bedrift",
+    "companyHint": "Send inn et prosjekt. Konnected går gjennom det og finner riktig student."
+  },
+  "DesignGuide": {
+    "title": "Designgrunnlag",
+    "lede": "Estuary-fargene og komponentene. Denne siden finnes bare under utvikling.",
+    "teamLink": "Oppsett for teamet",
+    "siteLink": "Oppsett for studenter og bedrifter",
+    "teamTitle": "Teamets arbeidsflate",
+    "teamLede": "Oppsettet for Konnected-teamet, med menyen på venstre side.",
+    "colours": "Farger",
+    "type": "Tekst",
+    "typePageTitle": "Sidetittel, 1,6 rem",
+    "typeSectionTitle": "Seksjonstittel, 1 rem",
+    "typeBody": "Brødtekst er 15 px med linjehøyde 1,5. Konnected godkjenner hvert prosjekt før studentene ser det.",
+    "typeSecondary": "Sekundærtekst for etiketter, hint og datoer.",
+    "typeNumbers": "Tall bruker tabellsifre",
+    "buttons": "Knapper",
+    "main": "Hovedhandling",
+    "normal": "Vanlig",
+    "secondary": "Sekundær",
+    "text": "Tekstknapp",
+    "disabled": "Ikke tilgjengelig",
+    "onBand": "På båndet",
+    "inputs": "Felt",
+    "email": "E-post",
+    "emailHint": "Vi sender oppdateringer om prosjektene dine hit.",
+    "description": "Kort beskrivelse",
+    "programme": "Studieprogram",
+    "programmePlaceholder": "Velg ett",
+    "programmes": {
+      "design": "Design",
+      "computing": "Informatikk",
+      "business": "Økonomi og administrasjon"
+    },
+    "agree": "Jeg godtar å dele CV-en min med bedriften etter at Konnected velger meg",
+    "pay": "Betaling",
+    "paid": "Betalt",
+    "unpaid": "Ubetalt",
+    "pills": "Statuser og merker",
+    "status": {
+      "submitted": "Sendt inn",
+      "published": "Publisert",
+      "dueSoon": "Frist snart",
+      "rejected": "Avslått",
+      "closed": "Lukket"
+    },
+    "tag": "Design",
+    "new": "Ny",
+    "tabs": "Faner",
+    "mine": "Mine",
+    "everyone": "Alle",
+    "mineBody": "Saker du eier.",
+    "everyoneBody": "Alle saker, med eier.",
+    "cards": "Kort",
+    "cardTitle": "Tekst til landingsside",
+    "cardBody": "Skriv teksten til en ny landingsside. Omtrent 20 timer over 2 uker.",
+    "cardAction": "Les mer",
+    "overlays": "Dialog og varsel",
+    "openDialog": "Åpne dialog",
+    "dialogTitle": "Trekke søknaden?",
+    "dialogBody": "Du kan ikke søke på dette prosjektet igjen etter at du har trukket søknaden.",
+    "cancel": "Avbryt",
+    "confirm": "Trekk søknaden",
+    "close": "Lukk",
+    "showToast": "Vis varsel",
+    "toast": "Lagret",
+    "loading": "Laster"
+  }
+}

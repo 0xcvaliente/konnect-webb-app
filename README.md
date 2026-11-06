@@ -56,4 +56,10 @@ Reset the local database: `pnpm db:down && docker volume rm konnect-webb-app_pgd
 - pnpm 12 blocks packages newer than its minimum release age. `pnpm-workspace.yaml` lists the
   Payload 3.93.0 packages as exceptions. Remove them when 3.93.0 is old enough.
 - Login is provisional (Google, email magic link, or email and password). The collections and access rules are built. The sign-in flows themselves are not: until the auth card, only the Payload admin password login works, and the first-user endpoint is closed. Create an admin with `pnpm seed`.
+- Design base: Tailwind 4 and shadcn/ui with the Estuary tokens (`src/app/(frontend)/globals.css`,
+  only loaded by our own pages, never by the Payload admin). UI primitives live in `src/components/ui`,
+  layouts (`SiteShell`, `TeamShell`) in `src/components/app`. The style guide is at
+  <http://localhost:3000/en/dev/design> in development; it does not exist in production.
+- Our pages get a nonce-based Content-Security-Policy from `src/proxy.ts` and render per request.
+  `/admin` and `/api` keep the static headers in `next.config.ts`.
 - Never commit `.env`. Only `NEXT_PUBLIC_*` values may be Docker build args.

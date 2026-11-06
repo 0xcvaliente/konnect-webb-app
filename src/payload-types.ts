@@ -100,10 +100,10 @@ export interface Config {
   db: {
     defaultIDType: number;
   };
-  fallbackLocale: null;
+  fallbackLocale: ('false' | 'none' | 'null') | false | null | ('en' | 'no') | ('en' | 'no')[];
   globals: {};
   globalsSelect: {};
-  locale: null;
+  locale: 'en' | 'no';
   widgets: {
     collections: CollectionsWidget;
   };
@@ -137,7 +137,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
-  role: 'admin' | 'student' | 'company';
+  role: 'admin' | 'student' | 'company' | 'pending';
   company?: (number | null) | Company;
   language?: ('en' | 'no') | null;
   googleSub?: string | null;

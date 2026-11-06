@@ -3,6 +3,7 @@ import { GRAPHQL_POST, REST_DELETE, REST_GET, REST_PATCH, REST_POST } from '@pay
 import pg from 'pg'
 import { getPayload, type Payload } from 'payload'
 
+import { createSessionCookie } from '@/lib/auth/session'
 import type { Project, User } from '@/payload-types'
 
 export const PASSWORD = 'Test-passw0rd-1234'
@@ -297,6 +298,7 @@ const call = async (
   const request = new Request(url, {
     method,
     headers: {
+      origin: ORIGIN,
       ...(options.cookie ? { cookie: options.cookie } : {}),
       ...(options.body ? { 'content-type': 'application/json' } : {}),
     },
@@ -320,17 +322,26 @@ export const rest = {
 export async function graphql(query: string, cookie?: string): Promise<HttpResult> {
   const request = new Request(`${ORIGIN}/api/graphql`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+    headers: { 'content-type': 'application/json', origin: ORIGIN, ...(cookie ? { cookie } : {}) },
     body: JSON.stringify({ query }),
   })
   return toResult(await GRAPHQL_POST(config)(request))
+}
+
+/**
+ * A session cookie for any user, made the way Google sign-in makes it. Admins cannot use the
+ * password login (they sign in with Google only), so admin tests use this.
+ */
+export async function sessionFor(userId: number): Promise<string> {
+  const cookie = await createSessionCookie(await getTestPayload(), userId)
+  return cookie.split(';')[0]!
 }
 
 /** Log in through the real login endpoint and return a cookie header for later requests. */
 export async function login(email: string, password = PASSWORD): Promise<string> {
   const request = new Request(`${ORIGIN}/api/users/login`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', origin: ORIGIN },
     body: JSON.stringify({ email, password }),
   })
   const res = await (REST_POST(config) as Handler)(request, {

@@ -1,9 +1,10 @@
 import type { Where } from 'payload'
-import { APIError, type CollectionConfig } from 'payload'
+import { APIError, AuthenticationError, type CollectionConfig } from 'payload'
 
 import { isAdminEmail } from '@/access/adminEmails'
 import { adminOnlyField, isAdmin } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { resetEmailHTML, resetEmailSubject } from '@/lib/email/passwordReset'
 
 /**
  * Accounts. Sign-in methods (Google, magic link, password) are provisional and belong to the auth
@@ -20,6 +21,15 @@ export const Users: CollectionConfig = {
     lockTime: 15 * 60 * 1000,
     // Keep req.user shallow so it never carries populated relations.
     depth: 0,
+    // The session cookie: HttpOnly (Payload default), Lax, and Secure on https in production.
+    cookies: { secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' },
+    // Reset links last an hour and work once. Admins get an email without a link (see
+    // resetEmailHTML), so a reset request looks the same whoever the address belongs to.
+    forgotPassword: {
+      expiration: 60 * 60 * 1000,
+      generateEmailHTML: resetEmailHTML,
+      generateEmailSubject: resetEmailSubject,
+    },
   },
   admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
   access: {
@@ -51,6 +61,14 @@ export const Users: CollectionConfig = {
     },
   ],
   hooks: {
+    // Admins sign in with Google only (owner decision, 5 Nov 2026). Payload runs this after the
+    // password check, so the error is the same generic one a wrong password gets.
+    beforeLogin: [
+      ({ req, user }) => {
+        if (user?.role === 'admin') throw new AuthenticationError(req.t)
+        return user
+      },
+    ],
     beforeChange: [
       ({ data, originalDoc }) => {
         const role = data.role ?? originalDoc?.role
@@ -72,8 +90,10 @@ export const Users: CollectionConfig = {
       name: 'role',
       type: 'select',
       required: true,
-      defaultValue: 'student',
-      options: ['admin', 'student', 'company'],
+      // A new account is `pending` (no access to anything) until the user picks student or
+      // company. Fail closed: a missing role must never mean a working one.
+      defaultValue: 'pending',
+      options: ['admin', 'student', 'company', 'pending'],
       index: true,
       saveToJWT: true,
       // Nobody can pick or change a role through the API. Server code sets it.
