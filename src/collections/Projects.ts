@@ -7,6 +7,7 @@ import {
   type Where,
 } from 'payload'
 
+import type { Project } from '@/payload-types'
 import {
   adminOnlyField,
   adminOrCompanyField,
@@ -18,8 +19,8 @@ import {
   relationId,
 } from '@/access/roles'
 import { draftingCompanyId } from '@/access/companies'
-import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
-import { sendProjectSubmittedEmail } from '@/lib/email/projectEmails'
+import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
+import { sendProjectReviewEmail, sendProjectSubmittedEmail } from '@/lib/email/projectEmails'
 import {
   COMPANY_EDITABLE,
   DURATION_WEEKS,
@@ -29,6 +30,7 @@ import {
   type ReviewInput,
   WORK_MODES,
 } from '@/lib/projects/fields'
+import { approvalProblem, assertCanPublish } from '@/lib/projects/publish'
 import { MAX_BRIEF_FILES } from './BriefFiles'
 import {
   assertInitialStatus,
@@ -155,6 +157,9 @@ export const Projects: CollectionConfig = {
         })
 
         const sending = to === 'submitted' && from !== 'submitted'
+        // When the project reached Konnected: the start of "how long it has waited" in the
+        // team's queue. Server only (field access keeps it admin-only to write).
+        if (sending) data.submittedAt = new Date().toISOString()
         // A company that is not approved cannot send a project for review (a pending company
         // may keep drafts).
         if (sending && company.status !== 'approved') {
@@ -190,6 +195,24 @@ export const Projects: CollectionConfig = {
           }
         }
 
+        // Approving settles paid or unpaid (Konnected's final decision) and, for a paid project,
+        // the fixed price (konnected-product-rules, money). An unpaid project has no price.
+        const next = { ...(originalDoc ?? {}), ...data } as Project
+        if (to === 'approved' && from !== 'approved') {
+          const problem = approvalProblem(next)
+          if (problem === 'pay_choice') {
+            throw new APIError('Project: decide paid or unpaid before approving', 400)
+          }
+          if (problem === 'price') {
+            throw new APIError('Project: a paid project needs a fixed price before approving', 400)
+          }
+        }
+        if (next.paidOrUnpaid === 'unpaid' && to !== 'draft') data.fee = null
+        // Publishing goes through one gate (agreements extend it later).
+        if (to === 'published' && from !== 'published') {
+          await assertCanPublish(req, { ...next, fee: data.fee === null ? null : next.fee })
+        }
+
         // The date of Konnected's latest note follows the note. Only admins write either (field
         // access drops a company's value).
         if (
@@ -208,6 +231,26 @@ export const Projects: CollectionConfig = {
     ],
     afterChange: [
       logActivityAfterChange({ statusField: 'status' }),
+      async ({ doc, previousDoc, operation, req, context }) => {
+        // Konnected's price and paid or unpaid decisions go to the activity log too. A company
+        // changing its own draft is not a decision and is not logged here.
+        if (operation === 'update' && isAdmin(req.user) && !context?.skipActivityLog) {
+          for (const field of ['fee', 'paidOrUnpaid'] as const) {
+            const before = previousDoc?.[field] ?? null
+            const after = doc[field] ?? null
+            if (before === after) continue
+            await writeActivity(req, {
+              action: 'review_change',
+              targetCollection: 'projects',
+              targetId: String(doc.id),
+              field,
+              fromStatus: before === null ? undefined : String(before),
+              toStatus: after === null ? undefined : String(after),
+            })
+          }
+        }
+        return doc
+      },
       async ({ doc, previousDoc, operation, req }) => {
         // Confirm to the company that its project reached Konnected, every time it is sent
         // (also after changes). Sent after the response, so a slow mail server never fails it.
@@ -217,6 +260,17 @@ export const Projects: CollectionConfig = {
           previousDoc?.status !== 'submitted'
         ) {
           await sendProjectSubmittedEmail(req, doc)
+        }
+        // Tell the company what Konnected decided (changes asked, rejected, approved, published).
+        if (
+          operation === 'update' &&
+          doc.status !== previousDoc?.status &&
+          (doc.status === 'changes_requested' ||
+            doc.status === 'rejected' ||
+            doc.status === 'approved' ||
+            doc.status === 'published')
+        ) {
+          await sendProjectReviewEmail(req, doc, doc.status)
         }
         return doc
       },
@@ -326,6 +380,15 @@ export const Projects: CollectionConfig = {
     {
       name: 'noteToCompanyAt',
       label: 'Note written',
+      type: 'date',
+      access: teamWritesCompanyReads,
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // When the project was last sent to Konnected for review. Set by the server; the team's
+      // queue shows how long it has waited.
+      name: 'submittedAt',
+      label: 'Sent for review',
       type: 'date',
       access: teamWritesCompanyReads,
       admin: { readOnly: true, position: 'sidebar' },

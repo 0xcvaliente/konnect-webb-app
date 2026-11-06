@@ -21,7 +21,20 @@ export const ActivityLogs: CollectionConfig = {
       name: 'action',
       type: 'select',
       required: true,
-      options: ['create', 'status_change', 'delete', 'sign_out_everywhere', 'sign_in_method_added'],
+      // review_change: a team decision that is not a status (a project's price or paid or unpaid
+      // decision, a profile reviewed again after the student changed it), with `field`, `fromStatus`
+      // and `toStatus`. info_requested / info_answered: the team asked a company for more
+      // information, and the company saved its corrected details.
+      options: [
+        'create',
+        'status_change',
+        'delete',
+        'sign_out_everywhere',
+        'sign_in_method_added',
+        'review_change',
+        'info_requested',
+        'info_answered',
+      ],
     },
     { name: 'targetCollection', type: 'text', required: true, index: true },
     { name: 'targetId', type: 'text', required: true, index: true },
@@ -33,6 +46,7 @@ export const ActivityLogs: CollectionConfig = {
     { name: 'toStatus', type: 'text' },
     // The team's reason for an action, for example why an account was paused. Admin-only like the
     // rest of the log. Written by the server from what the team member typed.
-    { name: 'note', type: 'textarea', maxLength: 500 },
+    // Up to 2000 characters: a review note to a company or student is kept here in full.
+    { name: 'note', type: 'textarea', maxLength: 2000 },
   ],
 }

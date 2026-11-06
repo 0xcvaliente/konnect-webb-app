@@ -23,7 +23,7 @@ export type ActivityContext = { skipActivityLog?: boolean; activityNote?: string
 
 const noteOf = (req: PayloadRequest): string | undefined => {
   const note = (req.context as ActivityContext | undefined)?.activityNote
-  return typeof note === 'string' && note.trim() ? note.trim().slice(0, 500) : undefined
+  return typeof note === 'string' && note.trim() ? note.trim().slice(0, 2000) : undefined
 }
 
 /**

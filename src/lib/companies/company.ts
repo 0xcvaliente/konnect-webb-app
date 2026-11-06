@@ -198,7 +198,8 @@ export async function registerCompany(
 /**
  * Save the profile page's form. While the company is pending every field can change; once
  * Konnected approved it, the name and organisation number stay as they were checked. A rejected
- * company cannot change anything here.
+ * company may correct every field once: that save sends it back to Konnected. After that it
+ * cannot change anything here.
  */
 export async function saveCompany(
   payload: Payload,
@@ -208,7 +209,12 @@ export async function saveCompany(
   if (!user || !isCompany(user)) return fail('forbidden')
   const company = await findOwnCompany(payload, user)
   if (!company) return fail('no_company')
-  if (company.status !== 'pending' && company.status !== 'approved') return fail('not_editable')
+  // A rejected company may correct its details and send them once more (owner decision); the
+  // collection hook moves it back to pending on this save.
+  const resending = company.status === 'rejected' && !company.resentAt
+  if (company.status !== 'pending' && company.status !== 'approved' && !resending) {
+    return fail('not_editable')
+  }
 
   const errors: CompanyFieldErrors = {}
   const details: Partial<Details> = readDetails(form, errors)
@@ -216,7 +222,7 @@ export async function saveCompany(
   if (logo === undefined) errors.logo = 'invalid'
   // After approval the name and organisation number are not sent at all (the page shows them
   // read-only). A different value in the form is refused rather than silently ignored.
-  if (company.status !== 'pending') {
+  if (company.status === 'approved') {
     for (const key of LOCKED_AFTER_APPROVAL) {
       const sent = form.has(key) ? details[key] : undefined
       delete errors[key]

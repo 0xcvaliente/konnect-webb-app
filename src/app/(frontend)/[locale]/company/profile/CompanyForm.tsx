@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useRouter } from '@/i18n/navigation'
 import { saveCompanyAction } from '@/lib/companies/actions'
 import {
   type CompanyField,
@@ -70,17 +71,25 @@ function useProblemText() {
 /**
  * The company details form (mockup "Company profile"). Everything can change while Konnected
  * reviews the company; after approval the name and organisation number are read-only (Konnected
- * checked them); a company that was not approved sees its details read-only. The server applies
- * the same rules. Sent with startTransition so React does not reset the fields after a save.
+ * checked them). A company Konnected rejected may correct every field once: that save sends it
+ * back for review ("Correct and send again"); after that its details are read-only. When Konnected
+ * asked for more information, the save is the answer. The server applies the same rules. Sent with
+ * startTransition so React does not reset the fields after a save.
  */
 export function CompanyForm({
   values,
   logo: initialLogo,
   status,
+  canResend = false,
+  answering = false,
 }: {
   values: CompanyValues
   logo: LogoInfo | null
   status: CompanyStatusKey
+  /** Rejected, and the one correction is still unused. */
+  canResend?: boolean
+  /** Konnected asked for more information: this save is the answer. */
+  answering?: boolean
 }) {
   const t = useTranslations('CompanyProfile')
   const f = useTranslations('CompanyFields')
@@ -91,18 +100,24 @@ export function CompanyForm({
   const [logo, setLogo] = useState(initialLogo)
   const [name, setName] = useState(values.name)
 
-  const readOnly = status === 'rejected'
-  const locked = status !== 'pending'
+  const router = useRouter()
+  const resending = status === 'rejected' && canResend
+  const readOnly = status === 'rejected' && !resending
+  const locked = status === 'approved'
 
   const error = (field: CompanyField) =>
     state.status === 'error' ? problemText(field, state.fields?.[field]) : undefined
 
   useEffect(() => {
-    if (state.status === 'done') toast(t('saved'))
+    if (state.status === 'done') {
+      toast(resending ? t('resent') : answering ? t('answered') : t('saved'))
+      // The status and the banners above change with these saves.
+      if (resending || answering) router.refresh()
+    }
     if (state.status === 'error' && state.fields) {
       formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
     }
-  }, [state, t])
+  }, [state]) // eslint-disable-line react-hooks/exhaustive-deps -- once per result
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -250,7 +265,13 @@ export function CompanyForm({
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" disabled={pending}>
               {pending && <LoaderCircleIcon aria-hidden="true" className="animate-spin" />}
-              {pending ? t('saving') : t('save')}
+              {pending
+                ? t('saving')
+                : resending
+                  ? t('resend')
+                  : answering
+                    ? t('answer')
+                    : t('save')}
             </Button>
           </div>
         )}

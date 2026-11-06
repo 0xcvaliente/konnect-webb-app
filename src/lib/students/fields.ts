@@ -22,9 +22,82 @@ export const SHARE_KEYS = [
 ] as const
 export type ShareKey = (typeof SHARE_KEYS)[number]
 
-/** Konnected reviews every profile by hand, within 2 working days, before matching. */
-export const REVIEW_STATUSES = ['waiting', 'reviewed'] as const
+/**
+ * Konnected reviews every profile by hand, within 2 working days, before matching. The team may
+ * ask the student for changes (with a note); the student's next save sends it back to `waiting`.
+ */
+export const REVIEW_STATUSES = ['waiting', 'changes_requested', 'reviewed'] as const
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number]
+
+/** Profile review promise: within 2 working days of the profile being sent. */
+export const PROFILE_REVIEW_DAYS = 2
+
+/** The longest note the team can write to a student about their profile. */
+export const REVIEW_NOTE_MAX = 2000
+
+/**
+ * What Konnected looks at in a review. A copy of these is kept when the team marks the profile
+ * reviewed, so the team can see what the student changed since (owner decision: editing a
+ * reviewed profile keeps it reviewed, and the team sees what changed).
+ */
+export const REVIEWED_FIELDS = [
+  'name',
+  'school',
+  'programme',
+  'year',
+  'pitch',
+  'skills',
+  'interests',
+  'preferredProjectTypes',
+  'experience',
+  'highlights',
+  'contactEmail',
+  'phone',
+  'cv',
+  'privacy',
+] as const
+export type ReviewedField = (typeof REVIEWED_FIELDS)[number]
+export type ReviewSnapshot = Partial<Record<ReviewedField, unknown>>
+
+/** A stored value in the form the snapshot keeps: ids for relations, `null` for empty. */
+const snapshotValue = (key: ReviewedField, value: unknown): unknown => {
+  if (value === undefined || value === '' || value === null) return null
+  if (key === 'cv') {
+    return typeof value === 'object' ? ((value as { id?: unknown }).id ?? null) : value
+  }
+  if (Array.isArray(value)) return value.length ? [...value] : null
+  if (key === 'privacy' && typeof value === 'object') {
+    return Object.fromEntries(
+      SHARE_KEYS.map((k) => [k, (value as Record<string, unknown>)[k] === true]),
+    )
+  }
+  return value
+}
+
+/** The reviewed fields of a profile, as the snapshot stores them. */
+export function reviewSnapshot(profile: Record<string, unknown>): ReviewSnapshot {
+  return Object.fromEntries(REVIEWED_FIELDS.map((k) => [k, snapshotValue(k, profile[k])]))
+}
+
+/** JSON with object keys in a fixed order (the database may store them in another order). */
+export const canonical = (value: unknown): string =>
+  JSON.stringify(value ?? null, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
+        )
+      : v,
+  )
+
+/** The reviewed fields whose value differs between a snapshot and a profile. */
+export function changedFields(
+  snapshot: ReviewSnapshot | null | undefined,
+  profile: Record<string, unknown>,
+): ReviewedField[] {
+  if (!snapshot) return []
+  const now = reviewSnapshot(profile)
+  return REVIEWED_FIELDS.filter((k) => canonical(snapshot[k]) !== canonical(now[k]))
+}
 
 /** The kinds of work a student can pick as interests. Stored as these keys. */
 export const INTEREST_KEYS = [

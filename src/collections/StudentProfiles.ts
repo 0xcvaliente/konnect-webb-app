@@ -1,10 +1,32 @@
 import type { Where } from 'payload'
 import { APIError, type CollectionConfig } from 'payload'
 
-import { adminOnlyField, adminOrStudentField, isAdmin, isStudent, relationId } from '@/access/roles'
+import {
+  adminOnlyField,
+  adminOrStudentField,
+  effectiveRole,
+  isAdmin,
+  isStudent,
+  relationId,
+} from '@/access/roles'
 import { copyNameToUser } from '@/hooks/copyNameToUser'
-import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
-import { REVIEW_STATUSES, SHARE_KEYS } from '@/lib/students/fields'
+import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
+import { sendProfileReviewEmail } from '@/lib/email/profileEmails'
+import {
+  canonical,
+  changedFields,
+  REVIEW_NOTE_MAX,
+  REVIEW_STATUSES,
+  REVIEWED_FIELDS,
+  type ReviewSnapshot,
+  reviewSnapshot,
+  SHARE_KEYS,
+} from '@/lib/students/fields'
+import {
+  assertTransition,
+  PROFILE_REVIEW_TRANSITIONS,
+  type ProfileReviewStatus,
+} from '@/lib/transitions'
 
 /** Fields copied to a match's `sharedInfo`. A change to any of them refreshes the copies. */
 const SHARED_SOURCE_FIELDS = [
@@ -56,24 +78,80 @@ export const StudentProfiles: CollectionConfig = {
           data.user = req.user!.id
         }
 
-        // Review: only Konnected decides. A new profile always waits for review, whatever the
-        // request says (field access already drops a non-admin's value; this is the second
-        // layer). Moving to `reviewed` records the date unless the admin gave one; moving back
-        // to `waiting` clears it.
-        if (!isAdmin(req.user)) {
-          if (operation === 'create') {
+        // Review: only Konnected decides (PROFILE_REVIEW_TRANSITIONS). Field access already drops
+        // a non-admin's review values; the rules below are the second layer and the moves the
+        // server makes itself.
+        const now = new Date().toISOString()
+        const admin = isAdmin(req.user)
+        if (operation === 'create') {
+          if (!admin) {
             data.reviewStatus = 'waiting'
             data.reviewedAt = null
-          } else {
-            data.reviewStatus = originalDoc?.reviewStatus
-            data.reviewedAt = originalDoc?.reviewedAt ?? null
           }
+          data.reviewStatus ??= 'waiting'
+          // The review clock starts when the profile is sent (the onboarding's last step).
+          data.reviewRequestedAt ??= now
         } else {
-          const to = data.reviewStatus ?? originalDoc?.reviewStatus ?? 'waiting'
-          if (to === 'waiting') data.reviewedAt = null
-          else if (originalDoc?.reviewStatus !== 'reviewed') {
-            data.reviewedAt ??= new Date().toISOString()
+          const from = (originalDoc?.reviewStatus ?? 'waiting') as ProfileReviewStatus
+          // Did this save change anything Konnected reviews? (`data` holds every field here.)
+          const before = reviewSnapshot(originalDoc ?? {})
+          const after = reviewSnapshot(data)
+          const touched = REVIEWED_FIELDS.some(
+            (key) => canonical(after[key]) !== canonical(before[key]),
+          )
+          if (!admin) {
+            data.reviewStatus = from
+            data.reviewedAt = originalDoc?.reviewedAt ?? null
+            // Konnected asked for changes: the student's edit sends the profile back for review.
+            if (from === 'changes_requested' && touched) {
+              data.reviewStatus = 'waiting'
+              data.reviewRequestedAt = now
+            }
+            // A reviewed profile stays reviewed when the student edits it; the team sees what
+            // changed since the review (and since when).
+            if (from === 'reviewed') {
+              // A profile reviewed before snapshots existed: what it held until now is what was
+              // reviewed, so that becomes the snapshot.
+              const stored = (originalDoc?.reviewedSnapshot ?? null) as ReviewSnapshot | null
+              const snapshot = stored ?? before
+              if (!stored) data.reviewedSnapshot = snapshot
+              const differs = changedFields(snapshot, { ...originalDoc, ...data }).length > 0
+              data.changedSinceReviewAt = differs
+                ? (originalDoc?.changedSinceReviewAt ?? now)
+                : null
+            }
           }
+          const to = (data.reviewStatus ?? from) as ProfileReviewStatus
+          assertTransition(PROFILE_REVIEW_TRANSITIONS, from, to, effectiveRole(req.user), 'Profile')
+
+          if (admin) {
+            if (to === 'waiting') data.reviewedAt = null
+            if (to === 'changes_requested') {
+              // The student must know what to change: a note comes with the request.
+              const note = (data.reviewNote ?? '').trim()
+              if (!note) throw new APIError('Profile: write what the student should change', 400)
+              if (note.length > REVIEW_NOTE_MAX) {
+                throw new APIError('Profile: the note is too long', 400)
+              }
+              data.reviewedAt = null
+            }
+            // Marking the profile reviewed (or reviewed again, with a new date) keeps a copy of
+            // what was reviewed and closes the request for changes.
+            const reviewedNow =
+              to === 'reviewed' &&
+              (from !== 'reviewed' ||
+                (data.reviewedAt ?? null) !== (originalDoc?.reviewedAt ?? null))
+            if (reviewedNow) {
+              data.reviewedAt ??= now
+              data.reviewedSnapshot = reviewSnapshot({ ...originalDoc, ...data })
+              data.changedSinceReviewAt = null
+              data.reviewNote = null
+            }
+          }
+        }
+        // The date of the team's note follows the note.
+        if ((data.reviewNote ?? '') !== (originalDoc?.reviewNote ?? '')) {
+          data.reviewNoteAt = data.reviewNote ? now : null
         }
 
         // The CV on a profile must be one the profile's student uploaded. Bypass: the server
@@ -97,6 +175,33 @@ export const StudentProfiles: CollectionConfig = {
     ],
     afterChange: [
       logActivityAfterChange({ statusField: 'reviewStatus' }),
+      async ({ doc, previousDoc, operation, req, context }) => {
+        if (operation !== 'update') return doc
+        const from = previousDoc?.reviewStatus ?? 'waiting'
+        // Reviewed again after the student changed it: a decision, but not a status change.
+        if (
+          !context?.skipActivityLog &&
+          isAdmin(req.user) &&
+          from === 'reviewed' &&
+          doc.reviewStatus === 'reviewed' &&
+          (doc.reviewedAt ?? null) !== (previousDoc?.reviewedAt ?? null)
+        ) {
+          await writeActivity(req, {
+            action: 'review_change',
+            targetCollection: 'student-profiles',
+            targetId: String(doc.id),
+            field: 'reviewedAt',
+            toStatus: 'reviewed',
+          })
+        }
+        // Tell the student: reviewed, or what Konnected asks them to change.
+        if (doc.reviewStatus !== from) {
+          if (doc.reviewStatus === 'reviewed' || doc.reviewStatus === 'changes_requested') {
+            await sendProfileReviewEmail(req, doc, doc.reviewStatus)
+          }
+        }
+        return doc
+      },
       copyNameToUser('name'),
       async ({ doc, previousDoc, operation, req }) => {
         // Keep what companies see in step with what the student shares now: ticking "share my
@@ -188,6 +293,49 @@ export const StudentProfiles: CollectionConfig = {
       type: 'date',
       access: { read: adminOrStudentField, create: adminOnlyField, update: adminOnlyField },
       admin: { position: 'sidebar' },
+    },
+    {
+      // What Konnected asks the student to change. The student reads it on their profile and gets
+      // it by email. Cleared when the profile is marked reviewed.
+      name: 'reviewNote',
+      label: 'What to change (note to the student)',
+      type: 'textarea',
+      maxLength: REVIEW_NOTE_MAX,
+      access: { read: adminOrStudentField, create: adminOnlyField, update: adminOnlyField },
+    },
+    {
+      name: 'reviewNoteAt',
+      label: 'Note written',
+      type: 'date',
+      access: { read: adminOrStudentField, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // When the profile was last sent for review (created, or updated after Konnected asked for
+      // changes). The 2 working day promise counts from here. Set by the server.
+      name: 'reviewRequestedAt',
+      label: 'Waiting for review since',
+      type: 'date',
+      access: { read: adminOrStudentField, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // The student changed a reviewed profile: since when. The profile stays reviewed; the team
+      // sees it in the queue with what changed. Cleared when the team reviews it again.
+      name: 'changedSinceReviewAt',
+      label: 'Changed since the review',
+      type: 'date',
+      index: true,
+      access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // A copy of the reviewed fields at the last review, to show the team what changed since.
+      // Team only. Set by the server.
+      name: 'reviewedSnapshot',
+      type: 'json',
+      access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, hidden: true },
     },
   ],
 }
