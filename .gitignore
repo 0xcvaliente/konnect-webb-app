@@ -39,5 +39,8 @@ service-account*.json
 *.key
 *.p12
 
+# Uploaded files (CVs, deliverables, brief attachments): personal data, never in git
+/media/
+
 # Playwright MCP screenshots (may show seed personal data)
 .playwright-mcp/

@@ -184,6 +184,9 @@ importers:
       clsx:
         specifier: 2.1.1
         version: 2.1.1
+      file-type:
+        specifier: 21.3.4
+        version: 21.3.4(supports-color@7.2.0)
       graphql:
         specifier: 16.14.0
         version: 16.14.0

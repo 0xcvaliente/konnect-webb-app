@@ -49,6 +49,39 @@ Schema changes always go through a committed migration (`pnpm migrate:create`). 
 
 Reset the local database: `pnpm db:down && docker volume rm konnect-webb-app_pgdata`.
 
+## File storage and backups
+
+Uploaded files live on the server's own disk in `MEDIA_DIR` (default `./media`, git-ignored), one
+subdirectory per upload collection:
+
+| Collection          | What                      | Types                                       | Limit |
+| ------------------- | ------------------------- | ------------------------------------------- | ----- |
+| `cvs`               | A student's CV            | PDF                                         | 10 MB |
+| `deliverable-files` | Files on a deliverable    | PDF, Word, Excel, PowerPoint, PNG, JPG, zip | 50 MB |
+| `brief-files`       | Company brief attachments | PDF, Word, Excel, PowerPoint, PNG, JPG      | 20 MB |
+
+- Files are never public. They are served only by `/api/<collection>/file/<name>`, which applies the
+  collection's read access, always as a download (`Content-Disposition: attachment`,
+  `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`). Never put `MEDIA_DIR` under
+  `public/` (the app refuses to start) and never serve it from Caddy or another static route.
+- The type is checked from the file's first bytes, and the name must match it (a PNG called
+  `cv.pdf` is refused). Word, Excel and PowerPoint means `.docx`, `.xlsx`, `.pptx` only. Stored files
+  get a random name; the uploaded name is kept as `originalName` for display.
+- Files not in use are limited per account, so nobody can fill the disk (which PostgreSQL shares):
+  3 CVs not on the student's profile, 20 brief files not on a submitted project (files on a draft
+  count), 20 deliverable files not on a deliverable. Further uploads get `429` until the person uses
+  or deletes some. Admins have no limit. A job removes files nothing has used for 7 days every night
+  at 03:15 (each student keeps their newest CV); the app schedules and runs it itself
+  (`src/jobs`, started from `src/instrumentation.ts`). Rules: `src/lib/uploads/unused.ts`.
+- Who can read what: `src/collections/Cvs.ts`, `DeliverableFiles.ts`, `BriefFiles.ts` and
+  `src/access/files.ts`. Tests: `tests/access/files.test.ts`.
+
+Backups (production, see the deploy card): the database backup alone is not enough. Back up
+`MEDIA_DIR` off the server on the same schedule and retention as the database (14 days,
+encrypted), and restore both together: a row in `cvs`, `deliverable_files` or `brief_files`
+without its file gives an error on download. In Docker, mount `MEDIA_DIR` as a named volume so a new
+image keeps the files. A restore test counts only when a downloaded file opens.
+
 ## Notes
 
 - Versions are pinned exactly. `payload`, `@payloadcms/next` and `@payloadcms/db-postgres` must stay on

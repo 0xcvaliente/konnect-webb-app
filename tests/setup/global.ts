@@ -1,14 +1,16 @@
 import { execFileSync } from 'node:child_process'
+import { rm } from 'node:fs/promises'
 
 import pg from 'pg'
 
-import { baseDatabaseUrl, testDatabaseName, testDatabaseUrl } from './env'
+import { baseDatabaseUrl, testDatabaseName, testDatabaseUrl, testMediaDir } from './env'
 
 /**
  * Create a fresh, empty test database and apply the committed migrations to it with the Payload
  * CLI. This also proves the migrations run cleanly on an empty PostgreSQL database.
  */
 export default async function setup() {
+  await rm(testMediaDir(), { recursive: true, force: true })
   const name = testDatabaseName()
   const admin = new pg.Client({ connectionString: baseDatabaseUrl() })
   await admin.connect()

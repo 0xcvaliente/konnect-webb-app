@@ -3,6 +3,7 @@ import { APIError, type CollectionConfig } from 'payload'
 
 import { adminOnlyField, companyIdOf, isAdmin, isStudent, relationId } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { MAX_DELIVERABLE_FILES } from './DeliverableFiles'
 import {
   assertInitialStatus,
   assertTransition,
@@ -12,8 +13,8 @@ import {
 
 /**
  * Work a student hands in for a match. The student uploads. A company sees a deliverable only
- * after Konnected releases it, and only for its own projects. File upload comes with the file
- * storage decision (open), so for now a deliverable carries links and a note.
+ * after Konnected releases it, and only for its own projects. A deliverable lists up to 10 files
+ * (`deliverable-files`, uploaded first for the same match), plus links and a note.
  */
 export const Deliverables: CollectionConfig = {
   slug: 'deliverables',
@@ -80,6 +81,28 @@ export const Deliverables: CollectionConfig = {
         assertTransition(DELIVERABLE_TRANSITIONS, from, to, role, 'Deliverable')
         return data
       },
+      async ({ data, originalDoc, req }) => {
+        // Every file must have been uploaded for this deliverable's match. Bypass: the server
+        // reads the files' match, whatever the acting user may read.
+        const fileIds = (data.files ?? []).map(relationId).filter(Boolean) as number[]
+        if (!fileIds.length) return data
+        const matchId = relationId(data.match ?? originalDoc?.match)
+        const files = await req.payload.find({
+          collection: 'deliverable-files',
+          where: { id: { in: fileIds } },
+          depth: 0,
+          pagination: false,
+          overrideAccess: true,
+          req,
+        })
+        const ok = new Set(
+          files.docs.filter((f) => relationId(f.match) === matchId).map((f) => f.id),
+        )
+        if (fileIds.some((id) => !ok.has(id))) {
+          throw new APIError('A file does not belong to this match', 403)
+        }
+        return data
+      },
     ],
     afterChange: [logActivityAfterChange({ statusField: 'status' })],
     afterDelete: [logActivityAfterDelete()],
@@ -94,6 +117,13 @@ export const Deliverables: CollectionConfig = {
       access: { update: adminOnlyField },
     },
     { name: 'note', type: 'textarea' },
+    {
+      name: 'files',
+      type: 'upload',
+      relationTo: 'deliverable-files',
+      hasMany: true,
+      maxRows: MAX_DELIVERABLE_FILES,
+    },
     {
       name: 'links',
       type: 'array',

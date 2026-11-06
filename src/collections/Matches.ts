@@ -69,13 +69,16 @@ export const Matches: CollectionConfig = {
           req,
         })
         const privacy = profile.privacy ?? {}
-        // Copy only what the student agreed to share. Rebuilt on every save.
+        // Copy only what the student agreed to share. Rebuilt on every save, and again whenever the
+        // student changes their profile or what they share (see StudentProfiles).
         data.sharedInfo = {
           name: privacy.shareName ? profile.name : null,
           pitch: privacy.sharePitch ? profile.pitch : null,
           // An empty list, not null: a hasMany field ignores null on update and would keep the old copy.
           skills: privacy.shareSkills ? profile.skills : [],
           experience: privacy.shareExperience ? profile.experience : null,
+          // The CV itself stays in `cvs`; its read rule checks the same tick on every request.
+          cv: privacy.shareCv ? (relationId(profile.cv) ?? null) : null,
         }
         return data
       },
@@ -125,6 +128,7 @@ export const Matches: CollectionConfig = {
         { name: 'pitch', type: 'textarea' },
         { name: 'skills', type: 'text', hasMany: true },
         { name: 'experience', type: 'textarea' },
+        { name: 'cv', type: 'upload', relationTo: 'cvs' },
       ],
     },
   ],

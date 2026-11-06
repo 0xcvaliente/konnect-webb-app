@@ -6,6 +6,8 @@ import { getPayload, type Payload } from 'payload'
 import { createSessionCookie } from '@/lib/auth/session'
 import type { Project, User } from '@/payload-types'
 
+import { fileOf, makePdf, makePng } from './files'
+
 export const PASSWORD = 'Test-passw0rd-1234'
 export const ADMIN_EMAIL = 'admin@konnected.test'
 
@@ -39,6 +41,7 @@ export const SENTINEL = {
     experience: 'Sentinel-Experience-Alpha',
     highlights: 'Sentinel-Highlights-Alpha',
     skill: 'Sentinel-Skill-Alpha',
+    cvName: 'Sentinel-CV-Alpha.pdf',
   },
   beta: {
     name: 'Sentinel-Name-Beta',
@@ -49,6 +52,7 @@ export const SENTINEL = {
     experience: 'Sentinel-Experience-Beta',
     highlights: 'Sentinel-Highlights-Beta',
     skill: 'Sentinel-Skill-Beta',
+    cvName: 'Sentinel-CV-Beta.pdf',
   },
 }
 
@@ -63,6 +67,9 @@ export type World = Awaited<ReturnType<typeof createWorld>>
  * - companyA is approved and has a published project that is matched to alpha, with a match,
  *   a released deliverable, an unreleased deliverable and a payment
  * - companyB is approved and has its own draft project
+ * - files: each student has a CV on their profile (neither ticked "share my CV"), the released and
+ *   the unreleased deliverable each list one file, and project A and project A open each have a
+ *   brief attachment
  *
  * Built through the Local API as admin, so the status rules in the hooks are exercised too.
  */
@@ -105,6 +112,27 @@ export async function createWorld() {
   }
   const alpha = await makeStudent('alpha', { shareSkills: true })
   const beta = await makeStudent('beta', {})
+
+  // Each student uploads a CV as themselves and puts it on their profile.
+  const addCv = async (student: typeof alpha, name: string) => {
+    const cv = await payload.create({
+      collection: 'cvs',
+      data: {} as never,
+      file: fileOf(makePdf(name), name, 'application/pdf'),
+      user: asUser(student.user),
+      overrideAccess: false,
+    })
+    await payload.update({
+      collection: 'student-profiles',
+      id: student.profile.id,
+      data: { cv: cv.id },
+      user: asUser(student.user),
+      overrideAccess: false,
+    })
+    return cv
+  }
+  const alphaCv = await addCv(alpha, SENTINEL.alpha.cvName)
+  const betaCv = await addCv(beta, SENTINEL.beta.cvName)
 
   const makeCompany = async (email: string, name: string) => {
     const user = await makeUser(email, 'company')
@@ -203,6 +231,18 @@ export async function createWorld() {
     })
   }
 
+  // alpha uploads one file for each deliverable, as themselves.
+  const addDeliverableFile = async (name: string) =>
+    payload.create({
+      collection: 'deliverable-files',
+      data: { match: match.id },
+      file: fileOf(makePdf(name), name, 'application/pdf'),
+      user: asUser(alpha.user),
+      overrideAccess: false,
+    })
+  const fileReleased = await addDeliverableFile('final-report.pdf')
+  const fileHidden = await addDeliverableFile('draft-report.pdf')
+
   const deliverableReleased = await payload.create({
     collection: 'deliverables',
     data: {
@@ -210,6 +250,7 @@ export async function createWorld() {
       note: 'Released work',
       status: 'submitted',
       links: [{ url: 'https://example.test/a' }],
+      files: [fileReleased.id],
     },
     user: asUser(alpha.user),
     overrideAccess: false,
@@ -228,10 +269,33 @@ export async function createWorld() {
       note: 'Not released yet',
       status: 'submitted',
       links: [{ url: 'https://example.test/b' }],
+      files: [fileHidden.id],
     },
     user: asUser(alpha.user),
     overrideAccess: false,
   })
+
+  // Company A uploads a brief attachment for each of two projects. Konnected attaches them (the
+  // projects are past the stage where the company can still edit them).
+  const addBrief = async (projectId: number, name: string) => {
+    const brief = await payload.create({
+      collection: 'brief-files',
+      data: {} as never,
+      file: fileOf(await makePng(), name, 'image/png'),
+      user: asUser(companyA.user),
+      overrideAccess: false,
+    })
+    await payload.update({
+      collection: 'projects',
+      id: projectId,
+      data: { attachments: [brief.id] },
+      user: adminCtx,
+      overrideAccess: false,
+    })
+    return brief
+  }
+  const briefA = await addBrief(projectA.id, 'brief-a.png')
+  const briefOpen = await addBrief(projectOpen.id, 'brief-open.png')
 
   const payment = await payload.create({
     collection: 'payments',
@@ -262,6 +326,12 @@ export async function createWorld() {
     deliverableReleased,
     deliverableHidden,
     payment,
+    alphaCv,
+    betaCv,
+    fileReleased,
+    fileHidden,
+    briefA,
+    briefOpen,
   }
 }
 
@@ -271,9 +341,10 @@ const ORIGIN = 'http://localhost:3000'
 
 type Json = Record<string, unknown>
 
-export type HttpResult = { status: number; json: Json; text: string }
+export type HttpResult = { status: number; json: Json; text: string; headers: Headers }
 
 const toResult = async (res: Response): Promise<HttpResult> => {
+  const headers = res.headers
   const text = await res.text()
   let json: Json = {}
   try {
@@ -281,7 +352,7 @@ const toResult = async (res: Response): Promise<HttpResult> => {
   } catch {
     // Not JSON. `text` still holds the body.
   }
-  return { status: res.status, json, text }
+  return { status: res.status, json, text, headers }
 }
 
 type Handler = (
@@ -296,14 +367,19 @@ const call = async (
   options: { cookie?: string; body?: unknown } = {},
 ): Promise<HttpResult> => {
   const url = new URL(`${ORIGIN}/api/${path}`)
+  const isForm = options.body instanceof FormData
   const request = new Request(url, {
     method,
     headers: {
       origin: ORIGIN,
       ...(options.cookie ? { cookie: options.cookie } : {}),
-      ...(options.body ? { 'content-type': 'application/json' } : {}),
+      ...(options.body && !isForm ? { 'content-type': 'application/json' } : {}),
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: isForm
+      ? (options.body as FormData)
+      : options.body
+        ? JSON.stringify(options.body)
+        : undefined,
   })
   const slug = path.split('?')[0]!.split('/').filter(Boolean)
   return toResult(await handler(request, { params: Promise.resolve({ slug }) }))
@@ -318,6 +394,18 @@ export const rest = {
     call(REST_PATCH(config) as Handler, 'PATCH', path, { cookie, body }),
   delete: (path: string, cookie?: string) =>
     call(REST_DELETE(config) as Handler, 'DELETE', path, { cookie }),
+  /** A multipart upload, the way the browser and the admin panel send files. */
+  upload: (
+    path: string,
+    file: { data: Buffer; name: string; type: string },
+    data: Record<string, unknown> = {},
+    cookie?: string,
+  ) => {
+    const form = new FormData()
+    form.append('file', new Blob([new Uint8Array(file.data)], { type: file.type }), file.name)
+    form.append('_payload', JSON.stringify(data))
+    return call(REST_POST(config) as Handler, 'POST', path, { cookie, body: form })
+  },
 }
 
 export async function graphql(query: string, cookie?: string): Promise<HttpResult> {

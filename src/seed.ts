@@ -1,5 +1,6 @@
 /**
- * Development seed: one admin, one student, one approved company, and one project in each status.
+ * Development seed: one admin, one student (with a CV), one approved company, and one project in
+ * each status.
  * Run with `pnpm seed`. Safe to run again: everything is found by email or title first.
  *
  * Local development only. It refuses to run in production, and the passwords below are throwaway
@@ -10,6 +11,7 @@ import config from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 
 import { adminEmails } from '@/access/adminEmails'
+import { samplePdf } from '@/lib/uploads/samplePdf'
 import type { Project, User } from '@/payload-types'
 
 if (process.env.NODE_ENV === 'production') {
@@ -81,6 +83,25 @@ async function seed() {
         privacy: { shareName: true, shareSkills: true },
       },
       overrideAccess: true,
+    })
+  }
+
+  // The student uploads a CV (a generated one-page PDF) and shares it with a selected company.
+  if (!profile.cv) {
+    const data = samplePdf('Seed Student CV')
+    const cv = await payload.create({
+      collection: 'cvs',
+      data: {} as never,
+      file: { data, name: 'seed-student-cv.pdf', mimetype: 'application/pdf', size: data.length },
+      user: studentCtx,
+      overrideAccess: false,
+    })
+    profile = await payload.update({
+      collection: 'student-profiles',
+      id: profile.id,
+      data: { cv: cv.id, privacy: { ...profile.privacy, shareCv: true } },
+      user: studentCtx,
+      overrideAccess: false,
     })
   }
 

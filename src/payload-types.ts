@@ -74,10 +74,14 @@ export interface Config {
     applications: Application;
     matches: Match;
     deliverables: Deliverable;
+    cvs: Cv;
+    'deliverable-files': DeliverableFile;
+    'brief-files': BriefFile;
     payments: Payment;
     'activity-logs': ActivityLog;
     'magic-links': MagicLink;
     'payload-kv': PayloadKv;
+    'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -91,10 +95,14 @@ export interface Config {
     applications: ApplicationsSelect<false> | ApplicationsSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
     deliverables: DeliverablesSelect<false> | DeliverablesSelect<true>;
+    cvs: CvsSelect<false> | CvsSelect<true>;
+    'deliverable-files': DeliverableFilesSelect<false> | DeliverableFilesSelect<true>;
+    'brief-files': BriefFilesSelect<false> | BriefFilesSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'activity-logs': ActivityLogsSelect<false> | ActivityLogsSelect<true>;
     'magic-links': MagicLinksSelect<false> | MagicLinksSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
+    'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -103,15 +111,25 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('en' | 'no') | ('en' | 'no')[];
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'payload-jobs-stats': PayloadJobsStat;
+  };
+  globalsSelect: {
+    'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
+  };
   locale: 'en' | 'no';
   widgets: {
     collections: CollectionsWidget;
   };
   user: User;
   jobs: {
-    tasks: unknown;
+    tasks: {
+      removeUnusedFiles: TaskRemoveUnusedFiles;
+      inline: {
+        input: unknown;
+        output: unknown;
+      };
+    };
     workflows: unknown;
   };
 }
@@ -196,6 +214,7 @@ export interface StudentProfile {
   experience?: string | null;
   highlights?: string | null;
   preferredProjectTypes?: string[] | null;
+  cv?: (number | null) | Cv;
   contactEmail?: string | null;
   phone?: string | null;
   privacy?: {
@@ -203,9 +222,28 @@ export interface StudentProfile {
     sharePitch?: boolean | null;
     shareSkills?: boolean | null;
     shareExperience?: boolean | null;
+    shareCv?: boolean | null;
   };
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cvs".
+ */
+export interface Cv {
+  id: number;
+  owner: number | User;
+  originalName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -225,6 +263,7 @@ export interface Project {
   location?: string | null;
   fee?: number | null;
   deadline?: string | null;
+  attachments?: (number | BriefFile)[] | null;
   status:
     | 'draft'
     | 'submitted'
@@ -238,6 +277,24 @@ export interface Project {
     | 'closed';
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "brief-files".
+ */
+export interface BriefFile {
+  id: number;
+  company: number | Company;
+  originalName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -269,6 +326,7 @@ export interface Match {
     pitch?: string | null;
     skills?: string[] | null;
     experience?: string | null;
+    cv?: (number | null) | Cv;
   };
   updatedAt: string;
   createdAt: string;
@@ -281,6 +339,7 @@ export interface Deliverable {
   id: number;
   match: number | Match;
   note?: string | null;
+  files?: (number | DeliverableFile)[] | null;
   links?:
     | {
         label?: string | null;
@@ -292,6 +351,25 @@ export interface Deliverable {
   submittedAt?: string | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "deliverable-files".
+ */
+export interface DeliverableFile {
+  id: number;
+  match: number | Match;
+  uploadedBy?: (number | null) | User;
+  originalName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -356,6 +434,107 @@ export interface PayloadKv {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs".
+ */
+export interface PayloadJob {
+  id: number;
+  /**
+   * Input data provided to the job
+   */
+  input?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  taskStatus?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  completedAt?: string | null;
+  totalTried?: number | null;
+  /**
+   * If hasError is true this job will not be retried
+   */
+  hasError?: boolean | null;
+  /**
+   * If hasError is true, this is the error that caused it
+   */
+  error?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Task execution log
+   */
+  log?:
+    | {
+        executedAt: string;
+        completedAt: string;
+        taskSlug: 'inline' | 'removeUnusedFiles';
+        taskID: string;
+        input?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        output?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        state: 'failed' | 'succeeded';
+        error?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  taskSlug?: ('inline' | 'removeUnusedFiles') | null;
+  queue?: string | null;
+  waitUntil?: string | null;
+  processing?: boolean | null;
+  meta?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
@@ -388,6 +567,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'deliverables';
         value: number | Deliverable;
+      } | null)
+    | ({
+        relationTo: 'cvs';
+        value: number | Cv;
+      } | null)
+    | ({
+        relationTo: 'deliverable-files';
+        value: number | DeliverableFile;
+      } | null)
+    | ({
+        relationTo: 'brief-files';
+        value: number | BriefFile;
       } | null)
     | ({
         relationTo: 'payments';
@@ -490,6 +681,7 @@ export interface StudentProfilesSelect<T extends boolean = true> {
   experience?: T;
   highlights?: T;
   preferredProjectTypes?: T;
+  cv?: T;
   contactEmail?: T;
   phone?: T;
   privacy?:
@@ -499,6 +691,7 @@ export interface StudentProfilesSelect<T extends boolean = true> {
         sharePitch?: T;
         shareSkills?: T;
         shareExperience?: T;
+        shareCv?: T;
       };
   updatedAt?: T;
   createdAt?: T;
@@ -532,6 +725,7 @@ export interface ProjectsSelect<T extends boolean = true> {
   location?: T;
   fee?: T;
   deadline?: T;
+  attachments?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -566,6 +760,7 @@ export interface MatchesSelect<T extends boolean = true> {
         pitch?: T;
         skills?: T;
         experience?: T;
+        cv?: T;
       };
   updatedAt?: T;
   createdAt?: T;
@@ -577,6 +772,7 @@ export interface MatchesSelect<T extends boolean = true> {
 export interface DeliverablesSelect<T extends boolean = true> {
   match?: T;
   note?: T;
+  files?: T;
   links?:
     | T
     | {
@@ -588,6 +784,58 @@ export interface DeliverablesSelect<T extends boolean = true> {
   submittedAt?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cvs_select".
+ */
+export interface CvsSelect<T extends boolean = true> {
+  owner?: T;
+  originalName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "deliverable-files_select".
+ */
+export interface DeliverableFilesSelect<T extends boolean = true> {
+  match?: T;
+  uploadedBy?: T;
+  originalName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "brief-files_select".
+ */
+export interface BriefFilesSelect<T extends boolean = true> {
+  company?: T;
+  originalName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -640,6 +888,38 @@ export interface PayloadKvSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs_select".
+ */
+export interface PayloadJobsSelect<T extends boolean = true> {
+  input?: T;
+  taskStatus?: T;
+  completedAt?: T;
+  totalTried?: T;
+  hasError?: T;
+  error?: T;
+  log?:
+    | T
+    | {
+        executedAt?: T;
+        completedAt?: T;
+        taskSlug?: T;
+        taskID?: T;
+        input?: T;
+        output?: T;
+        state?: T;
+        error?: T;
+        id?: T;
+      };
+  taskSlug?: T;
+  queue?: T;
+  waitUntil?: T;
+  processing?: T;
+  meta?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents_select".
  */
 export interface PayloadLockedDocumentsSelect<T extends boolean = true> {
@@ -672,6 +952,34 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats".
+ */
+export interface PayloadJobsStat {
+  id: number;
+  stats?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats_select".
+ */
+export interface PayloadJobsStatsSelect<T extends boolean = true> {
+  stats?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -679,6 +987,18 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskRemoveUnusedFiles".
+ */
+export interface TaskRemoveUnusedFiles {
+  input?: unknown;
+  output: {
+    cvs: number;
+    briefFiles: number;
+    deliverableFiles: number;
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

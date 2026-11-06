@@ -11,6 +11,7 @@ import {
   relationId,
 } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { MAX_BRIEF_FILES } from './BriefFiles'
 import {
   assertInitialStatus,
   assertTransition,
@@ -95,6 +96,26 @@ export const Projects: CollectionConfig = {
           throw new APIError('Only an approved company can submit a project', 403)
         }
 
+        // Every attachment must be a brief file of this project's company. Bypass: the server
+        // reads the files' company, whatever the acting user may read.
+        const attachmentIds = (data.attachments ?? []).map(relationId).filter(Boolean) as number[]
+        if (attachmentIds.length) {
+          const files = await req.payload.find({
+            collection: 'brief-files',
+            where: { id: { in: attachmentIds } },
+            depth: 0,
+            pagination: false,
+            overrideAccess: true,
+            req,
+          })
+          const ok = new Set(
+            files.docs.filter((f) => relationId(f.company) === companyId).map((f) => f.id),
+          )
+          if (attachmentIds.some((id) => !ok.has(id))) {
+            throw new APIError('An attachment does not belong to this company', 403)
+          }
+        }
+
         // Students never read the company record. They see this copy of the name.
         data.companyName = company.name
         return data
@@ -132,6 +153,15 @@ export const Projects: CollectionConfig = {
     // Konnected. No price or percentage is built in.
     { name: 'fee', type: 'number', min: 0 },
     { name: 'deadline', type: 'date' },
+    {
+      // Brief attachments (see `brief-files`). Only the owning company, admins and the selected
+      // student can open them; other students see at most the ids.
+      name: 'attachments',
+      type: 'upload',
+      relationTo: 'brief-files',
+      hasMany: true,
+      maxRows: MAX_BRIEF_FILES,
+    },
     {
       name: 'status',
       type: 'select',
