@@ -79,7 +79,7 @@ export const Projects: CollectionConfig = {
         const to = (data.status ?? from) as ProjectStatus
         if (operation === 'update') {
           assertTransition(PROJECT_TRANSITIONS, from, to, role, 'Project')
-          await assertProjectGates(req, from, to, originalDoc?.id)
+          await assertProjectGates(req, from, to, originalDoc && { ...originalDoc, ...data })
         }
 
         const companyId = relationId(data.company ?? originalDoc?.company)

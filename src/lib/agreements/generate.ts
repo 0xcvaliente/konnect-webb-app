@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
+import { sql } from '@payloadcms/db-postgres'
 import {
   commitTransaction,
   createLocalReq,
@@ -69,6 +70,20 @@ export async function inAgreementTransaction<T>(
     await killTransaction(req)
     throw error
   }
+}
+
+/**
+ * Lock the agreement's row until `req`'s transaction ends (`SELECT ... FOR UPDATE`). Call it
+ * before reading the status a write depends on: a withdrawal (or another signature) waits for this
+ * transaction, or this one waits for it and then reads its result. Payload takes no row locks.
+ */
+export async function lockAgreement(req: PayloadRequest, agreementId: number): Promise<void> {
+  const id = req.transactionID ? await req.transactionID : undefined
+  const tx = id === undefined ? undefined : req.payload.db.sessions?.[id]
+  if (!tx) throw new Error('lockAgreement needs an open transaction')
+  await (tx.db as { execute: (query: ReturnType<typeof sql>) => Promise<unknown> }).execute(
+    sql`SELECT 1 FROM "agreements" WHERE "id" = ${agreementId} FOR UPDATE`,
+  )
 }
 
 const activeKeyOf = (input: AgreementInput) =>
@@ -216,9 +231,26 @@ export async function voidAgreement(
 
 export type GenerateOutcome = 'done' | 'skipped' | 'failed'
 
-/** Mark an agreement that could not be made, with a code for the team. */
-async function markFailed(payload: Payload, agreementId: number, failure: string) {
-  await inAgreementTransaction(payload, null, async (req) => {
+/**
+ * Mark an agreement that could not be made, with a code for the team. `skipped` when it is
+ * no longer being made, for example withdrawn meanwhile.
+ */
+async function markFailed(
+  payload: Payload,
+  agreementId: number,
+  failure: string,
+): Promise<GenerateOutcome> {
+  return inAgreementTransaction(payload, null, async (req) => {
+    await lockAgreement(req, agreementId)
+    const fresh = await req.payload.findByID({
+      collection: 'agreements',
+      id: agreementId,
+      depth: 0,
+      select: { status: true },
+      overrideAccess: true,
+      req,
+    })
+    if (fresh.status !== 'generating') return 'skipped'
     await req.payload.update({
       collection: 'agreements',
       id: agreementId,
@@ -227,6 +259,7 @@ async function markFailed(payload: Payload, agreementId: number, failure: string
       overrideAccess: true,
       req,
     })
+    return 'failed'
   })
 }
 
@@ -264,10 +297,7 @@ export async function generateAgreementPdf(
     overrideAccess: true,
     disableErrors: true,
   })) as AgreementTemplate | null
-  if (!template) {
-    await markFailed(payload, agreementId, 'template')
-    return 'failed'
-  }
+  if (!template) return markFailed(payload, agreementId, 'template')
 
   let pdf: Buffer
   try {
@@ -278,21 +308,20 @@ export async function generateAgreementPdf(
     pdf = await convert(docx, `${agreement.reference}.docx`)
   } catch (error) {
     if (error instanceof MissingValueError) {
-      await markFailed(payload, agreementId, `missing_value:${error.field}`)
-      return 'failed'
+      return markFailed(payload, agreementId, `missing_value:${error.field}`)
     }
     if ((error as Error).name === 'ConverterError' && !lastAttempt) throw error
-    await markFailed(
+    return markFailed(
       payload,
       agreementId,
       (error as Error).name === 'ConverterError' ? 'converter' : 'template',
     )
-    return 'failed'
   }
 
   const hash = sha256(pdf)
   return inAgreementTransaction(payload, null, async (req): Promise<GenerateOutcome> => {
-    // The team may have withdrawn it while the PDF was being made.
+    // The team may have withdrawn it while the PDF was being made, or be withdrawing it now.
+    await lockAgreement(req, agreementId)
     const fresh = await req.payload.findByID({
       collection: 'agreements',
       id: agreementId,

@@ -6,6 +6,7 @@ import { logActivityAfterChange } from '@/hooks/logActivity'
 import {
   AGREEMENT_KINDS,
   AGREEMENT_STATUSES,
+  AGREEMENT_TRANSITIONS,
   type AgreementStatus,
   VOIDABLE,
 } from '@/lib/agreements/fields'
@@ -57,7 +58,16 @@ export const Agreements: CollectionConfig = {
           }
           return data
         }
-        if (server) return data
+        if (server) {
+          // Only the allowed moves; a withdrawn agreement is final. The database checks the same
+          // against the newest row, so a write built from an older read cannot undo a withdrawal.
+          if (from === 'void') throw new APIError('A withdrawn agreement cannot be changed.', 409)
+          const to = (data.status ?? from) as AgreementStatus
+          if (to !== from && !AGREEMENT_TRANSITIONS[from]?.includes(to)) {
+            throw new APIError(`An agreement cannot move from ${from} to ${to}.`, 409)
+          }
+          return data
+        }
 
         // Through the API: the team can only withdraw an agreement that is not complete. Every
         // other value stays as the server wrote it.

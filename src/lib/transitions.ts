@@ -1,6 +1,7 @@
 import { APIError, type PayloadRequest } from 'payload'
 
 import type { Role } from '@/access/roles'
+import type { Project } from '@/payload-types'
 import { assertCompanyAgreementSigned, assertStudentAgreementSigned } from '@/lib/agreements/gates'
 
 /** from -> to -> roles allowed to make that move. Anything not listed is rejected. */
@@ -37,16 +38,18 @@ export const PROJECT_TRANSITIONS: TransitionMap<ProjectStatus> = {
 /**
  * Project moves that also need a signed agreement (konnected-agreements): `approved` to
  * `published` needs the company agreement, `matched` to `in_progress` the student agreement, each
- * signed by the party and by Konnected. Call after assertTransition, for every role.
+ * signed by the party and by Konnected, and still matching the project. Call after
+ * assertTransition, for every role, with the project as it will be saved (the stored project with
+ * this request's changes), so a price changed in the same request is checked too.
  */
 export async function assertProjectGates(
   req: PayloadRequest,
   from: ProjectStatus,
   to: ProjectStatus,
-  projectId: number | undefined,
+  project: Project | undefined,
 ): Promise<void> {
-  if (from === 'approved' && to === 'published') await assertCompanyAgreementSigned(req, projectId)
-  if (from === 'matched' && to === 'in_progress') await assertStudentAgreementSigned(req, projectId)
+  if (from === 'approved' && to === 'published') await assertCompanyAgreementSigned(req, project)
+  if (from === 'matched' && to === 'in_progress') await assertStudentAgreementSigned(req, project)
 }
 
 export type CompanyStatus = 'pending' | 'approved' | 'rejected'

@@ -11,7 +11,7 @@ import {
 import type { Agreement, AgreementPdf, Company, Signature } from '@/payload-types'
 
 import { NAME_MAX, type SignatureParty, type SignInMethodUsed, TICK_TEXT_VERSION } from './fields'
-import { AGREEMENTS_QUEUE, inAgreementTransaction } from './generate'
+import { AGREEMENTS_QUEUE, inAgreementTransaction, lockAgreement } from './generate'
 import { buildSignedPdf, sha256 } from './pdf'
 import { readStoredFile } from './storage'
 
@@ -94,6 +94,9 @@ export async function signAgreement(
       })) as Agreement | null
       if (!agreement) return { ok: false, error: 'not_found' }
 
+      // Hold the row until this transaction ends, so the status read next is the one written
+      // over: a withdrawal at the same moment waits, or goes first and this sees `void`.
+      await lockAgreement(req, agreement.id)
       // Bypass: the full row, including the admin-only fields the signer cannot read.
       const full = (await req.payload.findByID({
         collection: 'agreements',

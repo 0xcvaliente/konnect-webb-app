@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { agreementServerContext } from '@/access/agreements'
 import { generateAgreementPdf, requestAgreement, voidAgreement } from '@/lib/agreements/generate'
+import { convertDocxToPdf } from '@/lib/agreements/gotenberg'
 import { sha256 } from '@/lib/agreements/pdf'
 import { signAgreement } from '@/lib/agreements/sign'
 import { staticDirFor } from '@/lib/uploads/storage'
@@ -621,6 +622,227 @@ describe('the status gates', () => {
     expect((await start()).status).toBe(409)
     expect((await signAs(w.payload, w.admin, a)).ok).toBe(true)
     expect((await start()).status).toBe(200)
+  })
+
+  it('the signed company agreement opens the gate only for the price, terms and company signed', async () => {
+    const project = await approvedProject('Signed terms', 2000)
+    await signedAgreement(w.payload, w.admin, w.companyA.user, {
+      kind: 'company',
+      projectId: project.id,
+    })
+    const patch = (data: Record<string, unknown>) =>
+      rest.patch(`projects/${project.id}`, data, cookies.admin)
+
+    // A new price in the same request as publishing, or saved first.
+    expect((await patch({ fee: 20000, status: 'published' })).status).toBe(409)
+    expect((await patch({ title: 'Another scope' })).status).toBe(200)
+    expect((await move(project.id, 'published', cookies.admin)).status).toBe(409)
+    await expect(
+      w.payload.update({
+        collection: 'projects',
+        id: project.id,
+        data: { status: 'published' },
+        user: asUser(w.admin),
+        overrideAccess: true,
+      }),
+    ).rejects.toThrow(/no longer matches/)
+    expect((await patch({ title: 'Signed terms' })).status).toBe(200)
+    // Another company than the one that signed.
+    expect((await patch({ company: w.companyB.company.id, status: 'published' })).status).toBe(409)
+
+    // Back to what was signed: the gate opens.
+    expect((await move(project.id, 'published', cookies.admin)).status).toBe(200)
+    const after = await w.payload.findByID({
+      collection: 'projects',
+      id: project.id,
+      overrideAccess: true,
+    })
+    expect(after).toMatchObject({ status: 'published', fee: 2000, title: 'Signed terms' })
+  })
+
+  it('the signed student agreement opens the start gate only for the student and terms signed', async () => {
+    const project = await approvedProject('Gate two, signed terms')
+    await signedAgreement(w.payload, w.admin, w.companyA.user, {
+      kind: 'company',
+      projectId: project.id,
+    })
+    for (const status of ['published', 'matched'] as const) {
+      await w.payload.update({
+        collection: 'projects',
+        id: project.id,
+        data: { status },
+        ...as(w.admin),
+      })
+    }
+    const match = await w.payload.create({
+      collection: 'matches',
+      data: { project: project.id, student: w.beta.profile.id },
+      ...as(w.admin),
+    })
+    await signedAgreement(w.payload, w.admin, w.beta.user, { kind: 'student', matchId: match.id })
+    const start = () => move(project.id, 'in_progress', cookies.admin)
+    const setMatch = (data: Record<string, unknown>) =>
+      w.payload.update({ collection: 'matches', id: match.id, data, ...as(w.admin) })
+
+    // The team picks another student after beta signed: alpha never signed.
+    await setMatch({ student: w.alpha.profile.id })
+    expect((await start()).status).toBe(409)
+    await setMatch({ student: w.beta.profile.id })
+
+    // The project title the student signed for changed.
+    await w.payload.update({
+      collection: 'projects',
+      id: project.id,
+      data: { title: 'Something else' },
+      ...as(w.admin),
+    })
+    expect((await start()).status).toBe(409)
+    await w.payload.update({
+      collection: 'projects',
+      id: project.id,
+      data: { title: 'Gate two, signed terms' },
+      ...as(w.admin),
+    })
+
+    expect((await start()).status).toBe(200)
+  })
+})
+
+describe('a withdrawal racing a signature or the PDF job', () => {
+  const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  /** Withdraw the agreement in an open transaction, as the team's request would, not committed. */
+  const holdWithdrawal = async (agreementId: number) => {
+    const db = new pg.Client({ connectionString: process.env.DATABASE_URL })
+    await db.connect()
+    await db.query('BEGIN')
+    await db.query(
+      `UPDATE agreements SET status = 'void', active_key = NULL, voided_at = now() WHERE id = $1`,
+      [agreementId],
+    )
+    return async () => {
+      await db.query('COMMIT')
+      await db.end()
+    }
+  }
+  const statusOf = async (id: number) =>
+    (await w.payload.findByID({ collection: 'agreements', id, depth: 0, overrideAccess: true }))
+      .status
+  const signatures = async (id: number) =>
+    (
+      await w.payload.count({
+        collection: 'signatures',
+        where: { agreement: { equals: id } },
+        overrideAccess: true,
+      })
+    ).totalDocs
+
+  it('the party signs while the team withdraws: it stays withdrawn, no signature', async () => {
+    const project = await approvedProject()
+    const a = await makeAgreement(w.payload, w.admin, { kind: 'company', projectId: project.id })
+    const commit = await holdWithdrawal(a.id)
+    const signing = signAs(w.payload, w.companyA.user, a)
+    await pause(300)
+    await commit()
+    expect(await signing).toEqual({ ok: false, error: 'not_your_turn' })
+    expect(await statusOf(a.id)).toBe('void')
+    expect(await signatures(a.id)).toBe(0)
+  })
+
+  it('Konnected signs last while the team withdraws: never signed, the gate stays closed', async () => {
+    const project = await approvedProject()
+    const a = await makeAgreement(w.payload, w.admin, { kind: 'company', projectId: project.id })
+    expect((await signAs(w.payload, w.companyA.user, a)).ok).toBe(true)
+    const commit = await holdWithdrawal(a.id)
+    const signing = signAs(w.payload, w.admin, a)
+    await pause(300)
+    await commit()
+    expect(await signing).toEqual({ ok: false, error: 'not_your_turn' })
+    expect(await statusOf(a.id)).toBe('void')
+    expect(await signatures(a.id)).toBe(1)
+    expect(
+      (await rest.patch(`projects/${project.id}`, { status: 'published' }, cookies.admin)).status,
+    ).toBe(409)
+  })
+
+  it('the PDF is finished while the team withdraws: it stays withdrawn', async () => {
+    const project = await approvedProject()
+    const made = await requestAgreement(w.payload, w.admin, {
+      kind: 'company',
+      projectId: project.id,
+    })
+    if (!made.ok) throw new Error(made.error)
+    let commit: (() => Promise<void>) | undefined
+    const job = generateAgreementPdf(w.payload, made.id, {
+      convert: async (docx, name) => {
+        const pdf = await convertDocxToPdf(docx, name)
+        commit = await holdWithdrawal(made.id)
+        return pdf
+      },
+    })
+    await vi.waitFor(() => expect(commit).toBeDefined())
+    await pause(300)
+    await commit!()
+    expect(await job).toBe('skipped')
+    const after = await w.payload.findByID({
+      collection: 'agreements',
+      id: made.id,
+      depth: 0,
+      overrideAccess: true,
+    })
+    expect(after).toMatchObject({ status: 'void', unsignedPdf: null, unsignedSha256: null })
+  })
+
+  it('withdrawn is final and no step is skipped: not the server, not a direct SQL write', async () => {
+    const project = await approvedProject()
+    const a = await makeAgreement(w.payload, w.admin, { kind: 'company', projectId: project.id })
+    expect((await voidAgreement(w.payload, w.admin, a.id)).ok).toBe(true)
+    await expect(
+      w.payload.update({
+        collection: 'agreements',
+        id: a.id,
+        data: { status: 'awaiting_konnected' },
+        overrideAccess: true,
+        context: { ...agreementServerContext },
+      }),
+    ).rejects.toThrow()
+
+    const fresh = await requestAgreement(w.payload, w.admin, {
+      kind: 'company',
+      projectId: project.id,
+    })
+    if (!fresh.ok) throw new Error(fresh.error)
+    await expect(
+      w.payload.update({
+        collection: 'agreements',
+        id: fresh.id,
+        data: { status: 'signed' },
+        overrideAccess: true,
+        context: { ...agreementServerContext },
+      }),
+    ).rejects.toThrow()
+
+    const db = new pg.Client({ connectionString: process.env.DATABASE_URL })
+    await db.connect()
+    try {
+      for (const status of ['awaiting_party', 'awaiting_konnected', 'signed']) {
+        await expect(
+          db.query(`UPDATE agreements SET status = $2 WHERE id = $1`, [a.id, status]),
+        ).rejects.toThrow(/withdrawn/)
+      }
+      await expect(
+        db.query(`UPDATE agreements SET title = 'x' WHERE id = $1`, [a.id]),
+      ).rejects.toThrow(/withdrawn/)
+      for (const status of ['awaiting_konnected', 'signed']) {
+        await expect(
+          db.query(`UPDATE agreements SET status = $2 WHERE id = $1`, [fresh.id, status]),
+        ).rejects.toThrow(/cannot move/)
+      }
+    } finally {
+      await db.end()
+    }
+    expect(await statusOf(a.id)).toBe('void')
+    expect(await statusOf(fresh.id)).toBe('generating')
   })
 })
 

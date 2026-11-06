@@ -35,6 +35,20 @@ export const VOIDABLE: readonly AgreementStatus[] = [
   'failed',
 ]
 
+/**
+ * The only status moves, for every writer. `signed` and `void` are final. The same rule is in the
+ * database (migration 20261106_230959_agreements_status_rules), so a write that read the agreement
+ * before the team withdrew it cannot move it back.
+ */
+export const AGREEMENT_TRANSITIONS: Record<AgreementStatus, readonly AgreementStatus[]> = {
+  generating: ['awaiting_party', 'failed', 'void'],
+  awaiting_party: ['awaiting_konnected', 'void'],
+  awaiting_konnected: ['signed', 'void'],
+  signed: [],
+  failed: ['void'],
+  void: [],
+}
+
 /** Who signs. The company or the student first, Konnected last. */
 export const SIGNATURE_PARTIES = ['company', 'student', 'konnected'] as const
 export type SignatureParty = (typeof SIGNATURE_PARTIES)[number]
