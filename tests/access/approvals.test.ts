@@ -574,6 +574,100 @@ describe('project review', () => {
     expect(asStudent).not.toHaveProperty('fee')
   })
 
+  it('a project of a company that is not approved (any more) is neither approved nor published', async () => {
+    const admin = session(w.admin)
+    const adminCookie = await sessionFor(w.admin.id)
+    const submitted = await submittedProject({ title: 'Waits for approval' })
+    const approved = await submittedProject({ title: 'Waits for publishing' })
+    await approveProject(w.payload, admin, form({ id: approved.id, pay: 'unpaid' }))
+    expect((await project(approved.id)).status).toBe('approved')
+
+    // The team rejects company A after it sent both projects.
+    await w.payload.update({
+      collection: 'companies',
+      id: w.companyA.company.id,
+      data: { status: 'rejected', noteToCompany: 'The organisation number is not active.' },
+      ...as(w.admin),
+    })
+
+    const seen = async (id: number) =>
+      (
+        await w.payload.find({
+          collection: 'projects',
+          where: { id: { equals: id } },
+          ...as(w.alpha.user),
+        })
+      ).totalDocs
+    const refusedEverywhere = async () => {
+      // Every role through the team's decisions: outsiders are refused, the team is told why.
+      for (const outsider of outsiders()) {
+        expect(
+          (await approveProject(w.payload, session(outsider), form({ id: submitted.id }))).error,
+        ).toBe('forbidden')
+        expect(
+          (await publishProject(w.payload, session(outsider), form({ id: approved.id }))).error,
+        ).toBe('forbidden')
+      }
+      expect(
+        (await approveProject(w.payload, admin, form({ id: submitted.id, pay: 'unpaid' }))).error,
+      ).toBe('company_not_approved')
+      expect((await publishProject(w.payload, admin, form({ id: approved.id }))).error).toBe(
+        'company_not_approved',
+      )
+      // The hook and the publishing gate hold for every API, the team's own included.
+      await expect(
+        w.payload.update({
+          collection: 'projects',
+          id: submitted.id,
+          data: { status: 'approved', paidOrUnpaid: 'unpaid' },
+          ...as(w.admin),
+        }),
+      ).rejects.toThrow(/approve the company/)
+      await expect(
+        w.payload.update({
+          collection: 'projects',
+          id: approved.id,
+          data: { status: 'published' },
+          ...as(w.admin),
+        }),
+      ).rejects.toThrow(/approve the company/)
+      expect(
+        (await rest.patch(`projects/${approved.id}`, { status: 'published' }, adminCookie)).status,
+      ).toBe(403)
+      const gql = await graphql(
+        `mutation { updateProject(id: ${approved.id}, data: { status: published }) { id } }`,
+        adminCookie,
+      )
+      expect(gql.text).toContain('"errors"')
+
+      expect((await project(submitted.id)).status).toBe('submitted')
+      expect((await project(approved.id)).status).toBe('approved')
+      // Students never see either.
+      expect(await seen(submitted.id)).toBe(0)
+      expect(await seen(approved.id)).toBe(0)
+    }
+    await refusedEverywhere()
+
+    // The company corrects and resends its details: pending again, still not approved.
+    const cookie = await login(w.companyA.user.email)
+    expect(
+      (await rest.patch(`companies/${w.companyA.company.id}`, { description: 'Corrected' }, cookie))
+        .status,
+    ).toBe(200)
+    expect((await company(w.companyA.company.id)).status).toBe('pending')
+    await refusedEverywhere()
+
+    // Once Konnected approves the company again, its projects move on.
+    expect(
+      (await approveCompany(w.payload, admin, form({ id: w.companyA.company.id }))).status,
+    ).toBe('done')
+    expect((await publishProject(w.payload, admin, form({ id: approved.id }))).status).toBe('done')
+    expect(await seen(approved.id)).toBe(1)
+    expect(
+      (await approveProject(w.payload, admin, form({ id: submitted.id, pay: 'unpaid' }))).status,
+    ).toBe('done')
+  })
+
   it('no email about a project ever names a student', async () => {
     const admin = session(w.admin)
     const p = await submittedProject()

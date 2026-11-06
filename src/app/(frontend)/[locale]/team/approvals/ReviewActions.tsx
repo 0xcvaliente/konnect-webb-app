@@ -321,6 +321,7 @@ export function ProjectActions({
   id,
   title,
   companyChoice,
+  companyApproved,
   itemHref,
   queueHref,
 }: {
@@ -328,6 +329,8 @@ export function ProjectActions({
   title: string
   /** What the company chose; Konnected decides. */
   companyChoice: 'paid' | 'unpaid' | null
+  /** Approving waits until Konnected has approved the company (the page says why). */
+  companyApproved: boolean
   /** This project in the queue: after approval it waits here to be published. */
   itemHref: string
   queueHref: string
@@ -438,7 +441,7 @@ export function ProjectActions({
         <Button
           type="submit"
           form={formId}
-          disabled={!checked || approve.pending}
+          disabled={!companyApproved || !checked || approve.pending}
           aria-describedby={checked ? undefined : `${base}-checkhint`}
           aria-busy={approve.pending || undefined}
         >
@@ -498,10 +501,13 @@ export function ProjectActions({
 export function PublishAction({
   id,
   title,
+  companyApproved,
   queueHref,
 }: {
   id: number
   title: string
+  /** Publishing waits until Konnected has approved the company (the page says why). */
+  companyApproved: boolean
   queueHref: string
 }) {
   const t = useTranslations('TeamApprovals.publish')
@@ -515,12 +521,13 @@ export function PublishAction({
           type="button"
           aria-expanded={open}
           aria-controls={box}
+          disabled={!companyApproved}
           onClick={() => setOpen((v) => !v)}
         >
           {t('button')}
         </Button>
       </div>
-      {open && (
+      {open && companyApproved && (
         <Box id={box}>
           <p className="font-semibold">{t('confirmTitle', { title })}</p>
           <p className="text-[0.88rem] text-muted-foreground">{t('confirmBody')}</p>

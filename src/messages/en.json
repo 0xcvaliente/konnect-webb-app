@@ -1303,6 +1303,7 @@
       "pay_choice": "Choose paid or unpaid.",
       "price_required": "Set the fixed price for a paid project.",
       "price_invalid": "Write the price in whole kroner, for example 6500.",
+      "company_not_approved": "Konnected has not approved this project's company. Approve the company first.",
       "duplicate_org": "Another approved company already has this organisation number. One company account per organisation number.",
       "generic": "Something went wrong and nothing was saved. Try again."
     },

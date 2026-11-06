@@ -484,6 +484,7 @@ async function ProjectDetail({ id, tab, mine, payload, user }: DetailProps) {
             id={project.id}
             title={project.title}
             companyChoice={project.paidOrUnpaid ?? null}
+            companyApproved={company?.status === 'approved'}
             itemHref={queueHref(tab, mine, project.id)}
             queueHref={queueHref(tab, mine)}
           />
@@ -496,6 +497,7 @@ async function ProjectDetail({ id, tab, mine, payload, user }: DetailProps) {
               key={project.id}
               id={project.id}
               title={project.title}
+              companyApproved={company?.status === 'approved'}
               queueHref={queueHref(tab, mine)}
             />
           </div>

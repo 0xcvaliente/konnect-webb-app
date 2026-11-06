@@ -559,6 +559,29 @@ type Decision = (
   form: FormData,
 ) => Promise<ReviewState>
 
+/**
+ * Whether Konnected has approved the project's company. Approving and publishing a project need
+ * it (the Projects hook and the publishing gate check it again); a company can be rejected, or be
+ * back in pending after its one correction, while its project waits in the queue.
+ */
+async function companyApproved(
+  payload: Payload,
+  actor: SessionUser,
+  project: Project,
+): Promise<boolean> {
+  const id = relationId(project.company)
+  if (!id) return false
+  const company = (await payload.findByID({
+    collection: 'companies',
+    id,
+    depth: 0,
+    select: { status: true },
+    disableErrors: true,
+    ...asActor(actor),
+  })) as Pick<Company, 'status'> | null
+  return company?.status === 'approved'
+}
+
 /** Approve a pending company. It can then send projects for review; it gets an email. */
 export const approveCompany: Decision = async (payload, actor, form) => {
   if (!actor || !isAdmin(actor)) return fail('forbidden')
@@ -619,6 +642,7 @@ export const approveProject: Decision = async (payload, actor, form) => {
   const project = (await load(payload, actor, 'projects', form)) as Project | null
   if (!project) return fail('not_found')
   if (project.status !== 'submitted') return fail('not_allowed')
+  if (!(await companyApproved(payload, actor, project))) return fail('company_not_approved')
   return save(payload, actor, 'projects', project.id, {
     status: 'approved',
     paidOrUnpaid: pay,
@@ -674,6 +698,7 @@ export const publishProject: Decision = async (payload, actor, form) => {
   const project = (await load(payload, actor, 'projects', form)) as Project | null
   if (!project) return fail('not_found')
   if (project.status !== 'approved') return fail('not_allowed')
+  if (!(await companyApproved(payload, actor, project))) return fail('company_not_approved')
   return save(payload, actor, 'projects', project.id, { status: 'published' })
 }
 

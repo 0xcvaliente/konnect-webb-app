@@ -22,6 +22,8 @@ export type ReviewError =
   | 'pay_choice'
   | 'price_required'
   | 'price_invalid'
+  /** The project's company is not approved (any more): approve the company first. */
+  | 'company_not_approved'
   /** Another approved company has this organisation number. */
   | 'duplicate_org'
   | 'generic'

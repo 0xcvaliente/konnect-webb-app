@@ -1303,6 +1303,7 @@
       "pay_choice": "Velg betalt eller ubetalt.",
       "price_required": "Sett fastprisen for et betalt prosjekt.",
       "price_invalid": "Skriv prisen i hele kroner, for eksempel 6500.",
+      "company_not_approved": "Konnected har ikke godkjent bedriften bak dette prosjektet. Godkjenn bedriften først.",
       "duplicate_org": "En annen godkjent bedrift har allerede dette organisasjonsnummeret. Én bedriftskonto per organisasjonsnummer.",
       "generic": "Noe gikk galt, og ingenting ble lagret. Prøv igjen."
     },

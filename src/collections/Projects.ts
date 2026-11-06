@@ -199,6 +199,11 @@ export const Projects: CollectionConfig = {
         // the fixed price (konnected-product-rules, money). An unpaid project has no price.
         const next = { ...(originalDoc ?? {}), ...data } as Project
         if (to === 'approved' && from !== 'approved') {
+          // Konnected approves the company before any of its projects (the company may have been
+          // rejected, or sent back to pending, after it sent this one).
+          if (company.status !== 'approved') {
+            throw new APIError('Project: approve the company before its project', 403)
+          }
           const problem = approvalProblem(next)
           if (problem === 'pay_choice') {
             throw new APIError('Project: decide paid or unpaid before approving', 400)
