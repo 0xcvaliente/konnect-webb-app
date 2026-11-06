@@ -16,6 +16,7 @@ import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActiv
 import { MAX_BRIEF_FILES } from './BriefFiles'
 import {
   assertInitialStatus,
+  assertProjectGates,
   assertTransition,
   PROJECT_TRANSITIONS,
   type ProjectStatus,
@@ -78,6 +79,7 @@ export const Projects: CollectionConfig = {
         const to = (data.status ?? from) as ProjectStatus
         if (operation === 'update') {
           assertTransition(PROJECT_TRANSITIONS, from, to, role, 'Project')
+          await assertProjectGates(req, from, to, originalDoc?.id)
         }
 
         const companyId = relationId(data.company ?? originalDoc?.company)

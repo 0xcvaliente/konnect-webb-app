@@ -4,6 +4,7 @@ import { registerCompany, saveCompany, type SessionUser } from '@/lib/companies/
 import { formatOrgNumber, isValidOrgNumber, normalizeWebsite } from '@/lib/companies/fields'
 import type { Company, CompanyLogo, User } from '@/payload-types'
 
+import { signedAgreement } from '../helpers/agreements'
 import { fileOf, makePdf, makePng } from '../helpers/files'
 import {
   asUser,
@@ -961,11 +962,18 @@ describe('company logos', () => {
     await approve(company.id)
     let project = await w.payload.create({
       collection: 'projects',
-      data: { title: 'Logo project', description: 'd', status: 'draft' } as never,
+      data: { title: 'Logo project', description: 'd', fee: 1000, status: 'draft' } as never,
       ...as(await fresh(user)),
     })
     expect(project.companyLogo).toMatchObject({ id: logo.id })
     for (const status of ['submitted', 'approved', 'published'] as const) {
+      // Publishing needs the signed company agreement.
+      if (status === 'published') {
+        await signedAgreement(w.payload, w.admin, await fresh(user), {
+          kind: 'company',
+          projectId: project.id,
+        })
+      }
       project = await w.payload.update({
         collection: 'projects',
         id: project.id,

@@ -18,6 +18,7 @@ import {
   SENTINEL,
   type World,
 } from '../helpers/world'
+import { signedAgreement } from '../helpers/agreements'
 
 /**
  * Roles, status rules, applications, matches, deliverables, payments and the activity log, each
@@ -374,7 +375,13 @@ describe('project status rules', () => {
   it('follows the whole chain in order and only admin makes the admin moves', async () => {
     const p = await w.payload.create({
       collection: 'projects',
-      data: { company: w.companyA.company.id, title: 'Chain', description: 'd', status: 'draft' },
+      data: {
+        company: w.companyA.company.id,
+        title: 'Chain',
+        description: 'd',
+        fee: 1000,
+        status: 'draft',
+      },
       overrideAccess: true,
     })
     await move(p.id, 'submitted', w.companyA.user)
@@ -389,6 +396,22 @@ describe('project status rules', () => {
       'delivered',
       'closed',
     ]) {
+      // The two agreement gates: the company agreement before publishing, the student agreement
+      // (after the match) before the work starts.
+      if (status === 'published') {
+        await signedAgreement(w.payload, w.admin, w.companyA.user, {
+          kind: 'company',
+          projectId: p.id,
+        })
+      }
+      if (status === 'in_progress') {
+        const m = await w.payload.create({
+          collection: 'matches',
+          data: { project: p.id, student: w.beta.profile.id },
+          ...as(w.admin),
+        })
+        await signedAgreement(w.payload, w.admin, w.beta.user, { kind: 'student', matchId: m.id })
+      }
       await move(p.id, status, w.admin)
     }
     const done = await w.payload.findByID({ collection: 'projects', id: p.id })

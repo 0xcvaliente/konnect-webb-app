@@ -234,7 +234,7 @@ export async function consumeMagicLink(
   try {
     const user = await completeEmailLinkLogin(payload, String(link.email), locale)
     if (!user) return { ok: false, error: 'invalid_link' }
-    return { ok: true, user, cookie: await createSession(payload, user.id) }
+    return { ok: true, user, cookie: await createSession(payload, user.id, 'email_link') }
   } catch (error) {
     // The link proved the address, so its owner may learn that the account is paused.
     if (error instanceof AccountPausedError) return { ok: false, error: 'paused' }

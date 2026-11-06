@@ -7,10 +7,22 @@
  * values for local accounts. Every status change goes through the real access rules and hooks as
  * the admin user, so the seed also proves the status workflow.
  */
+import fs from 'node:fs/promises'
+import path from 'node:path'
+
 import config from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 
 import { adminEmails } from '@/access/adminEmails'
+import type { AgreementKind } from '@/lib/agreements/fields'
+import {
+  generateAgreementPdf,
+  type AgreementInput,
+  requestAgreement,
+} from '@/lib/agreements/generate'
+import { convertDocxToPdf } from '@/lib/agreements/gotenberg'
+import { textPdf } from '@/lib/agreements/pdf'
+import { signAgreement } from '@/lib/agreements/sign'
 import { samplePdf } from '@/lib/uploads/samplePdf'
 import type { Project, User } from '@/payload-types'
 
@@ -45,6 +57,91 @@ const ensureUser = async (
     overrideAccess: true,
     disableVerificationEmail: true,
   })) as User
+}
+
+/**
+ * The example agreement templates (docs/agreements, "EXAMPLE, not legal text"), uploaded and
+ * published by the admin when no template of the kind is published yet.
+ */
+async function ensureTemplate(payload: Payload, admin: User, kind: AgreementKind) {
+  const published = await payload.count({
+    collection: 'agreement-templates',
+    where: { and: [{ kind: { equals: kind } }, { status: { equals: 'published' } }] },
+    overrideAccess: true,
+  })
+  if (published.totalDocs > 0) return
+  const data = await fs.readFile(path.resolve(`docs/agreements/example-${kind}-agreement.docx`))
+  const adminCtx = { ...admin, collection: 'users' as const }
+  const draft = await payload.create({
+    collection: 'agreement-templates',
+    data: { kind } as never,
+    file: {
+      data,
+      name: `example-${kind}-agreement.docx`,
+      mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      size: data.length,
+    },
+    user: adminCtx,
+    overrideAccess: false,
+  })
+  await payload.update({
+    collection: 'agreement-templates',
+    id: draft.id,
+    data: { status: 'published' },
+    user: adminCtx,
+    overrideAccess: false,
+  })
+}
+
+/** Gotenberg when it runs (GOTENBERG_URL), else a plain one-page PDF that says so. */
+const seedConvert = async (docx: Buffer, name: string) => {
+  try {
+    return await convertDocxToPdf(docx, name)
+  } catch {
+    return textPdf([
+      'Seed agreement. EXAMPLE, not legal text.',
+      'Gotenberg was not running when the seed ran, so this PDF is a stand-in.',
+    ])
+  }
+}
+
+/**
+ * A signed agreement for a seed project, made the real way: from the published template, signed by
+ * the party, then by Konnected. The signed-PDF emails go out when the app's job runner starts.
+ */
+async function seedSignedAgreement(
+  payload: Payload,
+  admin: User,
+  party: User,
+  input: AgreementInput,
+) {
+  const made = await requestAgreement(payload, admin, input)
+  if (!made.ok) throw new Error(`The seed could not make an agreement: ${made.error}`)
+  await generateAgreementPdf(payload, made.id, { convert: seedConvert })
+  for (const [user, name, method] of [
+    [party, 'Seed Signer', 'password'],
+    [admin, 'Konnected Seed', 'google'],
+  ] as const) {
+    const agreement = await payload.findByID({
+      collection: 'agreements',
+      id: made.id,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const signed = await signAgreement(
+      payload,
+      user,
+      {
+        agreementId: made.id,
+        typedName: name,
+        agree: true,
+        authority: true,
+        documentSha256: agreement.unsignedSha256 ?? '',
+      },
+      method,
+    )
+    if (!signed.ok) throw new Error(`The seed could not sign an agreement: ${signed.error}`)
+  }
 }
 
 async function seed() {
@@ -141,6 +238,10 @@ async function seed() {
     companyId = company.id
   }
 
+  // Konnected's example agreement templates, so seed projects can be published and started.
+  await ensureTemplate(payload, admin, 'company')
+  await ensureTemplate(payload, admin, 'student')
+
   const move = (id: number, status: Status) =>
     payload.update({
       collection: 'projects',
@@ -189,6 +290,7 @@ async function seed() {
         title,
         description: `A seed project in the ${status} state.`,
         tasks: 'Do the seed task.',
+        deliverable: 'A short written report.',
         desiredSkills: ['research'],
         fee: 5000,
       },
@@ -224,9 +326,37 @@ async function seed() {
         }
         await payload.create({
           collection: 'matches',
-          data: { project: project.id, student: profile.id, application: application.id },
+          data: {
+            project: project.id,
+            student: profile.id,
+            application: application.id,
+            // Agreed at kick-off; the student agreement uses them.
+            startDate: new Date().toISOString(),
+            endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          },
           user: adminCtx,
           overrideAccess: false,
+        })
+      }
+      // The agreement gates: the company agreement before publishing, the student agreement
+      // before the work starts.
+      if (step === 'published') {
+        await seedSignedAgreement(payload, admin, companyUser, {
+          kind: 'company',
+          projectId: project.id,
+        })
+      }
+      if (step === 'in_progress') {
+        const match = await payload.find({
+          collection: 'matches',
+          where: { project: { equals: project.id } },
+          limit: 1,
+          depth: 0,
+          overrideAccess: true,
+        })
+        await seedSignedAgreement(payload, admin, studentUser, {
+          kind: 'student',
+          matchId: match.docs[0]!.id,
         })
       }
       await move(project.id, step)

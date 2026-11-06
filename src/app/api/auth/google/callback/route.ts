@@ -58,7 +58,7 @@ export async function GET(request: Request) {
 
   try {
     const user = await completeGoogleLogin(payload, claims)
-    const sessionCookie = await createSessionCookie(payload, user.id)
+    const sessionCookie = await createSessionCookie(payload, user.id, 'google')
     return finish(user.role === 'pending' ? `/${locale}/choose-role` : `/${locale}`, sessionCookie)
   } catch (error) {
     if (error instanceof AuthFlowError) return fail(error.code)

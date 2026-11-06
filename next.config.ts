@@ -38,12 +38,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
-      // Private files (CVs, deliverables, brief attachments): nothing in them may run or load
+      // Private files (CVs, deliverables, brief attachments, agreements and their templates): nothing in them may run or load
       // anything, even if a browser opened one. Later rules win for the same header, so this
       // replaces the policy above for these routes only. The download headers themselves come
       // from the collections (lib/uploads/fileRules.ts).
       {
-        source: '/api/:collection(cvs|deliverable-files|brief-files)/file/:path*',
+        source:
+          '/api/:collection(cvs|deliverable-files|brief-files|agreement-pdfs|agreement-templates)/file/:path*',
         headers: [
           {
             key: 'Content-Security-Policy',

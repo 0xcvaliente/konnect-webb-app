@@ -23,7 +23,7 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-type Parts = {
+export type Parts = {
   locale: EmailLocale
   subject: string
   heading: string
@@ -35,7 +35,7 @@ type Parts = {
 }
 
 /** One plain layout for every email: word mark, heading, text, one button, the small print. */
-function render({
+export function render({
   locale,
   subject,
   heading,

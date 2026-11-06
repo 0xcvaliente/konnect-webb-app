@@ -1,6 +1,7 @@
-import { APIError } from 'payload'
+import { APIError, type PayloadRequest } from 'payload'
 
 import type { Role } from '@/access/roles'
+import { assertCompanyAgreementSigned, assertStudentAgreementSigned } from '@/lib/agreements/gates'
 
 /** from -> to -> roles allowed to make that move. Anything not listed is rejected. */
 export type TransitionMap<S extends string> = Partial<Record<S, Partial<Record<S, Role[]>>>>
@@ -31,6 +32,21 @@ export const PROJECT_TRANSITIONS: TransitionMap<ProjectStatus> = {
   // The student delivering is wired up by the deliverables card. Admin only until then.
   in_progress: { delivered: ['admin'] },
   delivered: { closed: ['admin'] },
+}
+
+/**
+ * Project moves that also need a signed agreement (konnected-agreements): `approved` to
+ * `published` needs the company agreement, `matched` to `in_progress` the student agreement, each
+ * signed by the party and by Konnected. Call after assertTransition, for every role.
+ */
+export async function assertProjectGates(
+  req: PayloadRequest,
+  from: ProjectStatus,
+  to: ProjectStatus,
+  projectId: number | undefined,
+): Promise<void> {
+  if (from === 'approved' && to === 'published') await assertCompanyAgreementSigned(req, projectId)
+  if (from === 'matched' && to === 'in_progress') await assertStudentAgreementSigned(req, projectId)
 }
 
 export type CompanyStatus = 'pending' | 'approved' | 'rejected'
