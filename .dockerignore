@@ -1,0 +1,39 @@
+# Keep the build context small and free of secrets and personal data.
+# Secrets: never in the image.
+.env
+.env.*
+!.env.example
+!.env.prod.example
+credentials/
+client_secret*.json
+service-account*.json
+*.pem
+*.key
+*.p12
+
+# Uploaded files are personal data and live on a volume, not in the image.
+media/
+
+# Built or installed inside the image.
+node_modules/
+.next/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Not needed to build or run the app.
+.git/
+.github/
+.claude/
+.playwright-mcp/
+.idea/
+.vscode/
+docs/
+scripts/deploy/
+caddy/
+tests/
+Dockerfile
+docker/
+docker-compose*.yml
+*.log
+.DS_Store

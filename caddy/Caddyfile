@@ -1,0 +1,52 @@
+# Konnected: Caddy is the only service with public ports (docker-compose.prod.yml).
+#
+# SITE_ADDRESS comes from .env.prod: the app's host name on the server (Let's Encrypt
+# certificate, needs DNS and ports 80/443), or "localhost" for a trial on a laptop (Caddy's own
+# internal certificate authority, nothing leaves the machine).
+#
+# No access log on purpose: request lines hold sign-in links and tokens in query strings, and
+# client addresses are personal data. Caddy still logs its own errors to stdout.
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	# Do not advertise the server software.
+	header {
+		-Server
+		-Via
+	}
+
+	reverse_proxy {
+		# Every running "app" container. Docker's DNS returns one address per container, so
+		# during a deploy (scripts/deploy/deploy.sh) Caddy sees the old and the new container,
+		# and after the swap only the new one. Re-resolved every second.
+		dynamic a {
+			name app
+			port 3000
+			refresh 1s
+			versions ipv4
+		}
+		lb_policy round_robin
+
+		# A request that cannot reach a container (it is still starting, or it is shutting down
+		# and no longer accepts connections) is retried on another one for up to 30 seconds
+		# instead of failing. Retrying after a refused connection is safe for every method.
+		lb_try_duration 30s
+		lb_try_interval 250ms
+
+		# Passive health check: a container that refused a connection is skipped for 10 s.
+		# Caddy runs no active checks (health_uri) on dynamic upstreams; whether a new container
+		# is healthy is decided by its Docker health check on /api/health, which deploy.sh waits
+		# for before the old container is stopped.
+		fail_duration 10s
+
+		# A new connection for every request, so a container that is shutting down is never
+		# handed a request on an idle kept-alive connection it is about to close. Connections
+		# stay inside the Docker network, so this costs well under a millisecond.
+		transport http {
+			keepalive off
+		}
+	}
+}
