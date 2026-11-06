@@ -1,0 +1,241 @@
+/*
+ * Konnected design base: the "Estuary" look (konnected-design-system skill, chosen 6 Nov 2026).
+ * Imported only from src/app/(frontend)/[locale]/layout.tsx, so none of it reaches the Payload admin.
+ */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* Dark mode follows the system, unless a page sets .dark or .light on <html>. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:not(.light, .light *)) {
+      @slot;
+    }
+  }
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+}
+@custom-variant reduce-transparency (@media (prefers-reduced-transparency: reduce));
+
+/* Konnected tokens, light. Every token also has a dark value below. */
+:root {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #eaf5f1;
+  --line: #cde8dd;
+  --edge: #729397;
+  --ink: #0b2a31;
+  --ink-2: #4b676d;
+  --band: #cbebdf;
+  --band-ink: #00303a;
+  --band-ink-2: #2b5a61;
+  --band-link: #005f73;
+  --primary: #005f73;
+  --on-primary: #ffffff;
+  --tint: #e2f3ec;
+  --tint-ink: #004c5c;
+  --data: #0a9396;
+  --ok: #18794e;
+  --warn: #975a00;
+  --bad: #b42318;
+
+  /* The glass menu pill on the band. */
+  --glass: color-mix(in srgb, var(--surface) 64%, transparent);
+  --glass-edge: rgb(255 255 255 / 0.85);
+  --glass-hi: rgb(255 255 255 / 0.95);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+
+    --bg: #08191d;
+    --surface: #0e2429;
+    --surface-2: #163238;
+    --line: #24505a;
+    --edge: #4f7379;
+    --ink: #e4f1ee;
+    --ink-2: #9dbdb8;
+    --band: #123a3a;
+    --band-ink: #e4f1ee;
+    --band-ink-2: #a9d6cf;
+    --band-link: #94d2bd;
+    --primary: #94d2bd;
+    --on-primary: #00303a;
+    --tint: #123a3a;
+    --tint-ink: #b7e4d4;
+    --data: #3db8b4;
+    --ok: #5fd39a;
+    --warn: #f2b65c;
+    --bad: #ff8a80;
+
+    --glass: color-mix(in srgb, var(--surface) 58%, transparent);
+    --glass-edge: rgb(255 255 255 / 0.14);
+    --glass-hi: rgb(255 255 255 / 0.22);
+  }
+}
+
+/* The same dark values, for a page that asks for dark with a class. Keep in step with the block above. */
+.dark {
+  color-scheme: dark;
+
+  --bg: #08191d;
+  --surface: #0e2429;
+  --surface-2: #163238;
+  --line: #24505a;
+  --edge: #4f7379;
+  --ink: #e4f1ee;
+  --ink-2: #9dbdb8;
+  --band: #123a3a;
+  --band-ink: #e4f1ee;
+  --band-ink-2: #a9d6cf;
+  --band-link: #94d2bd;
+  --primary: #94d2bd;
+  --on-primary: #00303a;
+  --tint: #123a3a;
+  --tint-ink: #b7e4d4;
+  --data: #3db8b4;
+  --ok: #5fd39a;
+  --warn: #f2b65c;
+  --bad: #ff8a80;
+
+  --glass: color-mix(in srgb, var(--surface) 58%, transparent);
+  --glass-edge: rgb(255 255 255 / 0.14);
+  --glass-hi: rgb(255 255 255 / 0.22);
+}
+
+/* shadcn variables, mapped from the Konnected tokens (design-system skill, "shadcn / Tailwind 4 mapping").
+ * --primary is both a Konnected token and a shadcn variable, with the same value. */
+:root,
+.dark {
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary-foreground: var(--on-primary);
+  --secondary: var(--tint);
+  --secondary-foreground: var(--tint-ink);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--ink);
+  --destructive: var(--bad);
+  --border: var(--line);
+  --input: var(--edge);
+  --ring: var(--primary);
+  /* Cards. Inner items and pills have their own radii below, so they never pick this up. */
+  --radius: 1.5rem;
+}
+
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, system-ui, sans-serif;
+
+  /* Body text is 15 px. Inputs use text-base (16 px) on phones so iOS does not zoom. */
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5;
+  --text-tag: 0.78rem;
+  --text-tag--line-height: 1.4;
+
+  --breakpoint-team: 56.25rem; /* 900 px: the team menu moves to the left */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Konnected extras. */
+  --color-band: var(--band);
+  --color-band-foreground: var(--band-ink);
+  --color-band-muted: var(--band-ink-2);
+  --color-band-link: var(--band-link);
+  --color-tint: var(--tint);
+  --color-tint-foreground: var(--tint-ink);
+  --color-data: var(--data);
+  --color-success: var(--ok);
+  --color-warning: var(--warn);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-edge: var(--edge);
+  --color-glass: var(--glass);
+  --color-glass-edge: var(--glass-edge);
+
+  /* Radii: cards 24 px, inner items (inputs, rows, files, banners) 14 px, menus 18 px.
+   * Buttons, tabs, chips and pills use rounded-full. The default scale is pinned so that no
+   * shadcn class (rounded-md, rounded-lg) inherits the card radius. */
+  --radius-card: var(--radius);
+  --radius-item: 0.875rem;
+  --radius-menu: 1.125rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: var(--radius);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background font-sans text-body text-foreground antialiased;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  a {
+    color: var(--primary);
+  }
+  /* One focus ring everywhere: 3 px primary, 2 px away from the control. */
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::placeholder {
+    color: var(--ink-2);
+    opacity: 0.8;
+  }
+}
+
+/* Only move things when the user has not asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

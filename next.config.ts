@@ -9,8 +9,8 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
 
 /**
- * Browser rules for every response. A content security policy with nonces for our own pages comes
- * with the design base, once the pages load real scripts and styles.
+ * Browser rules for every response. Our own pages (/en, /no) get a full content security policy
+ * with a nonce from src/proxy.ts, which replaces the short one below. /admin and /api keep it.
  */
 const securityHeaders = [
   // HTTPS only, for two years, once the site is served over HTTPS.
