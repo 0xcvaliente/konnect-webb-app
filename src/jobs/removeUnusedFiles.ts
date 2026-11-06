@@ -12,7 +12,7 @@ export const MAINTENANCE_QUEUE = 'maintenance'
  */
 export const removeUnusedFilesTask: TaskConfig<{
   input: Record<string, never>
-  output: { cvs: number; briefFiles: number; deliverableFiles: number }
+  output: { cvs: number; briefFiles: number; deliverableFiles: number; companyLogos: number }
 }> = {
   slug: 'removeUnusedFiles',
   label: 'Remove unused files',
@@ -22,6 +22,7 @@ export const removeUnusedFilesTask: TaskConfig<{
     { name: 'cvs', type: 'number', required: true },
     { name: 'briefFiles', type: 'number', required: true },
     { name: 'deliverableFiles', type: 'number', required: true },
+    { name: 'companyLogos', type: 'number', required: true },
   ],
   handler: async ({ req }) => {
     const removed = await removeUnusedFiles(req)
@@ -30,6 +31,7 @@ export const removeUnusedFilesTask: TaskConfig<{
         cvs: removed.cvs,
         briefFiles: removed['brief-files'],
         deliverableFiles: removed['deliverable-files'],
+        companyLogos: removed['company-logos'],
       },
     }
   },

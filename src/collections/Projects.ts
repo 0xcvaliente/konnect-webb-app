@@ -10,6 +10,7 @@ import {
   isStudent,
   relationId,
 } from '@/access/roles'
+import { approvedCompanyId } from '@/access/companies'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { MAX_BRIEF_FILES } from './BriefFiles'
 import {
@@ -43,8 +44,8 @@ export const Projects: CollectionConfig = {
       const companyId = companyIdOf(user)
       return companyId ? { company: { equals: companyId } } : false
     },
-    // A company with a company record can create a draft. Submitting needs an approved company.
-    create: ({ req: { user } }) => isAdmin(user) || Boolean(companyIdOf(user)),
+    // Only an approved company creates projects, even drafts. Admins always can.
+    create: async ({ req }) => isAdmin(req.user) || Boolean(await approvedCompanyId(req)),
     update: ({ req: { user } }): Where | boolean => {
       if (isAdmin(user)) return true
       const companyId = companyIdOf(user)
@@ -116,8 +117,9 @@ export const Projects: CollectionConfig = {
           }
         }
 
-        // Students never read the company record. They see this copy of the name.
+        // Students never read the company record. They see these copies of the name and logo.
         data.companyName = company.name
+        data.companyLogo = relationId(company.logo) ?? null
         return data
       },
     ],
@@ -139,6 +141,14 @@ export const Projects: CollectionConfig = {
       // field-level access here: that is applied after the hook and would drop the server's value.
       name: 'companyName',
       type: 'text',
+      admin: { readOnly: true },
+    },
+    {
+      // Copy of the company logo, set by the server like `companyName`. Students may open the
+      // logo file of a published project (see `company-logos`).
+      name: 'companyLogo',
+      type: 'upload',
+      relationTo: 'company-logos',
       admin: { readOnly: true },
     },
     { name: 'title', type: 'text', required: true },

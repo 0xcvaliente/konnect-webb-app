@@ -5,6 +5,7 @@ import {
   type Where,
 } from 'payload'
 
+import { logoIdsInUse } from '@/access/files'
 import { companyIdOf, isAdmin, relationId } from '@/access/roles'
 
 /**
@@ -21,7 +22,7 @@ import { companyIdOf, isAdmin, relationId } from '@/access/roles'
  * and counts leave these functions.
  */
 
-export type FileSlug = 'cvs' | 'brief-files' | 'deliverable-files'
+export type FileSlug = 'cvs' | 'brief-files' | 'deliverable-files' | 'company-logos'
 
 /**
  * How many files one account may hold that are not in use. Uploads above it are refused until
@@ -32,11 +33,14 @@ export type FileSlug = 'cvs' | 'brief-files' | 'deliverable-files'
  * - Brief files: files not on a project the company submitted. Files on a draft count, so an
  *   account Konnected has not approved (it cannot submit) cannot fill the disk through drafts.
  * - Deliverable files: files not on a deliverable. Twice the 10 files one deliverable lists.
+ * - Company logos: logos not on a company or a project. The company holds one logo; three spare
+ *   ones are enough to replace it a few times.
  */
 export const MAX_UNUSED_FILES: Record<FileSlug, number> = {
   cvs: 3,
   'brief-files': 20,
   'deliverable-files': 20,
+  'company-logos': 3,
 }
 
 /** Files nothing has used for this many days are removed by the daily clean-up. */
@@ -120,6 +124,9 @@ async function unusedOwnFiles(req: PayloadRequest, slug: FileSlug): Promise<Wher
     })
     return { and: [{ company: { equals: companyId } }, ...notIn(submitted)] }
   }
+  if (slug === 'company-logos') {
+    return { and: [{ uploadedBy: { equals: user.id } }, ...notIn(await logoIdsInUse(req))] }
+  }
   const listed = await deliverableFilesOn(req, { 'match.student.user': { equals: user.id } })
   return { and: [{ uploadedBy: { equals: user.id } }, ...notIn(listed)] }
 }
@@ -151,7 +158,8 @@ export const limitUnusedFiles =
 
 /**
  * Remove files nothing uses that are older than `days`: CVs on no profile and no match (each
- * student keeps their newest CV), brief files on no project, deliverable files on no deliverable.
+ * student keeps their newest CV), brief files on no project, deliverable files on no deliverable,
+ * logos on no company and no project.
  * Deleting the document deletes the file on disk and writes an activity log row.
  */
 export async function removeUnusedFiles(
@@ -181,9 +189,10 @@ export async function removeUnusedFiles(
     cvs: { and: [old, ...notIn([...(await cvsInUse(req)), ...newest.values()])] },
     'brief-files': { and: [old, ...notIn(await briefsOn(req))] },
     'deliverable-files': { and: [old, ...notIn(await deliverableFilesOn(req))] },
+    'company-logos': { and: [old, ...notIn(await logoIdsInUse(req))] },
   }
 
-  const removed = { cvs: 0, 'brief-files': 0, 'deliverable-files': 0 }
+  const removed = { cvs: 0, 'brief-files': 0, 'deliverable-files': 0, 'company-logos': 0 }
   for (const slug of Object.keys(unused) as FileSlug[]) {
     const result = await req.payload.delete({
       collection: slug,

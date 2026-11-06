@@ -64,6 +64,20 @@ export const SENTINEL = {
   },
 }
 
+/**
+ * Everything the company onboarding asks for, for a company called `name`. The organisation
+ * number is made up but has a valid check digit.
+ */
+export const companyDetails = (name: string) => ({
+  name,
+  orgNumber: '999123457',
+  contactName: `${name} contact`,
+  contactRole: 'Founder',
+  website: 'https://company.example',
+  sector: 'software' as const,
+  description: `${name} description`,
+})
+
 /** A user document shaped for the Local API `user` option. */
 export const asUser = (user: User) => ({ ...user, collection: 'users' as const })
 
@@ -144,24 +158,26 @@ export async function createWorld() {
   const alphaCv = await addCv(alpha, SENTINEL.alpha.cvName)
   const betaCv = await addCv(beta, SENTINEL.beta.cvName)
 
+  /** A company user registers their company as themselves; Konnected approves it. */
   const makeCompany = async (email: string, name: string) => {
     const user = await makeUser(email, 'company')
     const company = await payload.create({
       collection: 'companies',
-      data: { name, description: `${name} description`, status: 'pending' },
-      overrideAccess: true,
+      data: { ...companyDetails(name), status: 'pending' },
+      user: asUser(user),
+      overrideAccess: false,
     })
     await payload.update({
       collection: 'companies',
       id: company.id,
       data: { status: 'approved' },
       user: adminCtx,
-      overrideAccess: true,
+      overrideAccess: false,
     })
-    const linked = (await payload.update({
+    const linked = (await payload.findByID({
       collection: 'users',
       id: user.id,
-      data: { company: company.id },
+      depth: 0,
       overrideAccess: true,
     })) as User
     return { user: linked, company }

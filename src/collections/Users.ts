@@ -219,13 +219,19 @@ export const Users: CollectionConfig = {
       name: 'company',
       type: 'relationship',
       relationTo: 'companies',
+      // One person per company account: no two users can point at the same company. (Postgres
+      // allows many NULLs, so students and admins are not affected.)
+      unique: true,
       index: true,
-      // Set by the server when a company user creates their company.
+      // Set only by the server, from `companies.user` (see Companies): when a company user
+      // registers, or when an admin changes a company's user there. Nobody writes it through the
+      // API, so the two links cannot disagree.
       access: {
         read: ({ req: { user }, id }) => isAdmin(user) || user?.id === id,
-        create: adminOnlyField,
-        update: adminOnlyField,
+        create: () => false,
+        update: () => false,
       },
+      admin: { readOnly: true },
     },
     {
       name: 'language',

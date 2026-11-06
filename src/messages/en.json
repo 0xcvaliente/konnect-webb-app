@@ -28,7 +28,8 @@
         "projects": "My projects",
         "submit": "Submit a project",
         "payments": "Payments"
-      }
+      },
+      "lockedItem": "{label} (opens after approval)"
     },
     "team": {
       "open": "open",
@@ -455,6 +456,151 @@
       "fix": "Some answers need a look. See the fields marked below.",
       "generic": "Something went wrong and nothing was saved. Try again.",
       "forbidden": "Your session has ended. Sign in again."
+    }
+  },
+  "CompanyFields": {
+    "name": "Company name",
+    "orgNumber": "Organisation number",
+    "orgNumberHint": "Nine digits, from the Brønnøysund register.",
+    "contactName": "Contact person",
+    "contactRole": "Their role at the company",
+    "website": "Website",
+    "websiteHint": "Optional.",
+    "sector": "Sector",
+    "chooseSector": "Choose a sector",
+    "sectorOption": {
+      "software": "Software and tech",
+      "food": "Food and drink",
+      "energy": "Energy and climate",
+      "retail": "Retail and e-commerce",
+      "health": "Health",
+      "media": "Media and creative",
+      "other": "Something else"
+    },
+    "description": "What does the company do?",
+    "descriptionHint": "A few sentences. Konnected reads it when it reviews your company.",
+    "logo": "Logo",
+    "lockedHint": "Checked by Konnected. Write to the Konnected team if it needs to change.",
+    "status": {
+      "pending": "Pending review",
+      "approved": "Approved",
+      "rejected": "Not approved"
+    },
+    "errors": {
+      "required": "Please fill this in.",
+      "requiredOne": "Please choose an option.",
+      "tooLong": "This is too long. Keep it under {max} characters.",
+      "orgNumberInvalid": "Use the nine digits of your organisation number, like 999 123 457.",
+      "websiteInvalid": "Enter a web address, like fjordfrukt.no.",
+      "sectorInvalid": "Choose one of the sectors.",
+      "locked": "This was checked by Konnected and cannot change here.",
+      "logoInvalid": "This logo could not be used. Upload it again."
+    }
+  },
+  "Logo": {
+    "dropTitle": "Add your logo",
+    "choose": "Choose an image",
+    "replace": "Replace",
+    "remove": "Remove",
+    "hint": "Optional. PNG or JPG, up to 1 MB.",
+    "uploading": "Uploading your logo…",
+    "none": "No logo",
+    "errors": {
+      "type": "Use a PNG or JPG image.",
+      "size": "The image is larger than 1 MB. Try a smaller one.",
+      "tooMany": "You have uploaded several logos that are not in use. Remove one or try again tomorrow.",
+      "generic": "The logo could not be uploaded. Try again."
+    }
+  },
+  "CompanyOnboarding": {
+    "label": "Company onboarding",
+    "welcomeBody": "{total} short questions set up your company. Konnected approves every company before it can send in projects, and this is the first step.",
+    "q": {
+      "name": "What is your company called?",
+      "orgNumber": "What is your organisation number?",
+      "contactName": "Who is Konnected's contact person at the company?",
+      "contactRole": "What is their role at the company?",
+      "website": "What is your website?",
+      "sector": "Which sector are you in?",
+      "description": "What does the company do?",
+      "logo": "Add your logo"
+    },
+    "help": {
+      "name": "As registered in the Brønnøysund register.",
+      "orgNumber": "Nine digits, from the Brønnøysund register. Konnected checks it before approving your company.",
+      "contactName": "Usually you. Their full name.",
+      "contactRole": "For example Founder or Head of marketing.",
+      "website": "Optional. For example fjordfrukt.no.",
+      "description": "A few sentences about what you make or do. Konnected reads it when it reviews your company.",
+      "logo": "Students see it next to your company name on published projects."
+    },
+    "doneTitle": "Thanks. {name} is with Konnected for review.",
+    "doneBody": "Konnected checks your details, usually within a few working days. Until then you can follow it on your status page and edit your details.",
+    "toStatus": "See your status",
+    "toProfile": "Edit company profile",
+    "doneHint": "You will not see these questions again. Change your answers on your company profile while Konnected reviews it.",
+    "notAnswered": "Not answered",
+    "errors": {
+      "exists": "Your account already has a company. Open your status page.",
+      "forbidden": "Only a signed-in company account can fill this in. Sign in again.",
+      "generic": "Something went wrong and your answers were not saved. Try again."
+    }
+  },
+  "CompanyStatus": {
+    "title": "Status",
+    "ledePending": "Konnected is checking your company. Nothing else needs you right now.",
+    "ledeApproved": "Konnected approved your company.",
+    "ledeRejected": "Konnected could not approve your company.",
+    "pendingTitle": "Waiting for approval",
+    "pendingBody": "Konnected approves every company by hand, usually within a few working days.",
+    "approvedTitle": "Approved",
+    "approvedBody": "Konnected approved your company on {date}.",
+    "rejectedTitle": "Konnected could not approve your company",
+    "rejectedBody": "If you think this is a mistake, write to the Konnected team.",
+    "nextTitle": "What happens next",
+    "next1Title": "Konnected checks your details",
+    "next1Body": "The organisation number, the website and the contact person.",
+    "next2Title": "Konnected approves your company",
+    "next2Body": "Usually within a few working days. Your status changes on this page.",
+    "next3Title": "You send in your first project",
+    "next3Body": "Describe the work. Konnected reviews every project before students see it.",
+    "editTitle": "Need to change something?",
+    "editBody": "You can edit your company details while Konnected reviews them.",
+    "edit": "Edit company details",
+    "view": "See company profile",
+    "lockedNote": "Projects and payments open once Konnected approves your company.",
+    "registeredOn": "Registered {date}"
+  },
+  "CompanySteps": {
+    "label": "Where your company stands",
+    "registered": "Registered",
+    "review": "Review",
+    "reviewCurrent": "Konnected is checking your details.",
+    "reviewDone": "Konnected checked your details.",
+    "approved": "Approved",
+    "approvedBody": "You can send in projects.",
+    "active": "Active",
+    "activeBody": "Your first project is live.",
+    "rejected": "Not approved",
+    "rejectedBody": "See the note above.",
+    "done": "Done",
+    "current": "Current step"
+  },
+  "CompanyProfile": {
+    "title": "Company profile",
+    "lede": "Konnected approves every company before it can send in a project.",
+    "detailsTitle": "Company details",
+    "save": "Save company",
+    "saving": "Saving…",
+    "saved": "Company saved.",
+    "statusTitle": "Status",
+    "submitAfterApproval": "Submit a project (after approval)",
+    "readOnly": "Your company can no longer be changed here. Write to the Konnected team if something is wrong.",
+    "errors": {
+      "fix": "Some answers need a look. See the fields marked below.",
+      "generic": "Something went wrong and nothing was saved. Try again.",
+      "forbidden": "Your session has ended. Sign in again.",
+      "notEditable": "Your company can no longer be changed here. Write to the Konnected team."
     }
   }
 }

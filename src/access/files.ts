@@ -110,3 +110,61 @@ export const lockedBriefIdsForCompany = (req: PayloadRequest, companyId: number)
       { status: { not_in: ['draft', 'changes_requested'] } },
     ],
   })
+
+/** The logo on a company, or undefined. */
+export async function ownCompanyLogoId(
+  req: PayloadRequest,
+  companyId: number | undefined,
+): Promise<number | undefined> {
+  if (!companyId) return undefined
+  const company = await req.payload.findByID({
+    collection: 'companies',
+    id: companyId,
+    depth: 0,
+    select: { logo: true },
+    overrideAccess: true,
+    disableErrors: true,
+    req,
+  })
+  return relationId(company?.logo)
+}
+
+/**
+ * Logos students may read: those copied onto published projects (students read only published
+ * projects, and see the company's name and logo there, never the company itself).
+ */
+export async function logoIdsForStudents(req: PayloadRequest): Promise<number[]> {
+  const projects = await req.payload.find({
+    collection: 'projects',
+    where: { and: [{ status: { equals: 'published' } }, { companyLogo: { exists: true } }] },
+    depth: 0,
+    pagination: false,
+    select: { companyLogo: true },
+    overrideAccess: true,
+    req,
+  })
+  return ids(projects.docs.map((p) => p.companyLogo))
+}
+
+/** Logos that something uses: the logo on a company, or the copy on a project. */
+export async function logoIdsInUse(req: PayloadRequest): Promise<number[]> {
+  const companies = await req.payload.find({
+    collection: 'companies',
+    where: { logo: { exists: true } },
+    depth: 0,
+    pagination: false,
+    select: { logo: true },
+    overrideAccess: true,
+    req,
+  })
+  const projects = await req.payload.find({
+    collection: 'projects',
+    where: { companyLogo: { exists: true } },
+    depth: 0,
+    pagination: false,
+    select: { companyLogo: true },
+    overrideAccess: true,
+    req,
+  })
+  return ids([...companies.docs.map((c) => c.logo), ...projects.docs.map((p) => p.companyLogo)])
+}

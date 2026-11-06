@@ -28,7 +28,8 @@
         "projects": "Mine prosjekter",
         "submit": "Send inn prosjekt",
         "payments": "Betalinger"
-      }
+      },
+      "lockedItem": "{label} (åpner etter godkjenning)"
     },
     "team": {
       "open": "åpne",
@@ -455,6 +456,151 @@
       "fix": "Noen svar må sjekkes. Se feltene som er merket nedenfor.",
       "generic": "Noe gikk galt, og ingenting ble lagret. Prøv igjen.",
       "forbidden": "Økten din er utløpt. Logg inn på nytt."
+    }
+  },
+  "CompanyFields": {
+    "name": "Bedriftsnavn",
+    "orgNumber": "Organisasjonsnummer",
+    "orgNumberHint": "Ni sifre, fra Brønnøysundregistrene.",
+    "contactName": "Kontaktperson",
+    "contactRole": "Rollen deres i bedriften",
+    "website": "Nettside",
+    "websiteHint": "Valgfritt.",
+    "sector": "Bransje",
+    "chooseSector": "Velg en bransje",
+    "sectorOption": {
+      "software": "Programvare og teknologi",
+      "food": "Mat og drikke",
+      "energy": "Energi og klima",
+      "retail": "Handel og netthandel",
+      "health": "Helse",
+      "media": "Medier og kreative fag",
+      "other": "Noe annet"
+    },
+    "description": "Hva gjør bedriften?",
+    "descriptionHint": "Noen setninger. Konnected leser det når de går gjennom bedriften.",
+    "logo": "Logo",
+    "lockedHint": "Sjekket av Konnected. Skriv til Konnected-teamet hvis det må endres.",
+    "status": {
+      "pending": "Venter på godkjenning",
+      "approved": "Godkjent",
+      "rejected": "Ikke godkjent"
+    },
+    "errors": {
+      "required": "Fyll inn dette.",
+      "requiredOne": "Velg et alternativ.",
+      "tooLong": "Dette er for langt. Hold det under {max} tegn.",
+      "orgNumberInvalid": "Bruk de ni sifrene i organisasjonsnummeret, som 999 123 457.",
+      "websiteInvalid": "Skriv inn en nettadresse, som fjordfrukt.no.",
+      "sectorInvalid": "Velg en av bransjene.",
+      "locked": "Dette er sjekket av Konnected og kan ikke endres her.",
+      "logoInvalid": "Denne logoen kunne ikke brukes. Last den opp på nytt."
+    }
+  },
+  "Logo": {
+    "dropTitle": "Legg til logoen din",
+    "choose": "Velg et bilde",
+    "replace": "Bytt ut",
+    "remove": "Fjern",
+    "hint": "Valgfritt. PNG eller JPG, opptil 1 MB.",
+    "uploading": "Laster opp logoen…",
+    "none": "Ingen logo",
+    "errors": {
+      "type": "Bruk et PNG- eller JPG-bilde.",
+      "size": "Bildet er større enn 1 MB. Prøv et mindre bilde.",
+      "tooMany": "Du har lastet opp flere logoer som ikke er i bruk. Fjern en, eller prøv igjen i morgen.",
+      "generic": "Logoen kunne ikke lastes opp. Prøv igjen."
+    }
+  },
+  "CompanyOnboarding": {
+    "label": "Oppstart for bedrifter",
+    "welcomeBody": "{total} korte spørsmål setter opp bedriften din. Konnected godkjenner hver bedrift før den kan sende inn prosjekter, og dette er første steg.",
+    "q": {
+      "name": "Hva heter bedriften?",
+      "orgNumber": "Hva er organisasjonsnummeret?",
+      "contactName": "Hvem er Konnecteds kontaktperson i bedriften?",
+      "contactRole": "Hvilken rolle har de i bedriften?",
+      "website": "Hva er nettsiden deres?",
+      "sector": "Hvilken bransje er dere i?",
+      "description": "Hva gjør bedriften?",
+      "logo": "Legg til logoen deres"
+    },
+    "help": {
+      "name": "Slik det står i Brønnøysundregistrene.",
+      "orgNumber": "Ni sifre, fra Brønnøysundregistrene. Konnected sjekker det før bedriften godkjennes.",
+      "contactName": "Som regel deg. Fullt navn.",
+      "contactRole": "For eksempel gründer eller markedssjef.",
+      "website": "Valgfritt. For eksempel fjordfrukt.no.",
+      "description": "Noen setninger om hva dere lager eller gjør. Konnected leser det når de går gjennom bedriften.",
+      "logo": "Studenter ser den ved siden av bedriftsnavnet på publiserte prosjekter."
+    },
+    "doneTitle": "Takk. {name} er sendt til Konnected for godkjenning.",
+    "doneBody": "Konnected sjekker opplysningene, som regel innen noen få arbeidsdager. Til da kan du følge med på statussiden og endre opplysningene.",
+    "toStatus": "Se statusen",
+    "toProfile": "Endre bedriftsprofilen",
+    "doneHint": "Du ser ikke disse spørsmålene igjen. Endre svarene på bedriftsprofilen mens Konnected går gjennom den.",
+    "notAnswered": "Ikke besvart",
+    "errors": {
+      "exists": "Kontoen din har allerede en bedrift. Åpne statussiden.",
+      "forbidden": "Bare en innlogget bedriftskonto kan fylle ut dette. Logg inn på nytt.",
+      "generic": "Noe gikk galt, og svarene ble ikke lagret. Prøv igjen."
+    }
+  },
+  "CompanyStatus": {
+    "title": "Status",
+    "ledePending": "Konnected sjekker bedriften din. Ingenting annet venter på deg nå.",
+    "ledeApproved": "Konnected har godkjent bedriften din.",
+    "ledeRejected": "Konnected kunne ikke godkjenne bedriften din.",
+    "pendingTitle": "Venter på godkjenning",
+    "pendingBody": "Konnected godkjenner hver bedrift manuelt, som regel innen noen få arbeidsdager.",
+    "approvedTitle": "Godkjent",
+    "approvedBody": "Konnected godkjente bedriften din {date}.",
+    "rejectedTitle": "Konnected kunne ikke godkjenne bedriften din",
+    "rejectedBody": "Hvis du mener dette er feil, skriv til Konnected-teamet.",
+    "nextTitle": "Hva skjer nå",
+    "next1Title": "Konnected sjekker opplysningene",
+    "next1Body": "Organisasjonsnummeret, nettsiden og kontaktpersonen.",
+    "next2Title": "Konnected godkjenner bedriften",
+    "next2Body": "Som regel innen noen få arbeidsdager. Statusen endres på denne siden.",
+    "next3Title": "Du sender inn det første prosjektet",
+    "next3Body": "Beskriv arbeidet. Konnected går gjennom hvert prosjekt før studentene ser det.",
+    "editTitle": "Må du endre noe?",
+    "editBody": "Du kan endre opplysningene om bedriften mens Konnected går gjennom dem.",
+    "edit": "Endre opplysningene",
+    "view": "Se bedriftsprofilen",
+    "lockedNote": "Prosjekter og betalinger åpner når Konnected har godkjent bedriften.",
+    "registeredOn": "Registrert {date}"
+  },
+  "CompanySteps": {
+    "label": "Hvor bedriften din står",
+    "registered": "Registrert",
+    "review": "Gjennomgang",
+    "reviewCurrent": "Konnected sjekker opplysningene.",
+    "reviewDone": "Konnected har sjekket opplysningene.",
+    "approved": "Godkjent",
+    "approvedBody": "Du kan sende inn prosjekter.",
+    "active": "Aktiv",
+    "activeBody": "Det første prosjektet er publisert.",
+    "rejected": "Ikke godkjent",
+    "rejectedBody": "Se merknaden over.",
+    "done": "Ferdig",
+    "current": "Nåværende steg"
+  },
+  "CompanyProfile": {
+    "title": "Bedriftsprofil",
+    "lede": "Konnected godkjenner hver bedrift før den kan sende inn et prosjekt.",
+    "detailsTitle": "Opplysninger om bedriften",
+    "save": "Lagre bedriften",
+    "saving": "Lagrer…",
+    "saved": "Bedriften er lagret.",
+    "statusTitle": "Status",
+    "submitAfterApproval": "Send inn prosjekt (etter godkjenning)",
+    "readOnly": "Bedriften kan ikke lenger endres her. Skriv til Konnected-teamet hvis noe er feil.",
+    "errors": {
+      "fix": "Noen svar må sjekkes. Se feltene som er merket nedenfor.",
+      "generic": "Noe gikk galt, og ingenting ble lagret. Prøv igjen.",
+      "forbidden": "Økten din er utløpt. Logg inn på nytt.",
+      "notEditable": "Bedriften kan ikke lenger endres her. Skriv til Konnected-teamet."
     }
   }
 }

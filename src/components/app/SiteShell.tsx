@@ -1,3 +1,4 @@
+import { LockIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 
@@ -18,6 +19,7 @@ import { PROFILE_HREF, SITE_NAV, type SiteNavKey, type SiteRole } from './nav'
 export async function SiteShell({
   role,
   current,
+  locked = [],
   user,
   title,
   lede,
@@ -28,6 +30,11 @@ export async function SiteShell({
   /** Shows that role's menu. Leave out for pages before a role is chosen. */
   role?: SiteRole
   current?: SiteNavKey
+  /**
+   * Menu items that are shown but do not open yet, for example a company's projects before
+   * Konnected approves it. Shown dimmed with a lock; the pages refuse them on the server too.
+   */
+  locked?: readonly SiteNavKey[]
   /** The signed-in user, for the account menu. Leave out when nobody is signed in. */
   user?: AccountUser | null
   title: ReactNode
@@ -71,17 +78,38 @@ export async function SiteShell({
                 'border border-glass-edge bg-glass shadow-[inset_0_1px_0_var(--glass-hi),0_12px_32px_-16px_color-mix(in_srgb,var(--ink)_38%,transparent)] backdrop-blur-[24px] backdrop-saturate-[1.8] reduce-transparency:bg-surface reduce-transparency:backdrop-blur-none reduce-transparency:backdrop-saturate-100',
               )}
             >
-              {nav.map((item) => (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  prefetch={false}
-                  aria-current={item.key === current ? 'page' : undefined}
-                  className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full px-1.5 text-center text-[0.78rem] leading-tight font-semibold text-muted-foreground no-underline transition-colors hover:text-foreground aria-[current=page]:bg-tint aria-[current=page]:text-tint-foreground md:min-h-10 md:flex-none md:px-4 md:text-body md:whitespace-nowrap"
-                >
-                  {t(`nav.${role}.${item.key}`)}
-                </Link>
-              ))}
+              {nav.map((item) => {
+                const label = t(`nav.${role}.${item.key}`)
+                const className =
+                  'inline-flex min-h-12 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-center text-[0.78rem] leading-tight font-semibold text-muted-foreground no-underline transition-colors md:min-h-10 md:flex-none md:px-4 md:text-body md:whitespace-nowrap'
+                if (locked.includes(item.key)) {
+                  return (
+                    <span
+                      key={item.key}
+                      aria-disabled="true"
+                      className={cn(className, 'cursor-default opacity-60')}
+                    >
+                      <LockIcon aria-hidden="true" className="size-3.5 shrink-0 max-md:hidden" />
+                      <span aria-hidden="true">{label}</span>
+                      <span className="sr-only">{t('nav.lockedItem', { label })}</span>
+                    </span>
+                  )
+                }
+                return (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    prefetch={false}
+                    aria-current={item.key === current ? 'page' : undefined}
+                    className={cn(
+                      className,
+                      'hover:text-foreground aria-[current=page]:bg-tint aria-[current=page]:text-tint-foreground',
+                    )}
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
             </nav>
           )}
 
