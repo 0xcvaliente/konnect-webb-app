@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import { CircleAlertIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react'
-import type { ComponentProps } from 'react'
+import type { ComponentProps, ComponentType, SVGProps } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -29,11 +29,16 @@ const ICONS = {
 
 export function Banner({
   tone = 'info',
+  icon,
   className,
   children,
   ...props
-}: ComponentProps<'div'> & VariantProps<typeof bannerVariants>) {
-  const Icon = ICONS[tone ?? 'info']
+}: ComponentProps<'div'> &
+  VariantProps<typeof bannerVariants> & {
+    /** Another icon than the tone's own, for example a clock for "waiting". */
+    icon?: ComponentType<SVGProps<SVGSVGElement>>
+  }) {
+  const Icon = icon ?? ICONS[tone ?? 'info']
   return (
     <div className={cn(bannerVariants({ tone }), className)} {...props}>
       <Icon

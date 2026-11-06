@@ -47,14 +47,14 @@ const FORBIDDEN = [
 const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   users: '{ Users(limit: 100) { docs { id email role company { id } } } }',
   'student-profiles':
-    '{ StudentProfiles(limit: 100) { docs { id name contactEmail phone pitch experience highlights skills user { id email } } } }',
+    '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt privacy { shareName shareSchool shareContactEmail sharePhone } user { id email } } } }',
   companies: '{ Companies(limit: 100) { docs { id name description status } } }',
   projects:
     '{ Projects(limit: 100) { docs { id title description status companyName company { id name } attachments { id originalName } } } }',
   applications:
     '{ Applications(limit: 100) { docs { id status note student { id name contactEmail user { id email } } project { id title } } } }',
   matches:
-    '{ Matches(limit: 100) { docs { id agreementNotes sharedInfo { name pitch skills experience cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
+    '{ Matches(limit: 100) { docs { id agreementNotes sharedInfo { name school programme year pitch skills experience contactEmail phone cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
   deliverables:
     '{ Deliverables(limit: 100) { docs { id status note links { url } files { id originalName uploadedBy { id email } } match { id student { id name contactEmail } project { id } } } } }',
   payments:
@@ -184,8 +184,28 @@ describe('company cannot reach student collections directly', () => {
     expect(res.json).not.toHaveProperty('agreementNotes')
     const shared = res.json.sharedInfo as Record<string, unknown>
     expect(JSON.stringify(shared.skills)).toContain(SENTINEL.alpha.skill)
-    expect(shared.name).toBeNull()
-    expect(shared.pitch).toBeNull()
-    expect(shared.experience).toBeNull()
+    for (const key of [
+      'name',
+      'school',
+      'programme',
+      'year',
+      'pitch',
+      'experience',
+      'cv',
+      'contactEmail',
+      'phone',
+    ]) {
+      expect(shared[key], key).toBeNull()
+    }
+  })
+
+  it('positive control: the admin sweep finds the new profile fields, so the sweep can fail', async () => {
+    for (const transport of ['local', 'rest', 'graphql'] as const) {
+      const all = await everything(transport, 'admin')
+      expect(all, transport).toContain(SENTINEL.alpha.school)
+      expect(all, transport).toContain(SENTINEL.beta.programme)
+      expect(all, transport).toContain(SENTINEL.alpha.interest)
+      expect(all, transport).toContain(SENTINEL.beta.projectType)
+    }
   })
 })

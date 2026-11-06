@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { redirect } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { AUTH_MESSAGES, isAuthErrorCode } from '@/lib/auth/messages'
+import { findOwnProfile, type SessionUser } from '@/lib/students/profile'
 
 import { EntryForms } from './EntryForms'
 
@@ -68,6 +69,10 @@ export default async function HomePage({
   }
 
   if (user.role === 'pending') return redirect({ href: '/choose-role', locale })
+  // A student fills in the onboarding first, once.
+  if (user.role === 'student' && !(await findOwnProfile(payload, user as SessionUser))) {
+    return redirect({ href: '/student/welcome', locale })
+  }
 
   const t = await getTranslations('Home')
   const tRole = await getTranslations('Roles')

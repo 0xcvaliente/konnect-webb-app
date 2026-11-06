@@ -5,6 +5,7 @@ import * as migration_20261106_142300_locales from './20261106_142300_locales';
 import * as migration_20261106_161202_sign_in_email from './20261106_161202_sign_in_email';
 import * as migration_20261106_170956_file_storage from './20261106_170956_file_storage';
 import * as migration_20261106_173513_unused_file_jobs from './20261106_173513_unused_file_jobs';
+import * as migration_20261106_175329_student_profile_review_and_sharing from './20261106_175329_student_profile_review_and_sharing';
 
 export const migrations = [
   {
@@ -40,6 +41,11 @@ export const migrations = [
   {
     up: migration_20261106_173513_unused_file_jobs.up,
     down: migration_20261106_173513_unused_file_jobs.down,
-    name: '20261106_173513_unused_file_jobs'
+    name: '20261106_173513_unused_file_jobs',
+  },
+  {
+    up: migration_20261106_175329_student_profile_review_and_sharing.up,
+    down: migration_20261106_175329_student_profile_review_and_sharing.down,
+    name: '20261106_175329_student_profile_review_and_sharing'
   },
 ];

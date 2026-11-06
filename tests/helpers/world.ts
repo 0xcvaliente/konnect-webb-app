@@ -34,6 +34,10 @@ export async function resetDatabase(): Promise<void> {
 export const SENTINEL = {
   alpha: {
     name: 'Sentinel-Name-Alpha',
+    school: 'Sentinel-School-Alpha',
+    programme: 'Sentinel-Programme-Alpha',
+    interest: 'Sentinel-Interest-Alpha',
+    projectType: 'Sentinel-Project-Type-Alpha',
     userEmail: 'sentinel.user.alpha@student.test',
     contactEmail: 'sentinel.contact.alpha@student.test',
     phone: '+47-SENTINEL-ALPHA',
@@ -45,6 +49,10 @@ export const SENTINEL = {
   },
   beta: {
     name: 'Sentinel-Name-Beta',
+    school: 'Sentinel-School-Beta',
+    programme: 'Sentinel-Programme-Beta',
+    interest: 'Sentinel-Interest-Beta',
+    projectType: 'Sentinel-Project-Type-Beta',
     userEmail: 'sentinel.user.beta@student.test',
     contactEmail: 'sentinel.contact.beta@student.test',
     phone: '+47-SENTINEL-BETA',
@@ -95,11 +103,13 @@ export async function createWorld() {
       data: {
         user: user.id,
         name: s.name,
-        school: 'Test School',
-        programme: 'Test Programme',
+        school: s.school,
+        programme: s.programme,
         year: 2,
         pitch: s.pitch,
         skills: [s.skill],
+        interests: [s.interest],
+        preferredProjectTypes: [s.projectType],
         experience: s.experience,
         highlights: s.highlights,
         contactEmail: s.contactEmail,

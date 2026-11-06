@@ -279,5 +279,182 @@
     "showToast": "Show toast",
     "toast": "Saved",
     "loading": "Loading"
+  },
+  "StudentFields": {
+    "name": "Full name",
+    "school": "School",
+    "programme": "Programme",
+    "year": "Study year",
+    "yearOption": {
+      "1": "1st year",
+      "2": "2nd year",
+      "3": "3rd year",
+      "4": "4th year",
+      "5": "5th year",
+      "6": "6th year or later"
+    },
+    "chooseYear": "Choose your year",
+    "pitch": "Short pitch",
+    "pitchHint": "A few sentences on what you are good at and what you would like to work on.",
+    "skills": "Skills",
+    "skillsHint": "Separate with commas, for example Figma, Excel, user interviews.",
+    "interests": "Interests",
+    "interest": {
+      "marketing": "Marketing",
+      "design": "Design and UX",
+      "research": "Research",
+      "data": "Data and analysis",
+      "software": "Software development",
+      "business": "Business and strategy",
+      "writing": "Writing and copy",
+      "testing": "Testing and QA"
+    },
+    "projectTypes": "Projects you would like",
+    "projectType": {
+      "paid": "Paid projects",
+      "unpaid": "Unpaid projects, for the experience",
+      "remote": "Remote work",
+      "onSite": "Work on site"
+    },
+    "schoolOption": {
+      "ntnu": "NTNU",
+      "uio": "University of Oslo",
+      "uib": "University of Bergen",
+      "bi": "BI Norwegian Business School",
+      "nhh": "NHH",
+      "oslomet": "OsloMet"
+    },
+    "experience": "Experience",
+    "experienceHint": "Jobs, volunteering or projects that show what you can do. Optional.",
+    "highlights": "Highlights for Konnected",
+    "highlightsHint": "Grades, awards or anything else you want Konnected to know. Optional, and never shared with a company.",
+    "contactEmail": "Contact email",
+    "contactEmailHint": "Optional. Shared only if you tick it under \"What a company may see\".",
+    "phone": "Phone number",
+    "phoneHint": "Optional. Shared only if you tick it under \"What a company may see\".",
+    "share": {
+      "shareName": "Your name",
+      "shareSchool": "School, programme and study year",
+      "sharePitch": "Your short pitch",
+      "shareSkills": "Your skills",
+      "shareExperience": "Your experience",
+      "shareCv": "Your CV",
+      "shareContactEmail": "Your contact email",
+      "sharePhone": "Your phone number"
+    },
+    "shareHint": {
+      "shareContactEmail": "Only if you add one on your profile. Otherwise contact goes through Konnected.",
+      "sharePhone": "Only if you add one on your profile. Otherwise contact goes through Konnected."
+    },
+    "sharingLegend": "Shared with the company after Konnected selects you",
+    "sharingExplain": "Companies never see your profile and cannot search for students. Nothing is shared until Konnected selects you for a project, and then only what you tick here. Every item is off until you turn it on.",
+    "sharingLater": "You can change this at any time. If you untick something after you are selected, Konnected stops sharing it, but the company may already have seen it.",
+    "errors": {
+      "required": "Please fill this in.",
+      "requiredChoice": "Please choose at least one.",
+      "requiredOne": "Please choose an option.",
+      "tooLong": "This is too long. Keep it under {max} characters.",
+      "tooManySkills": "Add at most {max} skills.",
+      "skillTooLong": "Keep each skill under {max} characters.",
+      "emailInvalid": "Enter an email address, like name@example.com.",
+      "phoneInvalid": "Enter a phone number using digits, like +47 912 34 567.",
+      "yearInvalid": "Choose one of the years.",
+      "cvInvalid": "This CV could not be used. Upload it again."
+    }
+  },
+  "Cv": {
+    "title": "CV",
+    "hint": "PDF only, up to 10 MB.",
+    "dropTitle": "Add your CV",
+    "choose": "Choose a PDF",
+    "replace": "Replace",
+    "remove": "Remove",
+    "download": "Download",
+    "uploading": "Uploading your CV…",
+    "removing": "Removing your CV…",
+    "uploadedOn": "{size}, uploaded {date}",
+    "noCv": "No CV yet",
+    "noCvNote": "No CV yet? That is fine. You can add it later on your profile. Konnected looks at your CV before it selects you for a project.",
+    "saved": "CV saved.",
+    "removed": "CV removed.",
+    "errors": {
+      "type": "Only PDF files can be used as a CV.",
+      "size": "The file is larger than 10 MB. Try a smaller PDF.",
+      "tooMany": "You have uploaded several CVs that are not in use. Remove one or try again tomorrow.",
+      "generic": "The CV could not be uploaded. Try again."
+    }
+  },
+  "Onboarding": {
+    "label": "Student onboarding",
+    "count": "Question {n} of {total}",
+    "done": "Done",
+    "welcomeTitle": "Welcome to Konnected",
+    "welcomeBody": "{total} short questions help Konnected match you with the right projects. It takes about three minutes, and you only do this once.",
+    "start": "Start",
+    "ok": "OK",
+    "finish": "Finish",
+    "saving": "Saving…",
+    "pressEnter": "press <b>Enter ↵</b>",
+    "previous": "Previous question",
+    "next": "Next question",
+    "placeholder": "Type your answer here",
+    "otherSchool": "Another school",
+    "otherSchoolLabel": "Name of your school",
+    "q": {
+      "name": "What is your full name?",
+      "school": "Where do you study?",
+      "programme": "What do you study?",
+      "year": "Which year are you in?",
+      "pitch": "Tell Konnected a little about yourself",
+      "skills": "Which skills do you have?",
+      "interests": "What kind of work interests you?",
+      "projectTypes": "Which projects would you like?",
+      "cv": "Upload your CV",
+      "privacy": "If Konnected picks you for a project, what may it share with the company?"
+    },
+    "help": {
+      "name": "Konnected uses it in your profile. A company sees it only if you choose to share it.",
+      "programme": "Your programme, for example Industrial design.",
+      "pitch": "What you are good at and what you would like to work on. Optional.",
+      "skills": "Separate with commas, for example Figma, Excel, user interviews. Optional.",
+      "interests": "Choose as many as you like.",
+      "projectTypes": "Choose as many as you like. Optional.",
+      "cv": "Optional."
+    },
+    "doneTitle": "Thanks, {name}. You are all set.",
+    "doneBody": "Your profile is waiting for review. We review profiles within 2 working days.",
+    "toProfile": "Go to your profile",
+    "doneHint": "You will not see these questions again. Change your answers any time on your profile.",
+    "notAnswered": "Not answered",
+    "nothingShared": "Nothing",
+    "cvAdded": "Added",
+    "errors": {
+      "exists": "You already have a profile. Open it to make changes.",
+      "forbidden": "Only a signed-in student can fill this in. Sign in again.",
+      "generic": "Something went wrong and your answers were not saved. Try again."
+    },
+    "sharedLabel": "Shared after selection"
+  },
+  "Profile": {
+    "title": "Your profile",
+    "lede": "Konnected reviews every profile before matching. Keep it current.",
+    "aboutTitle": "About you",
+    "moreTitle": "Experience and contact",
+    "save": "Save profile",
+    "saving": "Saving…",
+    "saved": "Profile saved.",
+    "sharingTitle": "What a company may see",
+    "saveSharing": "Save sharing choices",
+    "sharingSaved": "Sharing choices saved.",
+    "sharedCount": "{count, plural, =0 {Nothing shared} one {# item shared} other {# items shared}}",
+    "waitingTitle": "Waiting for review",
+    "waitingBody": "We review profiles within 2 working days. You can still look at projects and apply in the meantime.",
+    "reviewedTitle": "Profile reviewed",
+    "reviewedBody": "Konnected reviewed your profile on {date}. Konnected can now select you for a project.",
+    "errors": {
+      "fix": "Some answers need a look. See the fields marked below.",
+      "generic": "Something went wrong and nothing was saved. Try again.",
+      "forbidden": "Your session has ended. Sign in again."
+    }
   }
 }
