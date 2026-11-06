@@ -297,6 +297,7 @@ const call = async (
   const request = new Request(url, {
     method,
     headers: {
+      origin: ORIGIN,
       ...(options.cookie ? { cookie: options.cookie } : {}),
       ...(options.body ? { 'content-type': 'application/json' } : {}),
     },
@@ -320,7 +321,7 @@ export const rest = {
 export async function graphql(query: string, cookie?: string): Promise<HttpResult> {
   const request = new Request(`${ORIGIN}/api/graphql`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+    headers: { 'content-type': 'application/json', origin: ORIGIN, ...(cookie ? { cookie } : {}) },
     body: JSON.stringify({ query }),
   })
   return toResult(await GRAPHQL_POST(config)(request))
@@ -330,7 +331,7 @@ export async function graphql(query: string, cookie?: string): Promise<HttpResul
 export async function login(email: string, password = PASSWORD): Promise<string> {
   const request = new Request(`${ORIGIN}/api/users/login`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', origin: ORIGIN },
     body: JSON.stringify({ email, password }),
   })
   const res = await (REST_POST(config) as Handler)(request, {

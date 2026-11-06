@@ -17,6 +17,10 @@ export default defineConfig({
       DATABASE_URL: testDatabaseUrl(),
       PAYLOAD_SECRET: 'test-only-secret-not-used-anywhere-else',
       ADMIN_EMAILS: 'admin@konnected.test',
+      // Fixed values so tests never use the real Google client from a developer's .env.
+      APP_URL: 'http://localhost:3000',
+      GOOGLE_CLIENT_ID: 'test-client-id.apps.googleusercontent.com',
+      GOOGLE_CLIENT_SECRET: 'test-client-secret-not-real',
     },
   },
 })

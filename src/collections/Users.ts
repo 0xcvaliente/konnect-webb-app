@@ -20,6 +20,8 @@ export const Users: CollectionConfig = {
     lockTime: 15 * 60 * 1000,
     // Keep req.user shallow so it never carries populated relations.
     depth: 0,
+    // The session cookie: HttpOnly (Payload default), Lax, and Secure on https in production.
+    cookies: { secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' },
   },
   admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
   access: {
@@ -72,8 +74,10 @@ export const Users: CollectionConfig = {
       name: 'role',
       type: 'select',
       required: true,
-      defaultValue: 'student',
-      options: ['admin', 'student', 'company'],
+      // A new account is `pending` (no access to anything) until the user picks student or
+      // company. Fail closed: a missing role must never mean a working one.
+      defaultValue: 'pending',
+      options: ['admin', 'student', 'company', 'pending'],
       index: true,
       saveToJWT: true,
       // Nobody can pick or change a role through the API. Server code sets it.
