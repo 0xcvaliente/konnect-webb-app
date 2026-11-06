@@ -31,7 +31,22 @@ const nextConfig: NextConfig = {
   agentRules: false,
   poweredByHeader: false,
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // Private files (CVs, deliverables, brief attachments): nothing in them may run or load
+      // anything, even if a browser opened one. Later rules win for the same header, so this
+      // replaces the policy above for these routes only. The download headers themselves come
+      // from the collections (lib/uploads/fileRules.ts).
+      {
+        source: '/api/:collection(cvs|deliverable-files|brief-files)/file/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'none'; frame-ancestors 'none'; sandbox",
+          },
+        ],
+      },
+    ]
   },
   // Payload source files import with ".js" extensions that resolve to ".ts" files.
   webpack: (webpackConfig) => {

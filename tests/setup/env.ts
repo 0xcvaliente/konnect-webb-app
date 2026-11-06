@@ -1,3 +1,5 @@
+import os from 'node:os'
+import path from 'node:path'
 import { loadEnvFile } from 'node:process'
 
 /**
@@ -28,3 +30,6 @@ export function testDatabaseName(): string {
   if (!name.endsWith('_test')) throw new Error(`Refusing to use database "${name}" for tests`)
   return name
 }
+
+/** Where tests store uploaded files: a directory under the system temp folder. */
+export const testMediaDir = (): string => path.join(os.tmpdir(), 'konnected-test-media')

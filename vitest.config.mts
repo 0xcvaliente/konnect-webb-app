@@ -1,7 +1,7 @@
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 
-import { testDatabaseUrl } from './tests/setup/env'
+import { testDatabaseUrl, testMediaDir } from './tests/setup/env'
 
 export default defineConfig({
   plugins: [tsconfigPaths()],
@@ -30,6 +30,8 @@ export default defineConfig({
       SMTP_HOST: '',
       // Sign-in answers wait at least this long (900 ms in production). Short in tests.
       AUTH_TIMING_FLOOR_MS: '120',
+      // Uploaded files go to a throwaway directory, emptied before each run, never ./media.
+      MEDIA_DIR: testMediaDir(),
     },
   },
 })

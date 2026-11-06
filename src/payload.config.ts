@@ -8,7 +8,10 @@ import { fileURLToPath } from 'url'
 
 import { ActivityLogs } from './collections/ActivityLogs'
 import { Applications } from './collections/Applications'
+import { BriefFiles } from './collections/BriefFiles'
 import { Companies } from './collections/Companies'
+import { Cvs } from './collections/Cvs'
+import { DeliverableFiles } from './collections/DeliverableFiles'
 import { Deliverables } from './collections/Deliverables'
 import { MagicLinks } from './collections/MagicLinks'
 import { Matches } from './collections/Matches'
@@ -17,6 +20,7 @@ import { Projects } from './collections/Projects'
 import { StudentProfiles } from './collections/StudentProfiles'
 import { Users } from './collections/Users'
 import { emailAdapter } from './lib/email/adapter'
+import { MAX_UPLOAD_BYTES, MB } from './lib/uploads/fileRules'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -36,6 +40,9 @@ export default buildConfig({
     Applications,
     Matches,
     Deliverables,
+    Cvs,
+    DeliverableFiles,
+    BriefFiles,
     Payments,
     ActivityLogs,
     MagicLinks,
@@ -55,6 +62,14 @@ export default buildConfig({
     fallbackLanguage: 'en',
   },
   email: emailAdapter(),
+  // Uploads: the parser stops any file above the largest per-collection limit (deliverable files,
+  // 50 MB) and any request above that plus room for the form fields. Each collection then checks
+  // its own, smaller limit (see lib/uploads/fileRules.ts).
+  upload: {
+    abortOnLimit: true,
+    limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+    requestSizeLimit: MAX_UPLOAD_BYTES + MB,
+  },
   // Production: never log secrets or personal data, even when a library passes them to the
   // logger (SMTP errors carry recipient addresses). Development keeps Payload's readable logs.
   logger:

@@ -34,6 +34,7 @@
     "@payloadcms/translations": "3.93.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "file-type": "21.3.4",
     "graphql": "16.14.0",
     "lucide-react": "1.61.0",
     "next": "16.4.5",

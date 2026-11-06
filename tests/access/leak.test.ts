@@ -29,6 +29,9 @@ const SLUGS = [
   'deliverables',
   'payments',
   'activity-logs',
+  'cvs',
+  'deliverable-files',
+  'brief-files',
 ] as const
 
 // What a company must never see about student alpha. alpha shares only skills, so the skill is
@@ -47,16 +50,21 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
     '{ StudentProfiles(limit: 100) { docs { id name contactEmail phone pitch experience highlights skills user { id email } } } }',
   companies: '{ Companies(limit: 100) { docs { id name description status } } }',
   projects:
-    '{ Projects(limit: 100) { docs { id title description status companyName company { id name } } } }',
+    '{ Projects(limit: 100) { docs { id title description status companyName company { id name } attachments { id originalName } } } }',
   applications:
     '{ Applications(limit: 100) { docs { id status note student { id name contactEmail user { id email } } project { id title } } } }',
   matches:
-    '{ Matches(limit: 100) { docs { id agreementNotes sharedInfo { name pitch skills experience } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
+    '{ Matches(limit: 100) { docs { id agreementNotes sharedInfo { name pitch skills experience cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
   deliverables:
-    '{ Deliverables(limit: 100) { docs { id status note links { url } match { id student { id name contactEmail } project { id } } } } }',
+    '{ Deliverables(limit: 100) { docs { id status note links { url } files { id originalName uploadedBy { id email } } match { id student { id name contactEmail } project { id } } } } }',
   payments:
     '{ Payments(limit: 100) { docs { id projectFee konnectedShare studentPay invoiceSentAt match { id student { id name } project { id } } } } }',
   'activity-logs': '{ ActivityLogs(limit: 100) { docs { id action targetCollection } } }',
+  cvs: '{ Cvs(limit: 100) { docs { id filename originalName url owner { id email } } } }',
+  'deliverable-files':
+    '{ DeliverableFiles(limit: 100) { docs { id filename originalName url uploadedBy { id email } match { id student { id name } } } } }',
+  'brief-files':
+    '{ BriefFiles(limit: 100) { docs { id filename originalName url company { id name } } } }',
 }
 
 let world: World
@@ -106,6 +114,7 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       expect(all).toContain(SENTINEL.alpha.name)
       expect(all).toContain(SENTINEL.alpha.contactEmail)
       expect(all).toContain(SENTINEL.beta.phone)
+      expect(all).toContain(SENTINEL.alpha.cvName)
     })
 
     it('a company reads no student personal data in any collection at depth 5', async () => {
@@ -121,6 +130,10 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       expect(all).toContain('Project A')
       expect(all).toContain(SENTINEL.alpha.skill)
       expect(all).toContain('Released work')
+      // The file on the released deliverable and its own brief attachment, not the unreleased one.
+      expect(all).toContain('final-report.pdf')
+      expect(all).toContain('brief-a.png')
+      expect(all).not.toContain('draft-report.pdf')
       // Not the unreleased deliverable, not another company's project.
       expect(all).not.toContain('Not released yet')
       expect(all).not.toContain('Project B draft')
