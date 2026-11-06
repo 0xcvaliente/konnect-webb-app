@@ -105,7 +105,8 @@ async function seed() {
     })
   }
 
-  // Company: created as pending, approved by the admin.
+  // Company: registered by the company user (starts pending, linked to them), then approved by
+  // the admin. The organisation number is made up but has a valid check digit.
   let companyId =
     typeof companyUser.company === 'object' ? companyUser.company?.id : companyUser.company
   if (!companyId) {
@@ -113,11 +114,16 @@ async function seed() {
       collection: 'companies',
       data: {
         name: 'Seed Startup AS',
+        orgNumber: '999123457',
+        contactName: 'Seed Contact',
+        contactRole: 'Founder',
+        website: 'https://seed-startup.example',
+        sector: 'software',
         description: 'A seed company.',
-        sector: 'Software',
         status: 'pending',
       },
-      overrideAccess: true,
+      user: { ...companyUser, collection: 'users' as const },
+      overrideAccess: false,
     })
     await payload.update({
       collection: 'companies',
@@ -126,10 +132,10 @@ async function seed() {
       user: adminCtx,
       overrideAccess: false,
     })
-    companyUser = (await payload.update({
+    companyUser = (await payload.findByID({
       collection: 'users',
       id: companyUser.id,
-      data: { company: company.id },
+      depth: 0,
       overrideAccess: true,
     })) as User
     companyId = company.id

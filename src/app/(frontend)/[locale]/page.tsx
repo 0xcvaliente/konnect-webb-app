@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 
+import { companyIdOf } from '@/access/roles'
 import { EntryShell } from '@/components/app/EntryShell'
 import { SiteShell } from '@/components/app/SiteShell'
 import { TeamShell } from '@/components/app/TeamShell'
@@ -72,6 +73,10 @@ export default async function HomePage({
   // A student fills in the onboarding first, once.
   if (user.role === 'student' && !(await findOwnProfile(payload, user as SessionUser))) {
     return redirect({ href: '/student/welcome', locale })
+  }
+  // A company registers its company first, once; after that its home is the status page.
+  if (user.role === 'company') {
+    return redirect({ href: companyIdOf(user) ? '/company' : '/company/welcome', locale })
   }
 
   const t = await getTranslations('Home')

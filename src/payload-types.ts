@@ -77,6 +77,7 @@ export interface Config {
     cvs: Cv;
     'deliverable-files': DeliverableFile;
     'brief-files': BriefFile;
+    'company-logos': CompanyLogo;
     payments: Payment;
     'activity-logs': ActivityLog;
     'magic-links': MagicLink;
@@ -98,6 +99,7 @@ export interface Config {
     cvs: CvsSelect<false> | CvsSelect<true>;
     'deliverable-files': DeliverableFilesSelect<false> | DeliverableFilesSelect<true>;
     'brief-files': BriefFilesSelect<false> | BriefFilesSelect<true>;
+    'company-logos': CompanyLogosSelect<false> | CompanyLogosSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'activity-logs': ActivityLogsSelect<false> | ActivityLogsSelect<true>;
     'magic-links': MagicLinksSelect<false> | MagicLinksSelect<true>;
@@ -191,11 +193,37 @@ export interface User {
 export interface Company {
   id: number;
   name: string;
+  orgNumber?: string | null;
+  contactName?: string | null;
+  contactRole?: string | null;
+  website?: string | null;
+  sector?: ('software' | 'food' | 'energy' | 'retail' | 'health' | 'media' | 'other') | null;
   description?: string | null;
-  sector?: string | null;
+  logo?: (number | null) | CompanyLogo;
   status: 'pending' | 'approved' | 'rejected';
+  user?: (number | null) | User;
+  teamOwner?: (number | null) | User;
+  approvedAt?: string | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "company-logos".
+ */
+export interface CompanyLogo {
+  id: number;
+  uploadedBy?: (number | null) | User;
+  originalName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -258,6 +286,7 @@ export interface Project {
   id: number;
   company: number | Company;
   companyName?: string | null;
+  companyLogo?: (number | null) | CompanyLogo;
   title: string;
   description: string;
   tasks?: string | null;
@@ -591,6 +620,10 @@ export interface PayloadLockedDocument {
         value: number | BriefFile;
       } | null)
     | ({
+        relationTo: 'company-logos';
+        value: number | CompanyLogo;
+      } | null)
+    | ({
         relationTo: 'payments';
         value: number | Payment;
       } | null)
@@ -717,9 +750,17 @@ export interface StudentProfilesSelect<T extends boolean = true> {
  */
 export interface CompaniesSelect<T extends boolean = true> {
   name?: T;
-  description?: T;
+  orgNumber?: T;
+  contactName?: T;
+  contactRole?: T;
+  website?: T;
   sector?: T;
+  description?: T;
+  logo?: T;
   status?: T;
+  user?: T;
+  teamOwner?: T;
+  approvedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -730,6 +771,7 @@ export interface CompaniesSelect<T extends boolean = true> {
 export interface ProjectsSelect<T extends boolean = true> {
   company?: T;
   companyName?: T;
+  companyLogo?: T;
   title?: T;
   description?: T;
   tasks?: T;
@@ -846,6 +888,23 @@ export interface DeliverableFilesSelect<T extends boolean = true> {
  */
 export interface BriefFilesSelect<T extends boolean = true> {
   company?: T;
+  originalName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "company-logos_select".
+ */
+export interface CompanyLogosSelect<T extends boolean = true> {
+  uploadedBy?: T;
   originalName?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1018,6 +1077,7 @@ export interface TaskRemoveUnusedFiles {
     cvs: number;
     briefFiles: number;
     deliverableFiles: number;
+    companyLogos: number;
   };
 }
 /**

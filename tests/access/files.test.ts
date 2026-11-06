@@ -685,6 +685,22 @@ describe('files not in use: a limit per account, and a nightly clean-up', () => 
     const newestCv = await add('cvs', 'beta', 'newest.pdf')
     const unusedBrief = await add('brief-files', 'companyA', 'loose.pdf')
     const unusedFile = await add('deliverable-files', 'alpha', 'loose.pdf', { match: w.match.id })
+    const logo = async (name: string) =>
+      w.payload.create({
+        collection: 'company-logos',
+        data: {} as never,
+        file: fileOf(await makePng(), name, 'image/png'),
+        depth: 0,
+        ...as('companyA'),
+      })
+    const unusedLogo = await logo('old-logo.png')
+    const usedLogo = await logo('logo.png')
+    await w.payload.update({
+      collection: 'companies',
+      id: w.companyA.company.id,
+      data: { logo: usedLogo.id },
+      ...as('companyA'),
+    })
 
     const req = await createLocalReq({}, w.payload)
     // Nothing is old enough yet.
@@ -692,6 +708,7 @@ describe('files not in use: a limit per account, and a nightly clean-up', () => 
       cvs: 0,
       'brief-files': 0,
       'deliverable-files': 0,
+      'company-logos': 0,
     })
 
     const later = new Date(Date.now() + (UNUSED_FILE_DAYS + 1) * 24 * 60 * 60 * 1000)
@@ -699,14 +716,16 @@ describe('files not in use: a limit per account, and a nightly clean-up', () => 
     expect(removed.cvs).toBeGreaterThan(0)
     expect(removed['brief-files']).toBeGreaterThan(0)
     expect(removed['deliverable-files']).toBeGreaterThan(0)
+    expect(removed['company-logos']).toBe(1)
 
-    const exists = async (slug: FileSlug, id: number) =>
+    const exists = async (slug: FileSlug | 'company-logos', id: number) =>
       (await w.payload.find({ collection: slug, where: { id: { equals: id } }, depth: 0 }))
         .totalDocs === 1
     for (const [slug, doc] of [
       ['cvs', unusedCv],
       ['brief-files', unusedBrief],
       ['deliverable-files', unusedFile],
+      ['company-logos', unusedLogo],
     ] as const) {
       expect(await exists(slug, doc.id), `${slug} ${doc.id} removed`).toBe(false)
       // The file on disk goes too.
@@ -721,6 +740,7 @@ describe('files not in use: a limit per account, and a nightly clean-up', () => 
       ['brief-files', w.briefOpen.id],
       ['deliverable-files', w.fileReleased.id],
       ['deliverable-files', w.fileHidden.id],
+      ['company-logos', usedLogo.id],
     ] as const) {
       expect(await exists(slug, id), `${slug} ${id} kept`).toBe(true)
     }

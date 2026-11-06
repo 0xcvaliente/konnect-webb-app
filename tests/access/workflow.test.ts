@@ -7,6 +7,7 @@ import type { User } from '@/payload-types'
 import {
   ADMIN_EMAIL,
   asUser,
+  companyDetails,
   createWorld,
   getTestPayload,
   login,
@@ -219,7 +220,7 @@ describe('company', () => {
     })) as User
     const company = await w.payload.create({
       collection: 'companies',
-      data: { name: 'New Co', status: 'approved' } as never,
+      data: { ...companyDetails('New Co'), status: 'approved' } as never,
       ...as(user),
     })
     expect(company.status).toBe('pending')
@@ -241,13 +242,13 @@ describe('company', () => {
     await expect(
       w.payload.create({
         collection: 'companies',
-        data: { name: 'Second', status: 'pending' },
+        data: { ...companyDetails('Second'), status: 'pending' },
         ...as(relinked),
       }),
     ).rejects.toThrow()
   })
 
-  it('a company that is not approved cannot submit a project; once approved it can', async () => {
+  it('a company that is not approved cannot create a project, not even a draft; once approved it can', async () => {
     const user = (await w.payload.create({
       collection: 'users',
       data: { email: 'pending.company@company.test', password: PASSWORD, role: 'company' },
@@ -255,25 +256,25 @@ describe('company', () => {
     })) as User
     const company = await w.payload.create({
       collection: 'companies',
-      data: { name: 'Pending Co', status: 'pending' },
+      data: { ...companyDetails('Pending Co'), status: 'pending' },
       ...as(user),
     })
     const me = (await w.payload.findByID({ collection: 'users', id: user.id, depth: 0 })) as User
-    const project = await w.payload.create({
-      collection: 'projects',
-      data: { title: 'Mine', description: 'd', company: company.id, status: 'draft' },
-      ...as(me),
-    })
-    expect(project.status).toBe('draft')
-
-    await expect(
-      w.payload.update({
+    const draft = () =>
+      w.payload.create({
         collection: 'projects',
-        id: project.id,
-        data: { status: 'submitted' },
+        data: { title: 'Mine', description: 'd', company: company.id, status: 'draft' },
         ...as(me),
-      }),
-    ).rejects.toThrow(/approved company/)
+      })
+    await expect(draft()).rejects.toThrow()
+    expect(
+      (
+        await w.payload.count({
+          collection: 'projects',
+          where: { company: { equals: company.id } },
+        })
+      ).totalDocs,
+    ).toBe(0)
 
     await w.payload.update({
       collection: 'companies',
@@ -282,6 +283,8 @@ describe('company', () => {
       user: asUser(w.admin),
       overrideAccess: false,
     })
+    const project = await draft()
+    expect(project.status).toBe('draft')
     const submitted = await w.payload.update({
       collection: 'projects',
       id: project.id,
@@ -289,6 +292,16 @@ describe('company', () => {
       ...as(me),
     })
     expect(submitted.status).toBe('submitted')
+
+    // Konnected takes the approval back: the company cannot submit again.
+    await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { status: 'rejected' },
+      user: asUser(w.admin),
+      overrideAccess: false,
+    })
+    await expect(draft()).rejects.toThrow()
   })
 
   it('creates projects only for its own company and only as draft', async () => {

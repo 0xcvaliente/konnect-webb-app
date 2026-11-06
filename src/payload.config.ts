@@ -10,6 +10,7 @@ import { ActivityLogs } from './collections/ActivityLogs'
 import { Applications } from './collections/Applications'
 import { BriefFiles } from './collections/BriefFiles'
 import { Companies } from './collections/Companies'
+import { CompanyLogos } from './collections/CompanyLogos'
 import { Cvs } from './collections/Cvs'
 import { DeliverableFiles } from './collections/DeliverableFiles'
 import { Deliverables } from './collections/Deliverables'
@@ -45,6 +46,7 @@ export default buildConfig({
     Cvs,
     DeliverableFiles,
     BriefFiles,
+    CompanyLogos,
     Payments,
     ActivityLogs,
     MagicLinks,

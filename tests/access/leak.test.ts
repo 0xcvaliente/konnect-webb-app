@@ -32,6 +32,7 @@ const SLUGS = [
   'cvs',
   'deliverable-files',
   'brief-files',
+  'company-logos',
 ] as const
 
 // What a company must never see about student alpha. alpha shares only skills, so the skill is
@@ -48,7 +49,8 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   users: '{ Users(limit: 100) { docs { id email role company { id } } } }',
   'student-profiles':
     '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt privacy { shareName shareSchool shareContactEmail sharePhone } user { id email } } } }',
-  companies: '{ Companies(limit: 100) { docs { id name description status } } }',
+  companies:
+    '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt user { id email } teamOwner { id email } logo { id url } } } }',
   projects:
     '{ Projects(limit: 100) { docs { id title description status companyName company { id name } attachments { id originalName } } } }',
   applications:
@@ -65,6 +67,8 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
     '{ DeliverableFiles(limit: 100) { docs { id filename originalName url uploadedBy { id email } match { id student { id name } } } } }',
   'brief-files':
     '{ BriefFiles(limit: 100) { docs { id filename originalName url company { id name } } } }',
+  'company-logos':
+    '{ CompanyLogos(limit: 100) { docs { id filename originalName url uploadedBy { id email } } } }',
 }
 
 let world: World
