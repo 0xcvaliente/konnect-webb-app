@@ -1,4 +1,11 @@
-import { ClockIcon, FileSearchIcon, RotateCcwIcon, TriangleAlertIcon } from 'lucide-react'
+import {
+  CircleCheckIcon,
+  CircleIcon,
+  ClockIcon,
+  FileSearchIcon,
+  RotateCcwIcon,
+  TriangleAlertIcon,
+} from 'lucide-react'
 import { hasLocale } from 'next-intl'
 import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -24,6 +31,10 @@ import { OwnerChip } from '@/app/(frontend)/[locale]/team/approvals/QueueParts'
 import { ReassignForm } from '@/components/app/team/TeamForms'
 import { requireTeam } from '@/lib/team/session'
 
+import { KickoffFacts } from '@/components/app/kickoff/KickoffCard'
+import { loadTeamKickoff, noteHistory } from '@/lib/kickoff/team'
+
+import { KickoffForm, NoteForm, StartWorkButton } from './KickoffForms'
 import { ProblemPaths } from './ProblemPaths'
 
 // The team's project page ("Final pass" mockup, team project page, states "Problem reported" and
@@ -89,6 +100,16 @@ export default async function TeamProjectPage({
   }
   const match = project.match
   const report = project.openReport
+  const tk = await getTranslations('Kickoff')
+  const tn = await getTranslations('TeamNote')
+  // The kick-off of the running match (matched, in progress or delivered), and every note
+  // Konnected wrote to the company (the project shows the company only the latest).
+  const [kick, notes] = await Promise.all([
+    match && ['matched', 'in_progress', 'delivered'].includes(project.status)
+      ? loadTeamKickoff(payload, user, project)
+      : null,
+    noteHistory(payload, user, project.id),
+  ])
   const running =
     Boolean(match) && (project.status === 'matched' || project.status === 'in_progress')
   const student = match?.studentName || report?.studentName || ''
@@ -102,7 +123,10 @@ export default async function TeamProjectPage({
     ),
   ])
   const rows: Row[] = [
-    ...project.activity.map((r) => ({ ...r, source: 'project' as const })),
+    // The notes to the company have their own history card below.
+    ...project.activity
+      .filter((r) => r.field !== 'noteToCompany')
+      .map((r) => ({ ...r, source: 'project' as const })),
     ...matchRows.flat().map((r) => ({ ...r, source: 'match' as const })),
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const pill = (status: string | null | undefined) =>
@@ -116,6 +140,8 @@ export default async function TeamProjectPage({
           ? t('activity.dueMoved', { from: day(r.fromStatus), to: day(r.toStatus ?? null) })
           : t('activity.dueSet', { date: day(r.toStatus ?? null) })
       if (r.action === 'create') return pill('matched')
+      if (r.field === 'kickoff')
+        return r.fromStatus ? t('activity.kickoffChanged') : t('activity.kickoffRecorded')
       return t('activity.other')
     }
     if (r.action === 'create') return t('activity.created')
@@ -183,6 +209,78 @@ export default async function TeamProjectPage({
             <Banner icon={RotateCcwIcon}>
               <p>{t(`reopened.${project.reopenReason}`, { date: at(project.reopenedAt) })}</p>
             </Banner>
+          )}
+
+          {kick && project.status === 'matched' && (
+            <Card className="gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle>{tk('title')}</CardTitle>
+                <Badge tone={kick.kickoff ? 'ok' : 'warn'}>
+                  {kick.kickoff ? tk('recorded') : tk('notRecorded')}
+                </Badge>
+              </div>
+              <p className="text-[0.9rem] text-muted-foreground">
+                {tk('teamIntro', {
+                  student,
+                  company: project.companyName,
+                  date: at(kick.selectedAt),
+                })}
+              </p>
+              {kick.kickoff && <KickoffFacts kickoff={kick.kickoff} team />}
+              <KickoffForm
+                projectId={project.id}
+                values={kick.form}
+                members={team.map((m) => ({ id: m.id, name: m.name }))}
+                recorded={Boolean(kick.kickoff)}
+                locked={!['none', 'failed'].includes(kick.agreement.stage)}
+              />
+              <ul className="grid gap-2 border-t border-line pt-4 text-[0.9rem]">
+                {(
+                  [
+                    [kick.companySigned, tk('check.company', { company: project.companyName })],
+                    [Boolean(kick.kickoff), tk('check.kickoff')],
+                    [
+                      kick.agreement.stage === 'signed',
+                      tk(`check.student.${kick.agreement.stage}`, { student }),
+                    ],
+                  ] as [boolean, string][]
+                ).map(([done, label]) => (
+                  <li key={label} className="flex items-start gap-2.5">
+                    {done ? (
+                      <CircleCheckIcon
+                        aria-hidden="true"
+                        className="mt-0.5 size-4 shrink-0 text-success"
+                      />
+                    ) : (
+                      <CircleIcon
+                        aria-hidden="true"
+                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                      />
+                    )}
+                    <span className={done ? undefined : 'text-muted-foreground'}>
+                      <span className="sr-only">{done ? tk('done') : tk('notDone')}: </span>
+                      {label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <StartWorkButton
+                projectId={project.id}
+                ready={Boolean(kick.kickoff) && kick.agreement.stage === 'signed'}
+              >
+                <Button asChild variant="secondary" size="sm">
+                  <Link href="/team/agreements">{tk('openAgreements')}</Link>
+                </Button>
+              </StartWorkButton>
+            </Card>
+          )}
+
+          {kick?.kickoff && project.status !== 'matched' && (
+            <Card className="gap-4">
+              <CardTitle>{tk('title')}</CardTitle>
+              <KickoffFacts kickoff={kick.kickoff} team />
+              <p className="text-[0.85rem] text-muted-foreground">{tk('teamFixed')}</p>
+            </Card>
           )}
 
           {running && report && (
@@ -261,6 +359,44 @@ export default async function TeamProjectPage({
                 dueDay={addDays(today, 7)}
                 closeDay={addDays(today, 7)}
               />
+            </Card>
+          )}
+
+          {project.status !== 'draft' && (
+            <Card className="gap-4">
+              <div className="grid gap-1">
+                <CardTitle>{tn('title')}</CardTitle>
+                <p className="text-[0.88rem] text-muted-foreground">
+                  {tn('intro', { company: project.companyName })}
+                </p>
+              </div>
+              <NoteForm
+                projectId={project.id}
+                note={project.noteToCompany ?? ''}
+                company={project.companyName}
+              />
+              {notes.length > 0 && (
+                <div className="grid gap-2 border-t border-line pt-4">
+                  <h3 className="text-[0.95rem] font-semibold">{tn('history')}</h3>
+                  <ol className="grid">
+                    {notes.map((n, i) => (
+                      <li
+                        key={n.id}
+                        className="grid gap-0.5 border-b border-line py-2.5 last:border-b-0"
+                      >
+                        <span className="text-[0.82rem] text-muted-foreground">
+                          {at(n.at)}
+                          {n.by ? `, ${n.by}` : ''}
+                          {i === 0 && n.note ? ` · ${tn('shown')}` : ''}
+                        </span>
+                        <p className="[overflow-wrap:anywhere] whitespace-pre-line">
+                          {n.note ?? <i className="text-muted-foreground">{tn('cleared')}</i>}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </Card>
           )}
 

@@ -13,6 +13,7 @@ import {
   type ApplyState,
   canWithdraw,
   decisionDay,
+  decisionDayOf,
   MAX_RUNNING_PROJECTS,
   NOTE_MAX,
   STATUS_ORDER,
@@ -203,6 +204,7 @@ const PROJECT_SELECT = {
   deliverable: true,
   paidOrUnpaid: true,
   deadline: true,
+  decisionBy: true,
 } as const
 
 const APPLICATION_SELECT = {
@@ -241,7 +243,7 @@ const toOwn = (doc: Application, today: string): OwnApplication => {
     companyName: project?.companyName ?? doc.companyName ?? '',
     closingDay,
     open: Boolean(project) && (!closingDay || closingDay >= today),
-    decideBy: decisionDay(closingDay),
+    decideBy: project ? decisionDayOf(project) : decisionDay(closingDay),
     listed: project
       ? {
           logoUrl:

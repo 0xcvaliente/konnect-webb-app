@@ -141,3 +141,16 @@ export function promiseState(start: Date, limit: number, now: Date = new Date())
       : -Math.max(1, workingDaysBetween(dueDay, today))
   return { dueDay, left, tone: left < 0 ? 'late' : left <= 1 ? 'soon' : 'ok' }
 }
+
+/**
+ * Where a fixed due day stands today: working days left (0 on the day, negative when late, at
+ * least one late working day once it has passed). The same tones as promiseState.
+ */
+export function countdownTo(dueDay: string, now: Date = new Date()): PromiseState {
+  const today = osloDay(now)
+  const left =
+    today <= dueDay
+      ? workingDaysBetween(today, dueDay)
+      : -Math.max(1, workingDaysBetween(dueDay, today))
+  return { dueDay, left, tone: left < 0 ? 'late' : left <= 1 ? 'soon' : 'ok' }
+}

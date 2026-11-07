@@ -76,11 +76,11 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   companies:
     '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt noteToCompany noteToCompanyAt infoRequestedAt reviewRequestedAt resentAt user { id email } teamOwner { id email } takenBy { id email } logo { id url } } } }',
   projects:
-    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt closeReason closeOutcome closedAt reopenedAt reopenReason status companyName owner { id email } takenBy { id email } company { id name } attachments { id originalName } } } }',
+    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt closeReason closeOutcome closedAt reopenedAt reopenReason decisionBy decisionReminderFor status companyName owner { id email } takenBy { id email } company { id name } attachments { id originalName } } } }',
   applications:
     '{ Applications(limit: 100) { docs { id status note profileWaiting projectTitle companyName closesOn shortlistedAt decidedAt withdrawnAt endedAt student { id name contactEmail user { id email } } project { id title } } } }',
   matches:
-    '{ Matches(limit: 100) { docs { id agreementNotes endedAt endDate dueDateHistory { from to changedAt } sharedInfo { name school programme year pitch skills experience contactEmail phone cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
+    '{ Matches(limit: 100) { docs { id agreementNotes endedAt endDate dueDateHistory { from to changedAt } kickoff { scope delivery contactName recordedAt checkIns { day } contact { id email name } } sharedInfo { name school programme year pitch skills experience contactEmail phone cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
   deliverables:
     '{ Deliverables(limit: 100) { docs { id status note returnNote returnedAt fixNote fixRequestedAt releasedAt acceptedAt acceptedBy submittedAt links { label url } files { id originalName uploadedBy { id email } } match { id student { id name contactEmail } project { id } } } } }',
   payments:
@@ -635,6 +635,7 @@ describe('matching: the company learns about its selected student only through t
             'dueDateHistory',
             'endDate',
             'id',
+            'kickoff',
             'project',
             'sharedInfo',
             'startDate',
@@ -645,6 +646,8 @@ describe('matching: the company learns about its selected student only through t
         expect(doc).not.toHaveProperty('application')
         expect(doc).not.toHaveProperty('agreementNotes')
         expect(doc).not.toHaveProperty('endedAt')
+        // The kick-off plan, but never the team's contact relation.
+        if (doc.kickoff) expect(doc.kickoff).not.toHaveProperty('contact')
       }
     }
     const gql = await graphql(

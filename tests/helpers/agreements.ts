@@ -58,12 +58,56 @@ export async function runAgreementJobs(payload: Payload): Promise<void> {
   }
 }
 
+/**
+ * Record the kick-off of a match as the admin, the way the team's form does (the student agreement
+ * is made only after it). Start today, due in 10 days, the admin as the contact.
+ */
+export async function recordTestKickoff(
+  payload: Payload,
+  admin: User,
+  matchId: number,
+  extra: { scope?: string; delivery?: string; start?: string; due?: string } = {},
+) {
+  const day = (n: number) => {
+    const d = new Date()
+    d.setUTCDate(d.getUTCDate() + n)
+    return `${d.toISOString().slice(0, 10)}T12:00:00.000Z`
+  }
+  return payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: {
+      startDate: extra.start ?? day(0),
+      endDate: extra.due ?? day(10),
+      kickoff: {
+        scope: extra.scope ?? 'Test scope agreed at kick-off',
+        delivery: extra.delivery ?? 'Hand in a PDF in Konnected',
+        checkIns: [{ day: day(5) }],
+        contact: admin.id,
+      },
+    },
+    user: asUser(admin),
+    overrideAccess: false,
+    context: { kickoffSave: matchId },
+  })
+}
+
 /** Ask for an agreement as the admin and run the job that makes its PDF. */
 export async function makeAgreement(
   payload: Payload,
   admin: User,
   input: AgreementInput,
 ): Promise<Agreement> {
+  // The student agreement comes after the kick-off (lib/kickoff).
+  if (input.kind === 'student') {
+    const match = await payload.findByID({
+      collection: 'matches',
+      id: input.matchId,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (!match.kickoff?.recordedAt) await recordTestKickoff(payload, admin, input.matchId)
+  }
   const result = await requestAgreement(payload, admin, input)
   if (!result.ok) throw new Error(`Could not make the agreement: ${result.error}`)
   await runAgreementJobs(payload)

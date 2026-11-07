@@ -43,6 +43,8 @@ export type RequestError =
   | 'no_template'
   | 'missing_values'
   | 'already_exists'
+  /** A student agreement is made after the kick-off is recorded (lib/kickoff). */
+  | 'no_kickoff'
   | 'generic'
 
 export type RequestResult =
@@ -107,7 +109,7 @@ export async function publishedTemplate(
 
 /**
  * Ask for a new agreement (admins only): the company agreement of an approved project, or the
- * student agreement of a matched project. Checks that a published template exists, that every
+ * student agreement of a matched project once its kick-off is recorded. Checks that a published template exists, that every
  * field it uses has a value, and that no agreement for the same project or match is in use, then
  * stores the agreement as `generating` and queues the job that makes the PDF.
  */
@@ -124,6 +126,9 @@ export async function requestAgreement(
       if (!source) return { ok: false, error: 'not_found' }
       const wanted = input.kind === 'company' ? 'approved' : 'matched'
       if (source.project.status !== wanted) return { ok: false, error: 'wrong_status' }
+      // The student agreement comes after the kick-off: it holds the dates agreed there.
+      if (source.kind === 'student' && (source.match.endedAt || !source.match.kickoff?.recordedAt))
+        return { ok: false, error: source.match.endedAt ? 'wrong_status' : 'no_kickoff' }
 
       const template = await publishedTemplate(req, input.kind)
       if (!template) return { ok: false, error: 'no_template' }

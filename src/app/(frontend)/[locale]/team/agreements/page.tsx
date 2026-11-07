@@ -82,12 +82,27 @@ export default async function TeamAgreementsPage({
       })),
     ...matched
       .filter((m) => !inUse.has(`student:${m.id}`))
-      .map((m) => ({
-        key: `m${m.id}`,
-        title: (m.project as Project | null)?.title ?? '',
-        detail: `${t('matchedProject')}, ${(m.student as StudentProfile | null)?.name ?? ''}`,
-        button: <MakeAgreementButton kind="student" matchId={m.id} />,
-      })),
+      .map((m) => {
+        const project = m.project as Project | null
+        return {
+          key: `m${m.id}`,
+          title: project?.title ?? '',
+          detail: `${t('matchedProject')}, ${(m.student as StudentProfile | null)?.name ?? ''}`,
+          // The student agreement holds the dates agreed at kick-off: record the kick-off first.
+          button: m.kickoff?.recordedAt ? (
+            <MakeAgreementButton kind="student" matchId={m.id} />
+          ) : (
+            <div className="grid gap-1.5">
+              <p className="text-[0.85rem] text-muted-foreground">{t('kickoffFirst')}</p>
+              <div>
+                <Button asChild variant="secondary" size="sm">
+                  <Link href={`/team/projects/${project?.id ?? ''}`}>{t('recordKickoff')}</Link>
+                </Button>
+              </div>
+            </div>
+          ),
+        }
+      }),
   ]
 
   const templates = (

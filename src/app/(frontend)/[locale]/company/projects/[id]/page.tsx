@@ -13,6 +13,7 @@ import { getPayload } from 'payload'
 
 import { Banner } from '@/components/app/Banner'
 import { CompanyWork } from '@/components/app/deliverables/CompanyWork'
+import { CompanyKickoffCard } from '@/components/app/kickoff/KickoffCard'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { ProjectDetails } from '@/components/app/ProjectDetails'
 import { ProjectTimeline, ProjectTrack } from '@/components/app/ProjectProgress'
@@ -25,6 +26,7 @@ import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { companyShellProps } from '@/lib/companies/display'
 import { loadCompanyWork } from '@/lib/deliverables/student'
+import { loadCompanyKickoff } from '@/lib/kickoff/views'
 import { PAYMENT_TERMS_DAYS, priceBreakdown, VAT_RATE } from '@/lib/money'
 import { requireOwnCompany } from '@/lib/companies/session'
 import { isEditable, PROJECT_STATUS_TONE } from '@/lib/projects/display'
@@ -71,7 +73,11 @@ export default async function CompanyProjectPage({
     ['in_progress', 'delivered', 'closed'].includes(project.status) &&
     project.closeOutcome !== 'no_delivery' &&
     project.closeOutcome !== 'no_match'
-  const [history, student, work, current] = await Promise.all([
+  const kickoffShown =
+    project.status === 'matched' ||
+    project.status === 'in_progress' ||
+    project.status === 'delivered'
+  const [history, student, work, current, kickoff] = await Promise.all([
     projectHistory(payload, project.id),
     // Only the selected student's shared copy, once Konnected has selected one; never any other
     // applicant (a company cannot read applications at all).
@@ -89,6 +95,8 @@ export default async function CompanyProjectPage({
       user,
       overrideAccess: false,
     }),
+    // The kick-off of the match that runs now (the company reads nothing of an ended one).
+    kickoffShown ? loadCompanyKickoff(payload, user, project.id) : null,
   ])
   const match = current.docs[0]
   const dueDay = storedToDay(match?.endDate)
@@ -227,6 +235,12 @@ export default async function CompanyProjectPage({
 
           {work && <CompanyWork work={work} />}
           {student && <SelectedStudent student={student} />}
+          {kickoffShown && (
+            <CompanyKickoffCard
+              kickoff={kickoff}
+              status={status as 'matched' | 'in_progress' | 'delivered'}
+            />
+          )}
 
           {status !== 'draft' && (
             <Card>

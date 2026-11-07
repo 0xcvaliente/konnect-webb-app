@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 
 import { WithdrawForm } from '@/components/app/applications/WithdrawForm'
 import { StudentWork } from '@/components/app/deliverables/StudentWork'
+import { StudentKickoffCard } from '@/components/app/kickoff/KickoffCard'
 import { ProblemCard } from '@/components/app/problems/ProblemCard'
 import { Banner } from '@/components/app/Banner'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
@@ -18,6 +19,7 @@ import { routing } from '@/i18n/routing'
 import { APPLICATION_STATUS_TONE, canWithdraw } from '@/lib/applications/fields'
 import { findOwnApplication, type OwnApplication, ownSharedItems } from '@/lib/applications/student'
 import { loadStudentWork } from '@/lib/deliverables/student'
+import { loadStudentKickoff } from '@/lib/kickoff/views'
 import { loadStudentProblem } from '@/lib/problems/student'
 import { requireStudent } from '@/lib/students/session'
 import { cn } from '@/lib/utils'
@@ -280,6 +282,12 @@ export default async function StudentApplicationPage({
     application?.status === 'selected'
       ? await loadStudentProblem(payload, user, application.projectId)
       : null
+  // The kick-off (what Konnected agreed with the student and the company), where the student's
+  // agreement stands, and the company's brief files: their own running match only.
+  const kickoff =
+    application?.status === 'selected'
+      ? await loadStudentKickoff(payload, user, application.projectId)
+      : null
   const tp = await getTranslations('StudentProblem')
   const workStage: WorkStage = !work
     ? 'none'
@@ -352,6 +360,15 @@ export default async function StudentApplicationPage({
                 </div>
               </Banner>
             </Card>
+          )}
+          {kickoff && (
+            <StudentKickoffCard
+              kickoff={kickoff.kickoff}
+              company={a.companyName}
+              agreement={kickoff.agreement}
+              files={kickoff.files}
+              started={Boolean(work) && work?.state.blocked !== 'not_started'}
+            />
           )}
           {work && <StudentWork work={work} company={a.companyName} />}
           <Progress application={a} work={workStage} />
