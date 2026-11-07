@@ -1,6 +1,7 @@
 import { APIError, type Payload, type Where } from 'payload'
 
 import { isAdmin, relationId } from '@/access/roles'
+import { agreementGateOf } from '@/lib/agreements/gates'
 import { formatOrgNumber } from '@/lib/companies/fields'
 import { parsePrice } from '@/lib/money'
 import {
@@ -496,6 +497,10 @@ function noteOf(form: FormData): { note: string } | { error: ReviewError } {
 
 /** Payload's refusals as answers for the page. Never throws: a throwing action loses the page. */
 function refused(payload: Payload, error: unknown): ReviewState {
+  // Publishing without the signed company agreement (or with one for older terms).
+  const gate = agreementGateOf(error)
+  if (gate === 'company_unsigned') return fail('agreement_unsigned')
+  if (gate === 'company_changed') return fail('agreement_changed')
   const status =
     error instanceof APIError || (typeof error === 'object' && error && 'status' in error)
       ? Number((error as { status: unknown }).status)
@@ -691,7 +696,8 @@ export const rejectProject: Decision = async (payload, actor, form) => {
 /**
  * Publish an approved project: students can apply from now on. The rules for publishing live in
  * one place, `assertCanPublish` (src/lib/projects/publish.ts), which the Projects hook runs for
- * every API; the agreements card extends it.
+ * every API: an approved company, the paid or unpaid decision and price, and the company agreement
+ * signed by the company and Konnected.
  */
 export const publishProject: Decision = async (payload, actor, form) => {
   if (!actor || !isAdmin(actor)) return fail('forbidden')

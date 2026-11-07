@@ -78,6 +78,10 @@ export interface Config {
     'deliverable-files': DeliverableFile;
     'brief-files': BriefFile;
     'company-logos': CompanyLogo;
+    'agreement-templates': AgreementTemplate;
+    agreements: Agreement;
+    signatures: Signature;
+    'agreement-pdfs': AgreementPdf;
     payments: Payment;
     'activity-logs': ActivityLog;
     'magic-links': MagicLink;
@@ -100,6 +104,10 @@ export interface Config {
     'deliverable-files': DeliverableFilesSelect<false> | DeliverableFilesSelect<true>;
     'brief-files': BriefFilesSelect<false> | BriefFilesSelect<true>;
     'company-logos': CompanyLogosSelect<false> | CompanyLogosSelect<true>;
+    'agreement-templates': AgreementTemplatesSelect<false> | AgreementTemplatesSelect<true>;
+    agreements: AgreementsSelect<false> | AgreementsSelect<true>;
+    signatures: SignaturesSelect<false> | SignaturesSelect<true>;
+    'agreement-pdfs': AgreementPdfsSelect<false> | AgreementPdfsSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'activity-logs': ActivityLogsSelect<false> | ActivityLogsSelect<true>;
     'magic-links': MagicLinksSelect<false> | MagicLinksSelect<true>;
@@ -127,6 +135,8 @@ export interface Config {
   jobs: {
     tasks: {
       removeUnusedFiles: TaskRemoveUnusedFiles;
+      generateAgreement: TaskGenerateAgreement;
+      sendAgreementEmail: TaskSendAgreementEmail;
       inline: {
         input: unknown;
         output: unknown;
@@ -446,6 +456,117 @@ export interface DeliverableFile {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "agreement-templates".
+ */
+export interface AgreementTemplate {
+  id: number;
+  kind: 'company' | 'student';
+  version?: number | null;
+  status: 'draft' | 'published' | 'retired';
+  fields?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  publishedKind?: string | null;
+  uploadedBy?: (number | null) | User;
+  publishedAt?: string | null;
+  retiredAt?: string | null;
+  originalName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "agreements".
+ */
+export interface Agreement {
+  id: number;
+  reference: string;
+  kind: 'company' | 'student';
+  title: string;
+  status: 'generating' | 'awaiting_party' | 'awaiting_konnected' | 'signed' | 'failed' | 'void';
+  project: number | Project;
+  company?: (number | null) | Company;
+  match?: (number | null) | Match;
+  student?: (number | null) | StudentProfile;
+  template?: (number | null) | AgreementTemplate;
+  templateVersion?: number | null;
+  values?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  unsignedPdf?: (number | null) | AgreementPdf;
+  unsignedSha256?: string | null;
+  signedPdf?: (number | null) | AgreementPdf;
+  signedSha256?: string | null;
+  generatedAt?: string | null;
+  partySignedAt?: string | null;
+  completedAt?: string | null;
+  emailedAt?: string | null;
+  voidedAt?: string | null;
+  failure?: string | null;
+  replaces?: (number | null) | Agreement;
+  requestedBy?: (number | null) | User;
+  activeKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "agreement-pdfs".
+ */
+export interface AgreementPdf {
+  id: number;
+  agreement: number | Agreement;
+  variant: 'unsigned' | 'signed';
+  sha256: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "signatures".
+ */
+export interface Signature {
+  id: number;
+  agreement: number | Agreement;
+  signer: number | User;
+  party: 'company' | 'student' | 'konnected';
+  typedName: string;
+  ticked: boolean;
+  tickTextVersion: string;
+  documentSha256: string;
+  signedAt: string;
+  signInMethod: 'google' | 'email_link' | 'password' | 'unknown';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payments".
  */
 export interface Payment {
@@ -567,7 +688,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'removeUnusedFiles';
+        taskSlug: 'inline' | 'removeUnusedFiles' | 'generateAgreement' | 'sendAgreementEmail';
         taskID: string;
         input?:
           | {
@@ -600,7 +721,7 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'removeUnusedFiles') | null;
+  taskSlug?: ('inline' | 'removeUnusedFiles' | 'generateAgreement' | 'sendAgreementEmail') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -666,6 +787,22 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'company-logos';
         value: number | CompanyLogo;
+      } | null)
+    | ({
+        relationTo: 'agreement-templates';
+        value: number | AgreementTemplate;
+      } | null)
+    | ({
+        relationTo: 'agreements';
+        value: number | Agreement;
+      } | null)
+    | ({
+        relationTo: 'signatures';
+        value: number | Signature;
+      } | null)
+    | ({
+        relationTo: 'agreement-pdfs';
+        value: number | AgreementPdf;
       } | null)
     | ({
         relationTo: 'payments';
@@ -988,6 +1125,97 @@ export interface CompanyLogosSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "agreement-templates_select".
+ */
+export interface AgreementTemplatesSelect<T extends boolean = true> {
+  kind?: T;
+  version?: T;
+  status?: T;
+  fields?: T;
+  publishedKind?: T;
+  uploadedBy?: T;
+  publishedAt?: T;
+  retiredAt?: T;
+  originalName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "agreements_select".
+ */
+export interface AgreementsSelect<T extends boolean = true> {
+  reference?: T;
+  kind?: T;
+  title?: T;
+  status?: T;
+  project?: T;
+  company?: T;
+  match?: T;
+  student?: T;
+  template?: T;
+  templateVersion?: T;
+  values?: T;
+  unsignedPdf?: T;
+  unsignedSha256?: T;
+  signedPdf?: T;
+  signedSha256?: T;
+  generatedAt?: T;
+  partySignedAt?: T;
+  completedAt?: T;
+  emailedAt?: T;
+  voidedAt?: T;
+  failure?: T;
+  replaces?: T;
+  requestedBy?: T;
+  activeKey?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "signatures_select".
+ */
+export interface SignaturesSelect<T extends boolean = true> {
+  agreement?: T;
+  signer?: T;
+  party?: T;
+  typedName?: T;
+  ticked?: T;
+  tickTextVersion?: T;
+  documentSha256?: T;
+  signedAt?: T;
+  signInMethod?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "agreement-pdfs_select".
+ */
+export interface AgreementPdfsSelect<T extends boolean = true> {
+  agreement?: T;
+  variant?: T;
+  sha256?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payments_select".
  */
 export interface PaymentsSelect<T extends boolean = true> {
@@ -1150,6 +1378,31 @@ export interface TaskRemoveUnusedFiles {
     briefFiles: number;
     deliverableFiles: number;
     companyLogos: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskGenerateAgreement".
+ */
+export interface TaskGenerateAgreement {
+  input: {
+    agreementId: number;
+  };
+  output: {
+    outcome: string;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSendAgreementEmail".
+ */
+export interface TaskSendAgreementEmail {
+  input: {
+    agreementId: number;
+    email: 'to_sign' | 'signed';
+  };
+  output: {
+    sent: number;
   };
 }
 /**

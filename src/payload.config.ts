@@ -7,6 +7,9 @@ import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
 import { ActivityLogs } from './collections/ActivityLogs'
+import { AgreementPdfs } from './collections/AgreementPdfs'
+import { Agreements } from './collections/Agreements'
+import { AgreementTemplates } from './collections/AgreementTemplates'
 import { Applications } from './collections/Applications'
 import { BriefFiles } from './collections/BriefFiles'
 import { Companies } from './collections/Companies'
@@ -18,9 +21,11 @@ import { MagicLinks } from './collections/MagicLinks'
 import { Matches } from './collections/Matches'
 import { Payments } from './collections/Payments'
 import { Projects } from './collections/Projects'
+import { Signatures } from './collections/Signatures'
 import { StudentProfiles } from './collections/StudentProfiles'
 import { Users } from './collections/Users'
 import { isAdmin } from './access/roles'
+import { AGREEMENTS_QUEUE, generateAgreementTask, sendAgreementEmailTask } from './jobs/agreements'
 import { MAINTENANCE_QUEUE, removeUnusedFilesTask } from './jobs/removeUnusedFiles'
 import { emailAdapter } from './lib/email/adapter'
 import { MAX_UPLOAD_BYTES, MB } from './lib/uploads/fileRules'
@@ -47,6 +52,10 @@ export default buildConfig({
     DeliverableFiles,
     BriefFiles,
     CompanyLogos,
+    AgreementTemplates,
+    Agreements,
+    Signatures,
+    AgreementPdfs,
     Payments,
     ActivityLogs,
     MagicLinks,
@@ -66,19 +75,24 @@ export default buildConfig({
     fallbackLanguage: 'en',
   },
   email: emailAdapter(),
-  // Background jobs: the nightly clean-up of unused files. In development the app itself queues
-  // any job that is due once an hour and runs the maintenance queue (see instrumentation.ts). In
-  // production (docker-compose.prod.yml) RUN_JOBS_IN_APP=false turns that off, because two app
-  // containers run side by side during a deploy; the single `worker` container runs
-  // `payload jobs:run --cron ... --handle-schedules` instead.
+  // Background jobs: the nightly clean-up of unused files, and the agreement work (making the
+  // PDF with Gotenberg, the agreement emails). In development the app itself queues any job that
+  // is due once an hour and runs the maintenance queue, and runs the agreements queue every 5
+  // seconds (see instrumentation.ts). In production (docker-compose.prod.yml) RUN_JOBS_IN_APP=false
+  // turns that off, because two app containers run side by side during a deploy; the single
+  // `worker` container runs `payload jobs:run --cron ... --all-queues --handle-schedules` instead,
+  // which covers both queues.
   // Only admins may queue, run or cancel jobs through the API; the jobs collection itself stays
   // closed (Payload's default).
   jobs: {
-    tasks: [removeUnusedFilesTask],
+    tasks: [removeUnusedFilesTask, generateAgreementTask, sendAgreementEmailTask],
     autoRun:
       process.env.RUN_JOBS_IN_APP === 'false'
         ? []
-        : [{ cron: '0 * * * *', queue: MAINTENANCE_QUEUE }],
+        : [
+            { cron: '0 * * * *', queue: MAINTENANCE_QUEUE },
+            { cron: '*/5 * * * * *', queue: AGREEMENTS_QUEUE, disableScheduling: true },
+          ],
     deleteJobOnComplete: true,
     access: {
       cancel: ({ req }) => isAdmin(req.user),

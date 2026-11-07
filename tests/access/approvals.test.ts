@@ -22,6 +22,7 @@ import {
 import en from '@/messages/en.json'
 import type { ActivityLog, Company, Project, StudentProfile, User } from '@/payload-types'
 
+import { makeAgreement, signAs, signedAgreement } from '../helpers/agreements'
 import {
   asUser,
   companyDetails,
@@ -556,6 +557,8 @@ describe('project review', () => {
       data: { fee: 6500 },
       ...as(w.admin),
     })
+    // The company agreement is signed by the company and Konnected (the publishing gate).
+    await signedAgreement(w.payload, w.admin, w.companyA.user, { kind: 'company', projectId: p.id })
 
     expect((await publishProject(w.payload, admin, form({ id: p.id }))).status).toBe('done')
     expect((await project(p.id)).status).toBe('published')
@@ -574,13 +577,81 @@ describe('project review', () => {
     expect(asStudent).not.toHaveProperty('fee')
   })
 
+  it('publishing from the queue needs the company agreement signed by the company and Konnected', async () => {
+    const admin = session(w.admin)
+    const adminCookie = await sessionFor(w.admin.id)
+    const p = await submittedProject({ title: 'Needs its agreement' })
+    await approveProject(w.payload, admin, form({ id: p.id, pay: 'paid', price: 6500 }))
+    const seen = async () =>
+      (
+        await w.payload.find({
+          collection: 'projects',
+          where: { id: { equals: p.id } },
+          ...as(w.alpha.user),
+        })
+      ).totalDocs
+
+    // No agreement: the queue says why, and no other API gets around it.
+    expect((await publishProject(w.payload, admin, form({ id: p.id }))).error).toBe(
+      'agreement_unsigned',
+    )
+    await expect(
+      w.payload.update({
+        collection: 'projects',
+        id: p.id,
+        data: { status: 'published' },
+        ...as(w.admin),
+      }),
+    ).rejects.toThrow(/company agreement must be signed/)
+    expect(
+      (await rest.patch(`projects/${p.id}`, { status: 'published' }, adminCookie)).status,
+    ).toBe(409)
+    expect((await project(p.id)).status).toBe('approved')
+    expect(await seen()).toBe(0)
+
+    // Signed by the company only: still closed.
+    const half = await makeAgreement(w.payload, w.admin, { kind: 'company', projectId: p.id })
+    expect((await signAs(w.payload, w.companyA.user, half, 'Party Signer')).ok).toBe(true)
+    expect((await publishProject(w.payload, admin, form({ id: p.id }))).error).toBe(
+      'agreement_unsigned',
+    )
+    // Konnected signs too: the gate opens.
+    expect((await signAs(w.payload, w.admin, half, 'Konnected Signer')).ok).toBe(true)
+
+    // A price changed after signing no longer matches what the company signed.
+    await w.payload.update({
+      collection: 'projects',
+      id: p.id,
+      data: { fee: 7000 },
+      ...as(w.admin),
+    })
+    expect((await publishProject(w.payload, admin, form({ id: p.id }))).error).toBe(
+      'agreement_changed',
+    )
+    await w.payload.update({
+      collection: 'projects',
+      id: p.id,
+      data: { fee: 6500 },
+      ...as(w.admin),
+    })
+
+    expect((await publishProject(w.payload, admin, form({ id: p.id }))).status).toBe('done')
+    expect((await project(p.id)).status).toBe('published')
+    expect(await seen()).toBe(1)
+  })
+
   it('a project of a company that is not approved (any more) is neither approved nor published', async () => {
     const admin = session(w.admin)
     const adminCookie = await sessionFor(w.admin.id)
     const submitted = await submittedProject({ title: 'Waits for approval' })
     const approved = await submittedProject({ title: 'Waits for publishing' })
-    await approveProject(w.payload, admin, form({ id: approved.id, pay: 'unpaid' }))
+    await approveProject(w.payload, admin, form({ id: approved.id, pay: 'paid', price: 6500 }))
     expect((await project(approved.id)).status).toBe('approved')
+    // Signed before the company is rejected: the company check still comes first.
+    await signedAgreement(w.payload, w.admin, w.companyA.user, {
+      kind: 'company',
+      projectId: approved.id,
+    })
 
     // The team rejects company A after it sent both projects.
     await w.payload.update({

@@ -6,6 +6,7 @@ import { getPayload, type Payload } from 'payload'
 import { createSessionCookie } from '@/lib/auth/session'
 import type { Project, User } from '@/payload-types'
 
+import { publishTestTemplates, signedAgreement } from './agreements'
 import { fileOf, makePdf, makePng } from './files'
 
 export const PASSWORD = 'Test-passw0rd-1234'
@@ -148,6 +149,8 @@ export async function createWorld() {
 
   const admin = await makeUser(ADMIN_EMAIL, 'admin', { emailVerifiedAt: new Date().toISOString() })
   const adminCtx = asUser(admin)
+  // Konnected's agreement templates (test text), so projects can be published and started.
+  const templates = await publishTestTemplates(payload, admin)
 
   const makeStudent = async (key: 'alpha' | 'beta', privacy: Record<string, boolean>) => {
     const s = SENTINEL[key]
@@ -225,9 +228,12 @@ export async function createWorld() {
   const companyA = await makeCompany('company.a@company.test', 'Company A')
   const companyB = await makeCompany('company.b@company.test', 'Company B')
 
-  /** Create a project and move it through `path` as admin. */
+  /**
+   * Create a project and move it through `path` as admin. Before publishing, the company agreement
+   * is made and signed by the company and Konnected (the publishing gate).
+   */
   const makeProject = async (
-    company: { company: { id: number } },
+    company: { company: { id: number }; user: User },
     title: string,
     path: Project['status'][],
   ) => {
@@ -244,6 +250,12 @@ export async function createWorld() {
       overrideAccess: true,
     })
     for (const status of path) {
+      if (status === 'published') {
+        await signedAgreement(payload, admin, company.user, {
+          kind: 'company',
+          projectId: project.id,
+        })
+      }
       project = await payload.update({
         collection: 'projects',
         id: project.id,
@@ -289,6 +301,10 @@ export async function createWorld() {
     overrideAccess: false,
   })
   for (const status of ['matched', 'in_progress'] as const) {
+    // The work starts only after the student agreement is signed (the second gate).
+    if (status === 'in_progress') {
+      await signedAgreement(payload, admin, alpha.user, { kind: 'student', matchId: match.id })
+    }
     await payload.update({
       collection: 'projects',
       id: projectA.id,
@@ -379,6 +395,7 @@ export async function createWorld() {
 
   return {
     payload,
+    templates,
     admin,
     alpha,
     beta,

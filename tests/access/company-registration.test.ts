@@ -4,6 +4,7 @@ import { registerCompany, saveCompany, type SessionUser } from '@/lib/companies/
 import { formatOrgNumber, isValidOrgNumber, normalizeWebsite } from '@/lib/companies/fields'
 import type { Company, CompanyLogo, User } from '@/payload-types'
 
+import { signedAgreement } from '../helpers/agreements'
 import { fileOf, makePdf, makePng } from '../helpers/files'
 import {
   asUser,
@@ -981,10 +982,18 @@ describe('company logos', () => {
     })
     expect(project.companyLogo).toMatchObject({ id: logo.id })
     for (const status of ['submitted', 'approved', 'published'] as const) {
+      // Publishing needs the signed company agreement.
+      if (status === 'published') {
+        await signedAgreement(w.payload, w.admin, await fresh(user), {
+          kind: 'company',
+          projectId: project.id,
+        })
+      }
       project = await w.payload.update({
         collection: 'projects',
         id: project.id,
-        data: { status },
+        // Konnected decides paid with a price: the test company template fills in the price.
+        data: status === 'approved' ? { status, paidOrUnpaid: 'paid', fee: 1000 } : { status },
         ...as(w.admin),
       })
     }

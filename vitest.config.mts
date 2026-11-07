@@ -10,7 +10,8 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     globalSetup: ['./tests/setup/global.ts'],
     // Never call the real breached-password service from a test.
-    setupFiles: ['./tests/setup/hibp.ts'],
+    // Nor the real Gotenberg: a stand-in answers on GOTENBERG_URL (tests/setup/gotenberg.ts).
+    setupFiles: ['./tests/setup/hibp.ts', './tests/setup/gotenberg.ts'],
     // One database, so run files one after another.
     fileParallelism: false,
     testTimeout: 30_000,
@@ -32,6 +33,8 @@ export default defineConfig({
       AUTH_TIMING_FLOOR_MS: '120',
       // Uploaded files go to a throwaway directory, emptied before each run, never ./media.
       MEDIA_DIR: testMediaDir(),
+      // The Gotenberg stand-in's address. Never a real converter.
+      GOTENBERG_URL: 'http://gotenberg.test',
     },
   },
 })

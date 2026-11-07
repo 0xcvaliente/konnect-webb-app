@@ -19,6 +19,7 @@ import {
   SENTINEL,
   type World,
 } from '../helpers/world'
+import { signedAgreement } from '../helpers/agreements'
 
 /**
  * Roles, status rules, applications, matches, deliverables, payments and the activity log, each
@@ -416,6 +417,22 @@ describe('project status rules', () => {
       'delivered',
       'closed',
     ]) {
+      // The two agreement gates: the company agreement before publishing, the student agreement
+      // (after the match) before the work starts.
+      if (status === 'published') {
+        await signedAgreement(w.payload, w.admin, w.companyA.user, {
+          kind: 'company',
+          projectId: p.id,
+        })
+      }
+      if (status === 'in_progress') {
+        const m = await w.payload.create({
+          collection: 'matches',
+          data: { project: p.id, student: w.beta.profile.id },
+          ...as(w.admin),
+        })
+        await signedAgreement(w.payload, w.admin, w.beta.user, { kind: 'student', matchId: m.id })
+      }
       await move(p.id, status, w.admin)
     }
     const done = await w.payload.findByID({ collection: 'projects', id: p.id })

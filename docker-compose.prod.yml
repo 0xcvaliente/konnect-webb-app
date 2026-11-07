@@ -34,6 +34,8 @@ x-app-env: &app-env
   SMTP_PASSWORD: ${SMTP_PASSWORD:-}
   EMAIL_FROM: ${EMAIL_FROM:?}
   MEDIA_DIR: /data/media
+  # Agreement PDFs (the agreements queue in the worker). Internal network only.
+  GOTENBERG_URL: http://gotenberg:3000
   # Jobs run in the worker only, never in the app: two app containers run side by side during a
   # deploy and would both run them.
   RUN_JOBS_IN_APP: 'false'
@@ -109,8 +111,8 @@ services:
 
   worker:
     # Same image as the app. Every minute: queue the jobs that are due (--handle-schedules) and
-    # run what is queued in every queue (--all-queues; the nightly file clean-up uses the
-    # "maintenance" queue). Exactly one worker: do not scale it.
+    # run what is queued in every queue (--all-queues: the nightly file clean-up in "maintenance",
+    # agreement PDFs and emails in "agreements"). Exactly one worker: do not scale it.
     image: ${APP_IMAGE:?}
     restart: unless-stopped
     init: true

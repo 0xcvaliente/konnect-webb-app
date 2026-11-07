@@ -41,8 +41,10 @@ DOCX to PDF, deploys without downtime. EU-owned suppliers only.
   `deploy.sh` keeps a new copy off the `public` network until its health check passes.
 - **worker** is the same image running `payload jobs:run --cron "* * * * *" --all-queues
 --handle-schedules` in `/app/cli`, with `TZ=Europe/Oslo` so the 03:15 file clean-up is Norwegian
-  time. The app itself runs no jobs in production (`RUN_JOBS_IN_APP=false`), because two app
-  containers run side by side during a deploy. Exactly one worker.
+  time. It also makes agreement PDFs (through Gotenberg, `GOTENBERG_URL`) and sends the agreement
+  emails (the `agreements` queue), so a new agreement PDF can take up to a minute. The app itself
+  runs no jobs in production (`RUN_JOBS_IN_APP=false`), because two app containers run side by
+  side during a deploy. Exactly one worker.
 - **migrate** (one-off) runs `payload migrate` from the new image before the swap.
 - **postgres** has no published port. `archive_mode=on`, `archive_timeout=60`: every finished WAL
   segment, at least one a minute, goes to the Storage Box through `pgbackrest archive-push`.

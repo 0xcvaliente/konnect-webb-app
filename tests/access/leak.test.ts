@@ -34,6 +34,10 @@ const SLUGS = [
   'deliverable-files',
   'brief-files',
   'company-logos',
+  'agreement-templates',
+  'agreements',
+  'signatures',
+  'agreement-pdfs',
 ] as const
 
 // What a company must never see about student alpha. alpha shares only skills, so the skill is
@@ -73,6 +77,14 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
     '{ BriefFiles(limit: 100) { docs { id filename originalName url company { id name } } } }',
   'company-logos':
     '{ CompanyLogos(limit: 100) { docs { id filename originalName url uploadedBy { id email } } } }',
+  'agreement-templates':
+    '{ AgreementTemplates(limit: 100) { docs { id kind version status fields filename uploadedBy { id email } } } }',
+  agreements:
+    '{ Agreements(limit: 100) { docs { id reference kind title status values unsignedSha256 company { id name } student { id name contactEmail user { id email } } match { id student { id name } } project { id title } unsignedPdf { id filename url } signedPdf { id filename url } } } }',
+  signatures:
+    '{ Signatures(limit: 100) { docs { id party typedName signedAt signInMethod signer { id email name } agreement { id kind values student { id name } } } } }',
+  'agreement-pdfs':
+    '{ AgreementPdfs(limit: 100) { docs { id filename url variant sha256 agreement { id kind values student { id name } } } } }',
 }
 
 let world: World
