@@ -1,5 +1,7 @@
-import type { Where } from 'payload'
+import type { PayloadRequest, Where } from 'payload'
 import { APIError, type CollectionConfig } from 'payload'
+
+import type { Match } from '@/payload-types'
 
 import {
   adminOnlyField,
@@ -10,10 +12,14 @@ import {
   isStudent,
   relationId,
 } from '@/access/roles'
+import { isOnTeam } from '@/access/team'
 import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
 import { assertRoomForAnotherProject } from '@/lib/applications/rules'
+import { KICKOFF_LIMITS } from '@/lib/kickoff/fields'
+import { kickoffError, type KickoffContext, studentAgreementInUse } from '@/lib/kickoff/rules'
 import { sendDueDateEmails } from '@/lib/email/problemEmails'
 import { selectionOf } from '@/lib/matching/rules'
+import { firstName } from '@/lib/team/members'
 import { REPORTABLE_PROJECT_STATUSES } from '@/lib/problems/fields'
 import {
   ACTIVE_MATCH,
@@ -22,6 +28,104 @@ import {
   resolveOpenReports,
 } from '@/lib/problems/rules'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
+
+type MatchData = Partial<Match> & Record<string, unknown>
+
+type KickoffGroup = NonNullable<Match['kickoff']>
+
+/** The parts of the kick-off the team writes, comparable between a save and the stored match. */
+const kickoffKey = (k: Partial<KickoffGroup> | null | undefined) =>
+  JSON.stringify([
+    (k?.scope ?? '').trim(),
+    (k?.delivery ?? '').trim(),
+    relationId(k?.contact as number | { id: number } | null | undefined) ?? null,
+    (k?.checkIns ?? []).map((c) => storedToDay(c?.day)).filter(Boolean),
+  ])
+
+/** Does this save change what the team wrote at kick-off? */
+function kickoffChanged(next: unknown, stored: Match['kickoff']): boolean {
+  if (!next || typeof next !== 'object') return false
+  const merged = { ...(stored ?? {}), ...(next as Partial<KickoffGroup>) }
+  return kickoffKey(merged) !== kickoffKey(stored)
+}
+
+/**
+ * Check a kick-off save, for every API (only admins can update a match at all): the project is
+ * matched (the work has not started), no student agreement is made from the match, the contact is
+ * on the team, and the check-ins are days. Sets when it was first recorded and the contact's name.
+ */
+async function checkKickoff(
+  req: PayloadRequest,
+  data: MatchData,
+  originalDoc: Match | undefined,
+  projectId: number,
+): Promise<void> {
+  const project = await req.payload.findByID({
+    collection: 'projects',
+    id: projectId,
+    depth: 0,
+    select: { status: true },
+    overrideAccess: true,
+    disableErrors: true,
+    req,
+  })
+  if (project?.status !== 'matched') {
+    throw kickoffError('not_open', 'The kick-off is fixed once the work has started', 409)
+  }
+  if (await studentAgreementInUse(req, originalDoc!.id)) {
+    throw kickoffError(
+      'agreement_in_use',
+      'A student agreement is made from this kick-off. Withdraw it first.',
+      409,
+    )
+  }
+  const kickoff = {
+    ...(originalDoc?.kickoff ?? {}),
+    ...((data.kickoff as object) ?? {}),
+  } as NonNullable<Match['kickoff']>
+  const contactId = relationId(kickoff.contact as number | { id: number } | null | undefined)
+  if (!contactId || !(await isOnTeam(req, contactId))) {
+    throw kickoffError('contact_required', 'The kick-off contact must be on the team', 400)
+  }
+  // Bypass: the server reads the team member's name to copy it; students and companies cannot
+  // read team users.
+  const contact = await req.payload.findByID({
+    collection: 'users',
+    id: contactId,
+    depth: 0,
+    select: { name: true, email: true },
+    overrideAccess: true,
+    disableErrors: true,
+    req,
+  })
+  if (!kickoff.scope?.trim()) throw kickoffError('scope_required', 'Write the agreed scope', 400)
+  if (!kickoff.delivery?.trim()) {
+    throw kickoffError('delivery_required', 'Say how the student delivers', 400)
+  }
+  const start = storedToDay('startDate' in data ? data.startDate : originalDoc?.startDate)
+  const due = storedToDay('endDate' in data ? data.endDate : originalDoc?.endDate)
+  if (!start) throw kickoffError('start_invalid', 'The kick-off needs a start date', 400)
+  if (!due) throw kickoffError('due_invalid', 'The kick-off needs a due date', 400)
+  if (due < start) throw kickoffError('due_before_start', 'The due date is before the start', 400)
+  const checkIns = (kickoff.checkIns ?? []).filter((c) => c && c.day)
+  if (checkIns.length > KICKOFF_LIMITS.checkIns) {
+    throw kickoffError('too_many_check_ins', 'Too many check-in dates', 400)
+  }
+  for (const c of checkIns) {
+    const d = storedToDay(c.day)
+    if (!d || d < start || d > due) {
+      throw kickoffError('check_in_invalid', 'A check-in falls outside the work', 400)
+    }
+  }
+  data.kickoff = {
+    scope: kickoff.scope ?? null,
+    delivery: kickoff.delivery ?? null,
+    checkIns: checkIns.map((c) => ({ day: c.day })),
+    contact: contactId,
+    contactName: contact?.name?.trim() || firstName(contact?.email ?? ''),
+    recordedAt: originalDoc?.kickoff?.recordedAt ?? new Date().toISOString(),
+  }
+}
 
 /**
  * Konnected's pick of a student for a project. Made only by selecting an application (Matching);
@@ -107,7 +211,10 @@ export const Matches: CollectionConfig = {
           throw new APIError('A match keeps its student, project and application', 400)
         }
 
-        const context = req.context as ProblemContext | undefined
+        const context = req.context as (ProblemContext & KickoffContext) | undefined
+        // Saving the kick-off (lib/kickoff/team.ts) sets the plan before the work starts: its
+        // dates are not a move of the due date.
+        const kickoffEdit = operation === 'update' && context?.kickoffSave === originalDoc?.id
         if (operation === 'update') {
           // An ended match is history: nothing on it changes any more.
           if (originalDoc?.endedAt) {
@@ -138,10 +245,19 @@ export const Matches: CollectionConfig = {
             }
             return data
           }
+          // The kick-off: only while the project is matched and no student agreement is made from
+          // it. When it was first recorded and the contact's name are the server's.
+          if (kickoffEdit || kickoffChanged(data.kickoff, originalDoc?.kickoff)) {
+            await checkKickoff(req, data, originalDoc, projectId)
+          } else {
+            // Nothing of the kick-off changed (Payload sends the group with every save): keep it
+            // as stored, with the server's own fields.
+            data.kickoff = originalDoc?.kickoff ?? {}
+          }
           // Moving the due date: only while the work runs, to today or later. The old date is kept.
           const before = storedToDay(originalDoc?.endDate)
           const after = 'endDate' in data ? storedToDay(data.endDate) : before
-          if (before && after !== before) {
+          if (before && after !== before && !kickoffEdit) {
             const project = await req.payload.findByID({
               collection: 'projects',
               id: projectId,
@@ -170,6 +286,8 @@ export const Matches: CollectionConfig = {
         } else {
           data.endedAt = null
           data.dueDateHistory = []
+          // The kick-off comes after the selection, never with it.
+          data.kickoff = {}
         }
 
         // Bypass for the read below: the server needs the full student profile to copy only the
@@ -218,6 +336,17 @@ export const Matches: CollectionConfig = {
           })
           return doc
         }
+        // The kick-off was recorded or changed (lib/kickoff): log who did it, not what it says.
+        if ((req.context as KickoffContext | undefined)?.kickoffSave === doc.id) {
+          await writeActivity(req, {
+            action: 'review_change',
+            targetCollection: 'matches',
+            targetId: String(doc.id),
+            field: 'kickoff',
+            fromStatus: previousDoc?.kickoff?.recordedAt ? 'recorded' : undefined,
+            toStatus: 'recorded',
+          })
+        }
         // The due date moved (or was set in answer to the student's report): log it with the
         // team's note, settle the student's report, and tell both. Setting the first due date at
         // kick-off is not a move: no email then.
@@ -233,8 +362,10 @@ export const Matches: CollectionConfig = {
             toStatus: after,
             note: typeof note === 'string' && note.trim() ? note.trim().slice(0, 2000) : undefined,
           })
-          const answered = await resolveOpenReports(req, doc.id, 'date_moved')
-          if (before || answered > 0) {
+          // Saving the kick-off sets the plan before the work starts: not a move, no email.
+          const kickoffEdit = (req.context as KickoffContext | undefined)?.kickoffSave === doc.id
+          const answered = kickoffEdit ? 0 : await resolveOpenReports(req, doc.id, 'date_moved')
+          if (!kickoffEdit && (before || answered > 0)) {
             await sendDueDateEmails(req, doc, previousDoc?.endDate, doc.endDate)
           }
         }
@@ -323,6 +454,55 @@ export const Matches: CollectionConfig = {
       index: true,
       admin: { readOnly: true, position: 'sidebar' },
       access: { read: adminOrStudentField, create: adminOnlyField, update: adminOnlyField },
+    },
+    {
+      // The plan Konnected agreed at kick-off with the student and the company (lib/kickoff). The
+      // dates are `startDate` and `endDate` above. Written by the team only (the collection's
+      // update rule), and only while the project is matched (hook above). The student and the
+      // company read it on their project page; the company only while the match runs. Nothing here
+      // is the student's own data: the team writes it.
+      name: 'kickoff',
+      type: 'group',
+      access: { create: adminOnlyField, update: adminOnlyField },
+      fields: [
+        { name: 'scope', label: 'Agreed scope', type: 'textarea', maxLength: KICKOFF_LIMITS.scope },
+        {
+          name: 'delivery',
+          label: 'How to deliver',
+          type: 'textarea',
+          maxLength: KICKOFF_LIMITS.delivery,
+        },
+        {
+          name: 'checkIns',
+          label: 'Check-in dates',
+          type: 'array',
+          maxRows: KICKOFF_LIMITS.checkIns,
+          fields: [{ name: 'day', type: 'date', required: true }],
+        },
+        {
+          // The Konnected contact for this project. Team only: the others read the name below.
+          name: 'contact',
+          label: 'Konnected contact',
+          type: 'relationship',
+          relationTo: 'users',
+          // No `filterOptions`: Payload would check it with the acting user's read access. The
+          // hook checks that the contact is on the team.
+          access: { read: adminOnlyField },
+        },
+        {
+          // The contact's name, copied by the server when the kick-off is saved, so the student
+          // and the company need no access to team users.
+          name: 'contactName',
+          type: 'text',
+          admin: { readOnly: true },
+        },
+        {
+          // When the kick-off was first recorded. Set by the server.
+          name: 'recordedAt',
+          type: 'date',
+          admin: { readOnly: true },
+        },
+      ],
     },
     {
       name: 'sharedInfo',

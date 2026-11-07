@@ -40,6 +40,7 @@ export type EmailType =
   | 'project_closed_no_match'
   | 'applications_reopened'
   | 'team_morning'
+  | 'decision_reminder'
 
 /**
  * Send an email after the answer has gone back to the browser, so the answer takes the

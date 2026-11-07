@@ -2,8 +2,7 @@ import { APIError, type Payload, ValidationError } from 'payload'
 
 import { isAdmin, relationId } from '@/access/roles'
 import {
-  decisionDay,
-  DECISION_DAYS,
+  decisionDayOf,
   MAX_RUNNING_PROJECTS,
   RUNNING_PROJECT_STATUSES,
 } from '@/lib/applications/fields'
@@ -18,7 +17,7 @@ import {
 import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import type { ApplicationStatus } from '@/lib/transitions'
-import { promiseState, type PromiseState } from '@/lib/workingDays'
+import { countdownTo, type PromiseState } from '@/lib/workingDays'
 import type { Application, Cv, Match, Project, StudentProfile } from '@/payload-types'
 
 import { type ActivityRow, activityOf, type Owner, ownersById, type SessionUser } from './approvals'
@@ -98,7 +97,14 @@ export async function listMatchingQueue(
     where: { id: { in: [...open.keys()] } },
     depth: 0,
     pagination: false,
-    select: { title: true, companyName: true, company: true, deadline: true, owner: true },
+    select: {
+      title: true,
+      companyName: true,
+      company: true,
+      deadline: true,
+      decisionBy: true,
+      owner: true,
+    },
     ...asActor(actor),
   })
   const owners = await ownersById(
@@ -112,6 +118,7 @@ export async function listMatchingQueue(
     const closesOn = storedToDay(p.deadline)
     const closed = Boolean(closesOn && closesOn < today)
     const counts = open.get(p.id)!
+    const decideBy = decisionDayOf(p)
     return {
       id: p.id,
       title: p.title,
@@ -120,10 +127,10 @@ export async function listMatchingQueue(
       open: counts.open,
       shortlisted: counts.shortlisted,
       closesOn,
-      decideBy: decisionDay(closesOn),
+      decideBy,
       section: closed ? 'decide' : 'open',
-      due:
-        closed && closesOn ? promiseState(new Date(`${closesOn}T12:00:00Z`), DECISION_DAYS) : null,
+      // The countdown to Konnected's decision day, once applications have closed.
+      due: closed && decideBy ? countdownTo(decideBy) : null,
     }
   })
   const order = (item: MatchingItem) => item.decideBy ?? '9999-12-31'
@@ -348,15 +355,13 @@ export async function loadMatchingProject(
 
   const closesOn = storedToDay(project.deadline)
   const closed = Boolean(closesOn && closesOn < todayInOslo())
+  const decideBy = decisionDayOf(project)
   return {
     project,
     owner: owners.get(relationId(project.owner) ?? 0) ?? null,
     closesOn,
-    decideBy: decisionDay(closesOn),
-    due:
-      published && closed && closesOn
-        ? promiseState(new Date(`${closesOn}T12:00:00Z`), DECISION_DAYS)
-        : null,
+    decideBy,
+    due: published && closed && decideBy ? countdownTo(decideBy) : null,
     applicants,
     decided,
     match: matchDoc

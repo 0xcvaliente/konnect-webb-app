@@ -44,6 +44,7 @@ function ErrorBanner({ state }: { state: AgreementActionState }) {
     'no_template',
     'missing_values',
     'already_exists',
+    'no_kickoff',
   ] as const
   const key = (known as readonly string[]).includes(state.error)
     ? (state.error as (typeof known)[number])

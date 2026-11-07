@@ -529,6 +529,16 @@
       "profile": "a student profile",
       "button": "Open My work",
       "ignore": "You get this email on working days when something of yours is due today or overdue."
+    },
+    "decisionReminder": {
+      "subject": "Decision due {date}: {title}",
+      "heading": "Hi {name}",
+      "body": "Konnected promised the students who applied to “{title}” ({company}) a decision by {date}.",
+      "waiting": "{count} applications are waiting.",
+      "waitingOne": "1 application is waiting.",
+      "next": "Select a student in Matching, or choose what happens next if nobody fits. Each student gets an email when you decide.",
+      "button": "Open Matching",
+      "ignore": "You get this email the working day before a decision is due on a project you own."
     }
   },
   "DesignGuide": {
@@ -809,8 +819,11 @@
       "no_template": "There is no published template for this agreement. Publish one first.",
       "missing_values": "These fields have no value yet: {fields}. Fill them in on the project first.",
       "already_exists": "This project already has an agreement in use. Withdraw it first to make a new one.",
-      "generic": "Something went wrong. Try again."
-    }
+      "generic": "Something went wrong. Try again.",
+      "no_kickoff": "Record the kick-off first: the student agreement uses the dates agreed there."
+    },
+    "kickoffFirst": "The kick-off is not recorded yet.",
+    "recordKickoff": "Record the kick-off"
   },
   "AgreementTemplates": {
     "title": "Agreement templates",
@@ -1247,7 +1260,8 @@
       "deliverables": "Deliverables to check",
       "payments": "Payments that need the team",
       "problems": "Problems reported",
-      "noMatch": "Projects without a match"
+      "noMatch": "Projects without a match",
+      "kickoff": "Kick-offs to record"
     },
     "oldest": "Oldest: {name}, {waited}",
     "queueEmpty": "Nothing waits here.",
@@ -1268,7 +1282,8 @@
     "reportedOn": "{company}, reported {date}",
     "noMatchTitle": "Projects without a match",
     "noMatchEmpty": "Every project whose applications closed has a student.",
-    "noMatchSub": "{company}, closed {date}, {count, plural, =0 {no application waits} one {# application waits} other {# applications wait}}"
+    "noMatchSub": "{company}, closed {date}, {count, plural, =0 {no application waits} one {# application waits} other {# applications wait}}",
+    "firstKickoff": "First: {name}, matched"
   },
   "TeamAccounts": {
     "title": "Accounts",
@@ -2997,7 +3012,9 @@
       "taken": "{name} took it from the shared pool",
       "reassigned": "Owner changed from {from} to {to}",
       "unassigned": "Owner removed",
-      "nobody": "nobody"
+      "nobody": "nobody",
+      "kickoffRecorded": "Kick-off recorded",
+      "kickoffChanged": "Kick-off changed"
     },
     "toast": {
       "dateMoved": "Due date moved. Both get an email.",
@@ -3058,7 +3075,8 @@
       "problem": "Problem reported",
       "noMatch": "Project without a match",
       "payment": "Payment that needs the team",
-      "workDue": "Work due"
+      "workDue": "Work due",
+      "kickoff": "Kick-off to record"
     },
     "itemSub": "{kind}, {detail}",
     "due": {
@@ -3142,5 +3160,104 @@
     "move": "Reassign this project",
     "moving": "Reassigning…",
     "moved_toast": "Reassigned. The history keeps your note."
+  },
+  "Kickoff": {
+    "title": "Kick-off",
+    "recorded": "Recorded",
+    "notRecorded": "Not recorded",
+    "teamIntro": "{student} was selected on {date}. Record what Konnected agreed with {student} and {company}. The student agreement is made from it, and the work starts once that is signed.",
+    "scope": "Agreed scope",
+    "scopeHint": "What the student delivers, in which format, and what is not included.",
+    "start": "Start date",
+    "due": "Due date",
+    "contact": "Konnected contact",
+    "contactPick": "Pick a team member",
+    "checkIns": "Check-ins",
+    "checkInN": "Check-in {n}",
+    "removeCheckIn": "Remove check-in {n}",
+    "addCheckIn": "Add a check-in",
+    "checkInsHint": "Days between the start and the due date. The student and the company see them.",
+    "delivery": "How to deliver",
+    "deliveryHint": "For example: hand in the files in Konnected as a PDF, with the source files.",
+    "record": "Record kick-off",
+    "save": "Save kick-off",
+    "cancel": "Cancel",
+    "change": "Change the kick-off",
+    "lockedHint": "A student agreement is made from this kick-off. Withdraw it in Agreements to change the plan.",
+    "recordedToast": "Kick-off recorded. You can make the student agreement now.",
+    "changedToast": "Kick-off saved.",
+    "startedToast": "Project started. It is now in progress.",
+    "start_work": "Start the project",
+    "startHint": "The project can start once the student agreement is signed by the student and Konnected.",
+    "done": "Done",
+    "notDone": "Not done yet",
+    "check": {
+      "company": "Company agreement signed by {company}",
+      "kickoff": "Kick-off recorded",
+      "student": {
+        "none": "Student agreement: not made yet",
+        "generating": "Student agreement: being made",
+        "awaiting_party": "Student agreement: waiting for {student} to sign",
+        "awaiting_konnected": "Student agreement: signed by {student}, waiting for Konnected",
+        "signed": "Student agreement signed by {student} and Konnected",
+        "failed": "Student agreement: the PDF could not be made. Fix it in Agreements"
+      }
+    },
+    "openAgreements": "Open Agreements",
+    "teamFixed": "Recorded at kick-off. The due date now moves only with “Move the due date”.",
+    "noCheckIns": "None planned",
+    "yourContact": "Your contact",
+    "contactValue": "{name}, Konnected",
+    "stage": {
+      "none": "No agreement yet",
+      "generating": "Agreement being made",
+      "awaiting_party": "Ready for you to sign",
+      "awaiting_konnected": "Waiting for Konnected",
+      "signed": "Signed",
+      "failed": "Agreement being fixed"
+    },
+    "studentIntro": "Konnected agreed this with you and {company} on {date}. It goes into your agreement.",
+    "sign": "Review and sign the agreement",
+    "studentStartHint": "The work starts once you and Konnected have signed.",
+    "studentWaiting": "Konnected agrees the scope, the due date and the check-ins with you and {company}, then makes your agreement. You find the plan here.",
+    "filesTitle": "Files from {company}",
+    "download": "Download",
+    "noFiles": "{company} added no files to the brief.",
+    "companyMatched": "The student signs the agreement next. The work starts once it is signed.",
+    "companyRunning": "The work has started.",
+    "companySame": "The student sees the same plan.",
+    "companyWaiting": "Konnected agrees the scope, the due date and the check-ins with you and the student. The plan shows here.",
+    "errors": {
+      "forbidden": "Only the Konnected team can do this.",
+      "not_found": "Not found. Load the page again.",
+      "not_open": "The kick-off can only change while the project is matched and the work has not started.",
+      "agreement_in_use": "A student agreement is made from this kick-off. Withdraw it in Agreements first, then change the kick-off.",
+      "scope_required": "Write the agreed scope.",
+      "scope_too_long": "The scope is too long. Keep it under 2,000 characters.",
+      "delivery_required": "Say how the student delivers.",
+      "delivery_too_long": "How to deliver is too long. Keep it under 1,000 characters.",
+      "start_invalid": "Pick a start date.",
+      "due_invalid": "Pick a due date.",
+      "due_before_start": "The due date must be on or after the start date.",
+      "check_in_invalid": "Each check-in must be a day from the start date to the due date.",
+      "too_many_check_ins": "Use at most 6 check-in dates.",
+      "contact_required": "Pick the Konnected contact from the team.",
+      "no_kickoff": "Record the kick-off first.",
+      "not_signed": "The student agreement must be signed by the student and Konnected before the work starts.",
+      "note_too_long": "The note is too long. Keep it under 1,000 characters.",
+      "changed": "Someone changed this meanwhile. Load the page again.",
+      "generic": "Something went wrong. Try again."
+    }
+  },
+  "TeamNote": {
+    "title": "Latest note to the company",
+    "intro": "{company} sees the latest note on its project page. Write the plan, never the student’s private notes. Earlier notes stay here.",
+    "label": "Note",
+    "hint": "Up to 1,000 characters. Leave it empty to show no note.",
+    "save": "Save note",
+    "savedToast": "Note saved. {company} sees it on the project page.",
+    "history": "Notes written",
+    "shown": "shown now",
+    "cleared": "Note removed"
   }
 }

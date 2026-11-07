@@ -36,6 +36,7 @@ import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import { dayToStored, todayInOslo } from '@/lib/projects/fields'
 import type { SessionUser } from '@/lib/team/approvals'
 import { closeWithoutDelivery, endMatchAndReopen, moveDueDate } from '@/lib/team/projects'
+import { recordKickoff } from '@/lib/kickoff/team'
 import { addDays } from '@/lib/workingDays'
 import type { Project, User } from '@/payload-types'
 
@@ -421,7 +422,7 @@ async function seed() {
     for (const step of path) {
       if (step === 'matched') {
         // Konnected picks the student: apply, shortlist, select. Selecting makes the match and
-        // moves the project to matched; the dates agreed at kick-off go on the match after.
+        // moves the project to matched; the kick-off is recorded before the work starts.
         const application = await payload.create({
           collection: 'applications',
           data: { project: projectId, note: 'I have done similar work before.' } as never,
@@ -437,17 +438,6 @@ async function seed() {
             overrideAccess: false,
           })
         }
-        await payload.update({
-          collection: 'matches',
-          where: { and: [{ project: { equals: projectId } }, ACTIVE_MATCH] },
-          data: {
-            // Agreed at kick-off; the student agreement uses them.
-            startDate: new Date().toISOString(),
-            endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          user: adminCtx,
-          overrideAccess: false,
-        })
         continue
       }
       // The agreement gates: the company agreement before publishing, the student agreement
@@ -466,6 +456,22 @@ async function seed() {
           depth: 0,
           overrideAccess: true,
         })
+        // The kick-off first, recorded by the team the real way: the student agreement holds its
+        // dates. (The matched seed project waits for its kick-off, as a real one would.)
+        if (!match.docs[0]!.kickoff?.recordedAt) {
+          const form = new FormData()
+          form.set('id', String(projectId))
+          form.set('scope', 'A short written report with the main findings.')
+          form.set('delivery', 'Hand in the report as a PDF in Konnected.')
+          form.set('start', todayInOslo())
+          form.set('due', addDays(todayInOslo(), 14))
+          form.set('checkIn', addDays(todayInOslo(), 7))
+          form.set('contact', String(admin.id))
+          const kicked = await recordKickoff(payload, adminCtx as SessionUser, form)
+          if (kicked.status === 'error') {
+            throw new Error(`The seed could not record the kick-off: ${kicked.error}`)
+          }
+        }
         await seedSignedAgreement(payload, admin, student.user, {
           kind: 'student',
           matchId: match.docs[0]!.id,

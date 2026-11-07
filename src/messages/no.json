@@ -529,6 +529,16 @@
       "profile": "en studentprofil",
       "button": "Åpne Mitt arbeid",
       "ignore": "Du får denne e-posten på virkedager når noe av ditt har frist i dag eller er forsinket."
+    },
+    "decisionReminder": {
+      "subject": "Avgjørelse innen {date}: {title}",
+      "heading": "Hei {name}",
+      "body": "Konnected har lovet studentene som søkte på «{title}» ({company}) en avgjørelse innen {date}.",
+      "waiting": "{count} søknader venter.",
+      "waitingOne": "1 søknad venter.",
+      "next": "Velg en student under Matching, eller velg hva som skjer videre hvis ingen passer. Hver student får en e-post når du avgjør.",
+      "button": "Åpne Matching",
+      "ignore": "Du får denne e-posten virkedagen før en avgjørelse har frist på et prosjekt du er ansvarlig for."
     }
   },
   "DesignGuide": {
@@ -809,8 +819,11 @@
       "no_template": "Det finnes ingen publisert mal for denne avtalen. Publiser en først.",
       "missing_values": "Disse feltene har ingen verdi ennå: {fields}. Fyll dem inn på prosjektet først.",
       "already_exists": "Prosjektet har allerede en avtale i bruk. Trekk den tilbake først for å lage en ny.",
-      "generic": "Noe gikk galt. Prøv igjen."
-    }
+      "generic": "Noe gikk galt. Prøv igjen.",
+      "no_kickoff": "Registrer oppstarten først: studentavtalen bruker datoene som ble avtalt der."
+    },
+    "kickoffFirst": "Oppstarten er ikke registrert ennå.",
+    "recordKickoff": "Registrer oppstarten"
   },
   "AgreementTemplates": {
     "title": "Avtalemaler",
@@ -1247,7 +1260,8 @@
       "deliverables": "Leveranser å sjekke",
       "payments": "Betalinger som trenger teamet",
       "problems": "Rapporterte problemer",
-      "noMatch": "Prosjekter uten match"
+      "noMatch": "Prosjekter uten match",
+      "kickoff": "Oppstarter å registrere"
     },
     "oldest": "Eldst: {name}, {waited}",
     "queueEmpty": "Ingenting venter her.",
@@ -1268,7 +1282,8 @@
     "reportedOn": "{company}, rapportert {date}",
     "noMatchTitle": "Prosjekter uten match",
     "noMatchEmpty": "Alle prosjekter med utløpt søknadsfrist har en student.",
-    "noMatchSub": "{company}, frist {date}, {count, plural, =0 {ingen søknader venter} one {# søknad venter} other {# søknader venter}}"
+    "noMatchSub": "{company}, frist {date}, {count, plural, =0 {ingen søknader venter} one {# søknad venter} other {# søknader venter}}",
+    "firstKickoff": "Først: {name}, matchet"
   },
   "TeamAccounts": {
     "title": "Kontoer",
@@ -2997,7 +3012,9 @@
       "taken": "{name} tok den fra fellesbunken",
       "reassigned": "Ansvarlig endret fra {from} til {to}",
       "unassigned": "Ansvarlig fjernet",
-      "nobody": "ingen"
+      "nobody": "ingen",
+      "kickoffRecorded": "Oppstart registrert",
+      "kickoffChanged": "Oppstart endret"
     },
     "toast": {
       "dateMoved": "Leveringsdatoen er flyttet. Begge får en e-post.",
@@ -3058,7 +3075,8 @@
       "problem": "Problem meldt",
       "noMatch": "Prosjekt uten match",
       "payment": "Betaling som trenger teamet",
-      "workDue": "Arbeid med frist"
+      "workDue": "Arbeid med frist",
+      "kickoff": "Oppstart å registrere"
     },
     "itemSub": "{kind}, {detail}",
     "due": {
@@ -3142,5 +3160,104 @@
     "move": "Flytt dette prosjektet",
     "moving": "Flytter…",
     "moved_toast": "Flyttet. Historikken tar vare på notatet ditt."
+  },
+  "Kickoff": {
+    "title": "Oppstart",
+    "recorded": "Registrert",
+    "notRecorded": "Ikke registrert",
+    "teamIntro": "{student} ble valgt {date}. Registrer det Konnected avtalte med {student} og {company}. Studentavtalen lages fra dette, og arbeidet starter når den er signert.",
+    "scope": "Avtalt omfang",
+    "scopeHint": "Hva studenten leverer, i hvilket format, og hva som ikke er med.",
+    "start": "Startdato",
+    "due": "Leveringsdato",
+    "contact": "Kontaktperson i Konnected",
+    "contactPick": "Velg en fra teamet",
+    "checkIns": "Oppfølging",
+    "checkInN": "Oppfølging {n}",
+    "removeCheckIn": "Fjern oppfølging {n}",
+    "addCheckIn": "Legg til oppfølging",
+    "checkInsHint": "Dager mellom start og levering. Studenten og bedriften ser dem.",
+    "delivery": "Hvordan levere",
+    "deliveryHint": "For eksempel: lever filene i Konnected som PDF, med kildefilene.",
+    "record": "Registrer oppstart",
+    "save": "Lagre oppstart",
+    "cancel": "Avbryt",
+    "change": "Endre oppstarten",
+    "lockedHint": "En studentavtale er laget fra denne oppstarten. Trekk den tilbake under Avtaler for å endre planen.",
+    "recordedToast": "Oppstart registrert. Du kan lage studentavtalen nå.",
+    "changedToast": "Oppstart lagret.",
+    "startedToast": "Prosjektet er startet. Det er nå i gang.",
+    "start_work": "Start prosjektet",
+    "startHint": "Prosjektet kan starte når studentavtalen er signert av studenten og Konnected.",
+    "done": "Ferdig",
+    "notDone": "Ikke ferdig ennå",
+    "check": {
+      "company": "Bedriftsavtale signert av {company}",
+      "kickoff": "Oppstart registrert",
+      "student": {
+        "none": "Studentavtale: ikke laget ennå",
+        "generating": "Studentavtale: lages",
+        "awaiting_party": "Studentavtale: venter på at {student} signerer",
+        "awaiting_konnected": "Studentavtale: signert av {student}, venter på Konnected",
+        "signed": "Studentavtale signert av {student} og Konnected",
+        "failed": "Studentavtale: PDF-en kunne ikke lages. Rett det i Avtaler"
+      }
+    },
+    "openAgreements": "Åpne Avtaler",
+    "teamFixed": "Registrert ved oppstart. Leveringsdatoen flyttes nå bare med «Flytt leveringsdatoen».",
+    "noCheckIns": "Ingen planlagt",
+    "yourContact": "Din kontakt",
+    "contactValue": "{name}, Konnected",
+    "stage": {
+      "none": "Ingen avtale ennå",
+      "generating": "Avtalen lages",
+      "awaiting_party": "Klar til å signeres",
+      "awaiting_konnected": "Venter på Konnected",
+      "signed": "Signert",
+      "failed": "Avtalen rettes"
+    },
+    "studentIntro": "Konnected avtalte dette med deg og {company} {date}. Det går inn i avtalen din.",
+    "sign": "Les og signer avtalen",
+    "studentStartHint": "Arbeidet starter når du og Konnected har signert.",
+    "studentWaiting": "Konnected avtaler omfang, leveringsdato og oppfølging med deg og {company}, og lager så avtalen din. Du finner planen her.",
+    "filesTitle": "Filer fra {company}",
+    "download": "Last ned",
+    "noFiles": "{company} la ikke ved filer i beskrivelsen.",
+    "companyMatched": "Studenten signerer avtalen nå. Arbeidet starter når den er signert.",
+    "companyRunning": "Arbeidet har startet.",
+    "companySame": "Studenten ser den samme planen.",
+    "companyWaiting": "Konnected avtaler omfang, leveringsdato og oppfølging med dere og studenten. Planen vises her.",
+    "errors": {
+      "forbidden": "Bare Konnected-teamet kan gjøre dette.",
+      "not_found": "Ikke funnet. Last inn siden på nytt.",
+      "not_open": "Oppstarten kan bare endres mens prosjektet er matchet og arbeidet ikke har startet.",
+      "agreement_in_use": "En studentavtale er laget fra denne oppstarten. Trekk den tilbake under Avtaler først, og endre så oppstarten.",
+      "scope_required": "Skriv det avtalte omfanget.",
+      "scope_too_long": "Omfanget er for langt. Hold det under 2 000 tegn.",
+      "delivery_required": "Skriv hvordan studenten leverer.",
+      "delivery_too_long": "Hvordan levere er for langt. Hold det under 1 000 tegn.",
+      "start_invalid": "Velg en startdato.",
+      "due_invalid": "Velg en leveringsdato.",
+      "due_before_start": "Leveringsdatoen må være samme dag som eller etter startdatoen.",
+      "check_in_invalid": "Hvert oppfølgingsmøte må være en dag fra startdatoen til leveringsdatoen.",
+      "too_many_check_ins": "Bruk høyst 6 datoer for oppfølging.",
+      "contact_required": "Velg kontaktpersonen i Konnected fra teamet.",
+      "no_kickoff": "Registrer oppstarten først.",
+      "not_signed": "Studentavtalen må være signert av studenten og Konnected før arbeidet starter.",
+      "note_too_long": "Notatet er for langt. Hold det under 1 000 tegn.",
+      "changed": "Noen endret dette i mellomtiden. Last inn siden på nytt.",
+      "generic": "Noe gikk galt. Prøv igjen."
+    }
+  },
+  "TeamNote": {
+    "title": "Siste notat til bedriften",
+    "intro": "{company} ser det siste notatet på prosjektsiden sin. Skriv planen, aldri studentens private notater. Tidligere notater blir liggende her.",
+    "label": "Notat",
+    "hint": "Opptil 1 000 tegn. La feltet stå tomt for å ikke vise noe notat.",
+    "save": "Lagre notat",
+    "savedToast": "Notat lagret. {company} ser det på prosjektsiden.",
+    "history": "Notater skrevet",
+    "shown": "vises nå",
+    "cleared": "Notat fjernet"
   }
 }
