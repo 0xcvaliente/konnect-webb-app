@@ -96,7 +96,7 @@ const PROFILE_WHERE: Where = {
 }
 
 /** Team members by id, for the owner on each item. */
-async function ownersById(
+export async function ownersById(
   payload: Payload,
   actor: SessionUser,
   ids: (number | undefined)[],
@@ -317,7 +317,7 @@ export type ActivityRow = Pick<
 > & { actorName: string | null }
 
 /** The activity log of one record, newest first, read as the team member. */
-async function activityOf(
+export async function activityOf(
   payload: Payload,
   actor: SessionUser,
   collection: string,

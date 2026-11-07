@@ -14,7 +14,7 @@ import { Card, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { APPLICATION_STATUS_TONE, canWithdraw } from '@/lib/applications/fields'
-import { findOwnApplication, type OwnApplication } from '@/lib/applications/student'
+import { findOwnApplication, type OwnApplication, ownSharedItems } from '@/lib/applications/student'
 import { requireStudent } from '@/lib/students/session'
 import { cn } from '@/lib/utils'
 
@@ -246,6 +246,12 @@ export default async function StudentApplicationPage({
     : null
   const t = await getTranslations('Application')
   const ts = await getTranslations('ApplicationStatus')
+  const tItems = await getTranslations('SharedItems.label')
+  // What Konnected shares with the company, once the student is selected (their own match).
+  const shares =
+    application?.status === 'selected'
+      ? await ownSharedItems(payload, user, application.projectId)
+      : null
   const crumb = { href: '/student/applications', label: t('back') }
 
   if (!application) {
@@ -328,6 +334,25 @@ export default async function StudentApplicationPage({
             {a.status === 'selected' ? (
               <>
                 <p className="text-[0.9rem] text-muted-foreground">{t('seesSelected')}</p>
+                {shares && shares.length > 0 && (
+                  <ul className="grid" aria-label={t('seesListLabel')}>
+                    {shares.map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-center gap-2.5 border-b border-line py-2 text-[0.9rem] last:border-b-0"
+                      >
+                        <CheckIcon aria-hidden="true" className="size-4 shrink-0 text-success" />
+                        {tItems(item)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {shares && shares.length === 0 && (
+                  <p className="flex items-start gap-2 text-[0.9rem]">
+                    <LockIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                    <span>{t('seesNothingShared', { company: a.companyName })}</span>
+                  </p>
+                )}
                 <Button asChild variant="secondary" className="w-full">
                   <Link href="/student/profile">{t('seesSelectedAction')}</Link>
                 </Button>

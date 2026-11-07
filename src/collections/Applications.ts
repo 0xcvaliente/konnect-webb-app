@@ -1,6 +1,8 @@
 import type { Where } from 'payload'
 import { type CollectionConfig } from 'payload'
 
+import type { Application } from '@/payload-types'
+
 import {
   adminOnlyField,
   adminOrStudentField,
@@ -11,12 +13,16 @@ import {
 } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { MAX_RUNNING_PROJECTS, NOTE_MAX } from '@/lib/applications/fields'
-import {
-  applyError,
-  assertRoomForAnotherProject,
-  runningProjectCount,
-} from '@/lib/applications/rules'
+import { applyError, runningProjectCount } from '@/lib/applications/rules'
+import { lockRow } from '@/lib/db/locks'
 import { sendApplicationReceivedEmail } from '@/lib/email/applicationEmails'
+import { sendNotSelectedEmails } from '@/lib/email/matchingEmails'
+import {
+  assertCanSelect,
+  completeSelection,
+  lockApplicationForDecision,
+  selectionOf,
+} from '@/lib/matching/rules'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import {
   APPLICATION_TRANSITIONS,
@@ -126,8 +132,13 @@ export const Applications: CollectionConfig = {
           data.note = note || null
 
           // The project must be published, and applications open (the closing day is today or
-          // later in Oslo, or not set).
+          // later in Oslo, or not set). Lock the project row first (share mode): a selection
+          // running on it holds the row for update, so this apply waits for it and then reads
+          // `matched`; and a selection starting now waits for this apply, then sees it among the
+          // open applications. Without the lock, an apply could slip in as `applied` on a project
+          // that was matched meanwhile.
           const projectId = relationId(data.project)
+          if (projectId) await lockRow(req, 'projects', projectId, 'share')
           const project = projectId
             ? await req.payload.findByID({
                 collection: 'projects',
@@ -190,14 +201,17 @@ export const Applications: CollectionConfig = {
 
         const from = originalDoc?.status as ApplicationStatus
         const to = (data.status ?? from) as ApplicationStatus
+        if (from !== to) {
+          // One decision at a time per project: lock the project and this application, and
+          // read the status again (two team members selecting at once, or the student
+          // withdrawing while the team selects, run one after the other).
+          await lockApplicationForDecision(req, originalDoc as Application)
+        }
         assertTransition(APPLICATION_TRANSITIONS, from, to, role, 'Application')
-        // At most 2 running projects per student: selecting is a pick, checked on the server.
+        // Selecting: a published project without a match, a reviewed profile, and at most 2
+        // running projects per student. The rest of the selection runs after the save (below).
         if (from !== to && to === 'selected') {
-          await assertRoomForAnotherProject(
-            req,
-            relationId(originalDoc?.student),
-            relationId(originalDoc?.project),
-          )
+          await assertCanSelect(req, originalDoc as Application)
         }
         // When each step happened, for the student's progress and the team. Server only.
         if (from !== to) {
@@ -213,6 +227,18 @@ export const Applications: CollectionConfig = {
       async ({ doc, operation, req }) => {
         // "We received your application", in the student's language. Sent after the response.
         if (operation === 'create') await sendApplicationReceivedEmail(req, doc)
+        return doc
+      },
+      async ({ doc, previousDoc, operation, req }) => {
+        if (operation !== 'update' || doc.status === previousDoc?.status) return doc
+        // Selecting creates the match, marks the other applications not selected, moves the
+        // project to matched and sends the emails, all in this request's transaction.
+        if (doc.status === 'selected') await completeSelection(req, doc)
+        // The team turned down one application on its own: a kind note to that student. During
+        // a selection, the selection sends the notes itself, once everything is saved.
+        if (doc.status === 'not_selected' && !selectionOf(req)) {
+          await sendNotSelectedEmails(req, relationId(doc.project), [doc.id])
+        }
         return doc
       },
     ],

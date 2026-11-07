@@ -16,6 +16,7 @@ import {
   readyFields,
   resetDatabase,
   rest,
+  selectStudent,
   SENTINEL,
   type World,
 } from '../helpers/world'
@@ -425,13 +426,22 @@ describe('project status rules', () => {
           projectId: p.id,
         })
       }
+      if (status === 'matched') {
+        // Only a selection matches a project: changing the status alone is refused.
+        await expect(move(p.id, 'matched', w.admin)).rejects.toThrow(/selecting a student/)
+        await selectStudent(w.payload, w.admin, w.beta, p.id)
+        continue
+      }
       if (status === 'in_progress') {
-        const m = await w.payload.create({
+        const m = await w.payload.find({
           collection: 'matches',
-          data: { project: p.id, student: w.beta.profile.id },
+          where: { project: { equals: p.id } },
           ...as(w.admin),
         })
-        await signedAgreement(w.payload, w.admin, w.beta.user, { kind: 'student', matchId: m.id })
+        await signedAgreement(w.payload, w.admin, w.beta.user, {
+          kind: 'student',
+          matchId: m.docs[0]!.id,
+        })
       }
       await move(p.id, status, w.admin)
     }
@@ -523,15 +533,22 @@ describe('applications', () => {
 
   it('only admin moves an application forward, in order', async () => {
     const app = await apply(w.beta.user, w.projectOpen.id)
-    await expect(
-      w.payload.update({
+    // Not back from the shortlist, and never withdrawn by the team.
+    for (const [status, error] of [
+      ['withdrawn', /your role cannot/],
+      ['shortlisted', null],
+      ['applied', /not a valid change/],
+    ] as const) {
+      const run = w.payload.update({
         collection: 'applications',
         id: app.id,
-        data: { status: 'selected' },
+        data: { status },
         ...as(w.admin),
-      }),
-    ).rejects.toThrow(/not a valid change/)
-    for (const status of ['shortlisted', 'not_selected']) {
+      })
+      if (error) await expect(run).rejects.toThrow(error)
+      else await run
+    }
+    for (const status of ['not_selected']) {
       await w.payload.update({
         collection: 'applications',
         id: app.id,
@@ -550,21 +567,34 @@ describe('applications', () => {
 })
 
 describe('matches', () => {
-  it('only admin creates a match, and a project has at most one', async () => {
-    await expect(
-      w.payload.create({
-        collection: 'matches',
-        data: { project: w.projectOpen.id, student: w.beta.profile.id },
-        ...as(w.beta.user),
-      }),
-    ).rejects.toThrow()
-    await expect(
-      w.payload.create({
-        collection: 'matches',
-        data: { project: w.projectOpen.id, student: w.beta.profile.id },
-        ...as(w.companyA.user),
-      }),
-    ).rejects.toThrow()
+  it('a match is made only by selecting; nobody creates one directly, a project has at most one', async () => {
+    const application = await w.payload.create({
+      collection: 'applications',
+      data: { project: w.projectOpen.id, note: 'Why I fit' } as never,
+      ...as(w.beta.user),
+    })
+    for (const user of [w.beta.user, w.companyA.user, w.admin]) {
+      await expect(
+        w.payload.create({
+          collection: 'matches',
+          data: {
+            project: w.projectOpen.id,
+            student: w.beta.profile.id,
+            application: application.id,
+          },
+          ...as(user),
+        }),
+      ).rejects.toThrow()
+    }
+    const admin = await sessionFor(w.admin.id)
+    const res = await rest.post(
+      'matches',
+      { project: w.projectOpen.id, student: w.beta.profile.id, application: application.id },
+      admin,
+    )
+    expect(res.status).toBe(400)
+    expect(await w.payload.count({ collection: 'matches' })).toMatchObject({ totalDocs: 1 })
+    // Project A already has its match: no second one, even through a selection.
     await expect(
       w.payload.create({
         collection: 'matches',
@@ -597,23 +627,16 @@ describe('matches', () => {
     expect(refreshed?.skills ?? []).toHaveLength(0)
   })
 
-  it('rejects an application that belongs to another student', async () => {
-    const other = await w.payload.create({
-      collection: 'applications',
-      data: { project: w.projectOpen.id, note: 'Why I fit' } as never,
-      ...as(w.beta.user),
-    })
-    await expect(
-      w.payload.create({
-        collection: 'matches',
-        data: {
-          project: w.projectOpen.id,
-          student: w.alpha.profile.id,
-          application: other.id,
-        },
-        ...as(w.admin),
-      }),
-    ).rejects.toThrow(/application/)
+  it('a match keeps its student, project and application', async () => {
+    for (const data of [
+      { student: w.beta.profile.id },
+      { project: w.projectOpen.id },
+      { application: null },
+    ]) {
+      await expect(
+        w.payload.update({ collection: 'matches', id: w.match.id, data, ...as(w.admin) }),
+      ).rejects.toThrow(/keeps its student/)
+    }
   })
 })
 

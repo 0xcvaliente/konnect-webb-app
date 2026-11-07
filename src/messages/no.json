@@ -349,6 +349,46 @@
       "next": "Du kan følge søknaden, og trekke den, under Mine søknader. Hvis du trekker søknaden, kan du ikke søke på dette prosjektet igjen.",
       "button": "Se søknaden din",
       "ignore": "Hvis du ikke har søkt, skriv til Konnected-teamet."
+    },
+    "matching": {
+      "items": {
+        "name": "navn",
+        "school": "studieprogram og lærested",
+        "skills": "ferdigheter",
+        "pitch": "kort presentasjon",
+        "experience": "erfaring",
+        "cv": "CV",
+        "contactEmail": "kontakt-e-post",
+        "phone": "telefonnummer"
+      },
+      "selected": {
+        "subject": "Du er valgt til «{title}»",
+        "heading": "Konnected har valgt deg",
+        "body": "Konnected har valgt deg til «{title}».",
+        "shares": "{company} ser bare det du har sagt ja til å dele: {items}.",
+        "sharesNothing": "Du deler ingenting med {company} ennå. Du velger hva du deler på profilen din.",
+        "next": "Konnected tar kontakt for å avtale hva du skal levere, og når.",
+        "button": "Se søknaden din",
+        "ignore": "Hvis du ikke har søkt på dette prosjektet, skriv til Konnected-teamet."
+      },
+      "notSelected": {
+        "subject": "Nytt om «{title}»",
+        "heading": "Konnected valgte en annen student",
+        "body": "Konnected valgte en annen student til «{title}». Profilen din er fortsatt aktiv for nye prosjekter.",
+        "thanks": "Takk for at du søkte.",
+        "button": "Se andre prosjekter",
+        "ignore": "Hvis du ikke har søkt på dette prosjektet, skriv til Konnected-teamet."
+      },
+      "found": {
+        "subject": "Vi har funnet studenten til «{title}»",
+        "heading": "Vi har funnet studenten deres",
+        "body": "Konnected har valgt en student til «{title}».",
+        "shares": "Studenten har sagt ja til å dele dette med dere: {items}. Dere finner det på prosjektsiden.",
+        "sharesNothing": "Studenten har ikke valgt å dele noe med dere ennå. Konnected er fortsatt kontaktpunktet deres.",
+        "next": "Konnected tar kontakt for å avtale veien videre.",
+        "button": "Åpne prosjektet",
+        "ignore": "Hvis dere ikke kjenner til dette prosjektet, skriv til Konnected-teamet."
+      }
     }
   },
   "DesignGuide": {
@@ -1048,7 +1088,7 @@
   },
   "TeamHome": {
     "title": "I dag",
-    "lede": "Teamets daglige arbeid. Hver kø åpner på den eldste saken. Matching, leveranser og betalinger kommer hit etter hvert.",
+    "lede": "Teamets daglige arbeid. Hver kø åpner på den eldste saken. Leveranser og betalinger kommer hit etter hvert.",
     "twoStepTitle": "Ha totrinnsbekreftelse på for Google-kontoen din",
     "twoStepBody": "Teamkontoer logger inn bare med Google, så Google-kontoen din beskytter alle opplysninger om bedrifter og studenter. Konnected kan ikke se om totrinnsbekreftelse er på: sjekk det i Google-kontoen din.",
     "twoStepLink": "Åpne sikkerhetsinnstillingene i Google",
@@ -1062,10 +1102,12 @@
     "queue": {
       "companies": "Bedrifter til godkjenning",
       "projects": "Prosjekter til vurdering eller publisering",
-      "students": "Studentprofiler til gjennomgang"
+      "students": "Studentprofiler til gjennomgang",
+      "matching": "Søknader å avgjøre"
     },
     "oldest": "Eldst: {name}, {waited}",
-    "queueEmpty": "Ingenting venter her."
+    "queueEmpty": "Ingenting venter her.",
+    "decideBy": "Først: {name}, avgjør innen {date}"
   },
   "TeamAccounts": {
     "title": "Kontoer",
@@ -1493,7 +1535,16 @@
     "priceExVat": "Fastpris eks. mva.",
     "vat": "Mva. {rate} %",
     "total": "Totalt",
-    "priceNote": "Satt av Konnected ved vurderingen. Konnected sender fakturaen; betalingsfristen er {days} dager."
+    "priceNote": "Satt av Konnected ved vurderingen. Konnected sender fakturaen; betalingsfristen er {days} dager.",
+    "student": {
+      "title": "Studenten deres",
+      "selectedOn": "Valgt {date}",
+      "nameHidden": "Navnet er ikke delt",
+      "only": "Valgt av Konnected. Dere ser bare det studenten har sagt ja til å dele.",
+      "nothing": "Studenten har ikke valgt å dele noe med dere ennå. Konnected er fortsatt kontaktpunktet deres.",
+      "notShared": "Ikke delt med dere: {items}. Dette blir hos Konnected.",
+      "openCv": "Åpne CV"
+    }
   },
   "TeamApprovals": {
     "title": "Godkjenninger",
@@ -2004,6 +2055,120 @@
     },
     "notFoundTitle": "Fant ikke søknaden",
     "notFoundBody": "Lenken kan være gammel. Søknadene dine står under Mine søknader.",
-    "seeAll": "Se mine søknader"
+    "seeAll": "Se mine søknader",
+    "seesListLabel": "Delt med bedriften",
+    "seesNothingShared": "Du deler ingenting med {company} ennå. Velg hva du deler på profilen din."
+  },
+  "TeamMatching": {
+    "back": "Tilbake til i dag",
+    "title": "Matching",
+    "lede": "Konnected velger én student per prosjekt for hånd. Bedriftene ser aldri søkerne, bare studenten Konnected velger, og bare det studenten har sagt ja til å dele.",
+    "whoLabel": "Vis prosjekter",
+    "mine": "Mine",
+    "everyone": "Alle",
+    "emptyTitle": "Ingenting å avgjøre",
+    "emptyBody": "Ingen publiserte prosjekter har søknader som venter på en avgjørelse.",
+    "queueEmpty": "Ingen søknader venter på en avgjørelse.",
+    "queueEmptyMine": "Ingen av prosjektene til bedriftene dine har søknader som venter.",
+    "section": {
+      "decide": "Søknadsfristen er ute, avgjør nå",
+      "open": "Tar fortsatt imot søknader"
+    },
+    "applications": "{count, plural, one {# søknad} other {# søknader}}",
+    "closed": "fristen var {date}",
+    "closes": "frist {date}",
+    "shortlistedTag": "{count} på kortlisten",
+    "decideBy": "Avgjør innen {date}",
+    "decideNoDate": "Avgjør innen 3 arbeidsdager etter søknadsfristen",
+    "closesOn": "Søknadsfristen er {date}. Konnected lover en avgjørelse innen 3 arbeidsdager etter det.",
+    "noClosingDay": "Prosjektet har ingen søknadsfrist.",
+    "workload": "Arbeidsmengde",
+    "timeframe": "Tidsramme",
+    "payment": "Betaling",
+    "pay": {
+      "paid": "Betalt",
+      "unpaid": "Ubetalt"
+    },
+    "missing": "Ikke fylt ut",
+    "skillsAsked": "Ferdigheter det spørres etter",
+    "work": "Arbeidet",
+    "deliverable": "Forventet leveranse",
+    "matchedTitle": "Matchet med {name} {date}",
+    "matchedShares": "{company} ser bare det studenten har sagt ja til å dele: {items}.",
+    "matchedSharesNothing": "Studenten deler ingenting med {company} ennå.",
+    "next": "Neste i køen",
+    "applicantsTitle": "{count, plural, =0 {Ingen åpne søknader} one {# åpen søknad} other {# åpne søknader, side om side}}",
+    "applicantsHint": "Profiler som ikke er gjennomgått, kan ikke velges.",
+    "noneLeftMatched": "Alle søknadene på dette prosjektet er avgjort.",
+    "noneOpen": "Ingen søknader venter på en avgjørelse på dette prosjektet.",
+    "decidedTitle": "Avgjort eller trukket",
+    "checkedHere": "Alle avgjørelser sjekkes på nytt på serveren og føres i aktivitetsloggen.",
+    "noStudy": "Studieprogram ikke oppgitt",
+    "firstProject": "Første prosjekt",
+    "changedSinceReview": "Profilen er endret siden gjennomgangen",
+    "skillsHit": "Ferdigheter: {hit} av {total} det spørres etter",
+    "skillsLabel": "Ferdigheter prosjektet spør etter",
+    "has": "Har:",
+    "missingSkill": "Mangler:",
+    "applied": "Søkte",
+    "running": "Pågående prosjekter",
+    "runningValue": "{count} av {max}",
+    "hours": "Timer på andre prosjekter",
+    "hoursValue": "{count, plural, one {# time} other {# timer}}",
+    "hoursNone": "Ingen",
+    "profile": "Profil",
+    "reviewed": "Gjennomgått",
+    "notReviewed": "Ikke gjennomgått ennå",
+    "noNote": "Ingen tekst med søknaden.",
+    "reviewFirst": "Gå gjennom profilen først",
+    "openCv": "Åpne CV",
+    "fullHint": "Har allerede {max} prosjekter, det meste samtidig. Kan ikke velges før ett er levert.",
+    "reviewHint": "Konnected går gjennom alle profiler før matching.",
+    "shortlist": "Sett på kortlisten",
+    "shortlistedToast": "{name} er satt på kortlisten.",
+    "select": "Velg",
+    "selectedToast": "{name} er valgt til {title}. Prosjektet er matchet.",
+    "confirmTitle": "Velge {name} til dette prosjektet?",
+    "confirmSelected": "{first} blir valgt og får en e-post.",
+    "confirmOthers": "{count, plural, one {Den andre søkeren blir ikke valgt og får en vennlig e-post.} other {De # andre søkerne blir ikke valgt og får en vennlig e-post.}}",
+    "confirmMatched": "Prosjektet blir matchet.",
+    "confirmShares": "{company} ser bare det {first} har sagt ja til å dele: {items}.",
+    "confirmSharesNothing": "{first} deler ingenting med {company} ennå. {company} ser ingen detaljer før {first} krysser dem av.",
+    "confirm": "Bekreft valget",
+    "cancel": "Avbryt",
+    "errors": {
+      "forbidden": "Bare Konnected-teamet kan gjøre dette. Logg inn på nytt.",
+      "not_found": "Denne søknaden finnes ikke lenger.",
+      "not_open": "Denne søknaden er ikke lenger åpen. Noen kan ha avgjort den først. Siden viser nå det som gjelder.",
+      "project_not_open": "Dette prosjektet er ikke lenger publisert. Det kan allerede være matchet.",
+      "already_matched": "En annen i teamet valgte en student til dette prosjektet først.",
+      "profile_not_reviewed": "Gå gjennom profilen til denne studenten før du velger dem.",
+      "too_many": "Denne studenten har allerede 2 prosjekter som pågår eller er valgt, det meste samtidig.",
+      "generic": "Noe gikk galt. Ingenting ble endret. Prøv igjen om et minutt."
+    },
+    "selectName": "Velg {name}",
+    "shortlistName": "Sett {name} på kortlisten"
+  },
+  "SharedItems": {
+    "label": {
+      "name": "Navn",
+      "school": "Studieprogram og lærested",
+      "skills": "Ferdigheter",
+      "pitch": "Kort presentasjon",
+      "experience": "Erfaring",
+      "cv": "CV",
+      "contactEmail": "Kontakt-e-post",
+      "phone": "Telefonnummer"
+    },
+    "inline": {
+      "name": "navn",
+      "school": "studieprogram og lærested",
+      "skills": "ferdigheter",
+      "pitch": "kort presentasjon",
+      "experience": "erfaring",
+      "cv": "CV",
+      "contactEmail": "kontakt-e-post",
+      "phone": "telefonnummer"
+    }
   }
 }

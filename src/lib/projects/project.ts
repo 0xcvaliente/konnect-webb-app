@@ -1,7 +1,7 @@
 import { type Payload, ValidationError } from 'payload'
 
 import { companyIdOf, isCompany, relationId } from '@/access/roles'
-import type { BriefFile, Project, User } from '@/payload-types'
+import type { BriefFile, Match, Project, User } from '@/payload-types'
 
 import {
   COMPANY_EDITABLE,
@@ -276,4 +276,44 @@ export async function sendProjectForReview(
   if ('status' in result) return result
   projectId = result.id
   return { status: 'sent', id: projectId }
+}
+
+/** What the company sees about its selected student: the match's shared copy, nothing else. */
+export type SelectedStudent = {
+  /** When Konnected selected the student. */
+  selectedAt: string
+  shared: NonNullable<Match['sharedInfo']>
+  /** The CV, when the student shares it (the file route checks the same tick on every request). */
+  cv: { url: string; name: string } | null
+}
+
+/**
+ * The selected student of one of the company user's own projects, read as that user with access
+ * control on: the match's `student` and `application` relations are not readable for a company,
+ * so only the shared copy comes back. Null for anyone else, and before Konnected selects someone.
+ * The caller must have read the project as the company user first.
+ */
+export async function findSelectedStudent(
+  payload: Payload,
+  user: SessionUser,
+  projectId: number,
+): Promise<SelectedStudent | null> {
+  if (!isCompany(user) || !companyIdOf(user)) return null
+  const found = await payload.find({
+    collection: 'matches',
+    where: { project: { equals: projectId } },
+    limit: 1,
+    depth: 1,
+    user,
+    overrideAccess: false,
+  })
+  const match = found.docs[0]
+  if (!match?.sharedInfo) return null
+  const cv =
+    typeof match.sharedInfo.cv === 'object' && match.sharedInfo.cv ? match.sharedInfo.cv : null
+  return {
+    selectedAt: match.createdAt,
+    shared: { ...match.sharedInfo, cv: cv?.id ?? null },
+    cv: cv?.url ? { url: cv.url, name: cv.originalName ?? cv.filename ?? 'CV.pdf' } : null,
+  }
 }

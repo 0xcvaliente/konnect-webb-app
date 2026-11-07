@@ -24,6 +24,7 @@ import {
   readyFields,
   resetDatabase,
   rest,
+  selectStudent,
   SENTINEL,
   sessionFor,
   type World,
@@ -612,19 +613,14 @@ describe('the status gates', () => {
       kind: 'company',
       projectId: project.id,
     })
-    for (const status of ['published', 'matched'] as const) {
-      await w.payload.update({
-        collection: 'projects',
-        id: project.id,
-        data: { status },
-        ...as(w.admin),
-      })
-    }
-    const match = await w.payload.create({
-      collection: 'matches',
-      data: { project: project.id, student: w.beta.profile.id },
+    await w.payload.update({
+      collection: 'projects',
+      id: project.id,
+      data: { status: 'published' },
       ...as(w.admin),
     })
+    // Konnected selects beta: the selection makes the match and moves the project to matched.
+    const { match } = await selectStudent(w.payload, w.admin, w.beta, project.id)
     const start = () => move(project.id, 'in_progress', cookies.admin)
     expect((await start()).status).toBe(409)
 
@@ -679,28 +675,22 @@ describe('the status gates', () => {
       kind: 'company',
       projectId: project.id,
     })
-    for (const status of ['published', 'matched'] as const) {
-      await w.payload.update({
-        collection: 'projects',
-        id: project.id,
-        data: { status },
-        ...as(w.admin),
-      })
-    }
-    const match = await w.payload.create({
-      collection: 'matches',
-      data: { project: project.id, student: w.beta.profile.id },
+    await w.payload.update({
+      collection: 'projects',
+      id: project.id,
+      data: { status: 'published' },
       ...as(w.admin),
     })
+    // Konnected selects beta: the selection makes the match and moves the project to matched.
+    const { match } = await selectStudent(w.payload, w.admin, w.beta, project.id)
     await signedAgreement(w.payload, w.admin, w.beta.user, { kind: 'student', matchId: match.id })
     const start = () => move(project.id, 'in_progress', cookies.admin)
     const setMatch = (data: Record<string, unknown>) =>
       w.payload.update({ collection: 'matches', id: match.id, data, ...as(w.admin) })
 
-    // The team picks another student after beta signed: alpha never signed.
-    await setMatch({ student: w.alpha.profile.id })
-    expect((await start()).status).toBe(409)
-    await setMatch({ student: w.beta.profile.id })
+    // The team cannot swap in another student after beta signed (alpha never signed): a match
+    // keeps its student.
+    await expect(setMatch({ student: w.alpha.profile.id })).rejects.toThrow(/keeps its student/)
 
     // The project title the student signed for changed.
     await w.payload.update({

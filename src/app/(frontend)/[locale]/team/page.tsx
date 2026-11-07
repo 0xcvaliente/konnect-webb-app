@@ -1,6 +1,6 @@
 import { ArrowRightIcon, ChevronRightIcon, ExternalLinkIcon, ShieldCheckIcon } from 'lucide-react'
 import { hasLocale } from 'next-intl'
-import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 
 import { Banner } from '@/components/app/Banner'
@@ -13,6 +13,7 @@ import { accountMenuUser } from '@/lib/account'
 import { QUEUE_TABS } from '@/lib/team/approvalFields'
 import { isOpen, listQueue } from '@/lib/team/approvals'
 import { teamCounts } from '@/lib/team/counts'
+import { listMatchingQueue } from '@/lib/team/matching'
 import { requireTeam } from '@/lib/team/session'
 import { calendarDaysBetween } from '@/lib/workingDays'
 
@@ -20,7 +21,8 @@ export const dynamic = 'force-dynamic'
 
 /**
  * The team workspace home ("Today"). Signed-in team members land here. It lists the approval
- * queues with their counts and oldest item (the other queues come with their own cards), the
+ * queues with their counts and oldest item, the applications to decide in Matching (the other
+ * queues come with their own cards), the
  * 2-step verification notice and the way to the accounts.
  *
  * 2-step verification: team members sign in with Google only, and Google enforces 2-step
@@ -38,16 +40,53 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
   const tq = await getTranslations('TeamApprovals')
 
   // The approval queues: how many items wait, and the oldest one.
-  const [queues, counts] = await Promise.all([
+  const [queues, matching, counts] = await Promise.all([
     Promise.all(
       QUEUE_TABS.map(async (tab) => {
         const items = ((await listQueue(payload, user, tab)) ?? []).filter(isOpen)
         return { tab, count: items.length, oldest: items[0] ?? null }
       }),
     ),
+    listMatchingQueue(payload, user),
     teamCounts(payload, user),
   ])
   const now = new Date()
+  const format = await getFormatter()
+  const firstToDecide = matching?.[0] ?? null
+  const day = (value: string) => {
+    const [y, m, d] = value.split('-').map(Number)
+    return format.dateTime(new Date(Date.UTC(y!, m! - 1, d!, 12)), {
+      dateStyle: 'medium',
+      timeZone: 'Europe/Oslo',
+    })
+  }
+  const rows = [
+    ...queues.map(({ tab, count, oldest }) => ({
+      key: tab,
+      href: tab === 'companies' ? '/team/approvals' : `/team/approvals?tab=${tab}`,
+      label: t(`queue.${tab}`),
+      count,
+      sub: oldest
+        ? t('oldest', {
+            name: oldest.title,
+            waited: tq('waited', {
+              count: Math.max(0, calendarDaysBetween(new Date(oldest.since), now)),
+            }),
+          })
+        : t('queueEmpty'),
+    })),
+    {
+      key: 'matching',
+      href: '/team/matching',
+      label: t('queue.matching'),
+      count: matching?.length ?? 0,
+      sub: firstToDecide
+        ? firstToDecide.decideBy
+          ? t('decideBy', { name: firstToDecide.title, date: day(firstToDecide.decideBy) })
+          : firstToDecide.title
+        : t('queueEmpty'),
+    },
+  ]
 
   return (
     <TeamShell
@@ -60,27 +99,20 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
       <Card className="max-w-[880px] gap-0 py-2 sm:py-3">
         <h2 className="sr-only">{t('queuesTitle')}</h2>
         <ul className="grid">
-          {queues.map(({ tab, count, oldest }) => (
-            <li key={tab} className="border-b border-line last:border-b-0">
+          {rows.map((row) => (
+            <li key={row.key} className="border-b border-line last:border-b-0">
               <Link
-                href={tab === 'companies' ? '/team/approvals' : `/team/approvals?tab=${tab}`}
+                href={row.href}
                 prefetch={false}
                 className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 py-3.5 text-foreground no-underline hover:[&_b]:underline"
               >
                 <span className="min-w-[2ch] text-right text-[1.5rem] leading-none font-medium text-primary tabular-nums">
-                  {count}
+                  {row.count}
                 </span>
                 <span className="min-w-0">
-                  <b className="block font-semibold">{t(`queue.${tab}`)}</b>
+                  <b className="block font-semibold">{row.label}</b>
                   <small className="block text-[0.85rem] [overflow-wrap:anywhere] text-muted-foreground">
-                    {oldest
-                      ? t('oldest', {
-                          name: oldest.title,
-                          waited: tq('waited', {
-                            count: Math.max(0, calendarDaysBetween(new Date(oldest.since), now)),
-                          }),
-                        })
-                      : t('queueEmpty')}
+                    {row.sub}
                   </small>
                 </span>
                 <ChevronRightIcon

@@ -9,6 +9,7 @@ import { Banner } from '@/components/app/Banner'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { ProjectDetails } from '@/components/app/ProjectDetails'
 import { ProjectTimeline, ProjectTrack } from '@/components/app/ProjectProgress'
+import { SelectedStudent } from '@/components/app/SelectedStudent'
 import { SiteShell } from '@/components/app/SiteShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,13 +20,14 @@ import { companyShellProps } from '@/lib/companies/display'
 import { PAYMENT_TERMS_DAYS, priceBreakdown, VAT_RATE } from '@/lib/money'
 import { requireOwnCompany } from '@/lib/companies/session'
 import { isEditable, PROJECT_STATUS_TONE } from '@/lib/projects/display'
-import { findOwnProject, projectHistory } from '@/lib/projects/project'
+import { findOwnProject, findSelectedStudent, projectHistory } from '@/lib/projects/project'
 import { projectToView } from '@/lib/projects/view'
 
 // The company's project page ("Final pass" mockup, company project page): where the project
-// stands, Konnected's latest note, the history, and what the company asked for. Read as the
-// company user with access control on: another company's project is "not found". Nothing about
-// any student is read here.
+// stands, the selected student (only what that student agreed to share, from the match's shared
+// copy), Konnected's latest note, the history, and what the company asked for. Read as the company
+// user with access control on: another company's project is "not found". No applicant is ever
+// read here, and nothing about the selected student beyond the shared copy.
 export const dynamic = 'force-dynamic'
 
 const BANNER_TONE = {
@@ -55,7 +57,12 @@ export default async function CompanyProjectPage({
   const payload = await getPayload({ config })
   const project = await findOwnProject(payload, user, Number(id), 1)
   if (!project) notFound()
-  const history = await projectHistory(payload, project.id)
+  const [history, student] = await Promise.all([
+    projectHistory(payload, project.id),
+    // Only the selected student's shared copy, once Konnected has selected one; never any other
+    // applicant (a company cannot read applications at all).
+    findSelectedStudent(payload, user, project.id),
+  ])
   const { sent } = await searchParams
 
   const t = await getTranslations('CompanyProject')
@@ -123,6 +130,8 @@ export default async function CompanyProjectPage({
               </p>
             </Banner>
           )}
+
+          {student && <SelectedStudent student={student} />}
 
           {status !== 'draft' && (
             <Card>
