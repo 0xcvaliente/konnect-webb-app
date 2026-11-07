@@ -13,7 +13,9 @@ import { accountMenuUser } from '@/lib/account'
 import { QUEUE_TABS } from '@/lib/team/approvalFields'
 import { isOpen, listQueue } from '@/lib/team/approvals'
 import { teamCounts } from '@/lib/team/counts'
+import { listDeliverableQueue } from '@/lib/team/deliverables'
 import { listMatchingQueue } from '@/lib/team/matching'
+import { listPaymentLog } from '@/lib/team/payments'
 import { requireTeam } from '@/lib/team/session'
 import { calendarDaysBetween } from '@/lib/workingDays'
 
@@ -21,8 +23,8 @@ export const dynamic = 'force-dynamic'
 
 /**
  * The team workspace home ("Today"). Signed-in team members land here. It lists the approval
- * queues with their counts and oldest item, the applications to decide in Matching (the other
- * queues come with their own cards), the
+ * queues with their counts and oldest item, the applications to decide in Matching, the hand-ins
+ * to check in Deliverables and the payment log rows that need the team, the
  * 2-step verification notice and the way to the accounts.
  *
  * 2-step verification: team members sign in with Google only, and Google enforces 2-step
@@ -38,9 +40,10 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
   const t = await getTranslations('TeamHome')
   const tRole = await getTranslations('Roles')
   const tq = await getTranslations('TeamApprovals')
+  const tp = await getTranslations('TeamPayments')
 
   // The approval queues: how many items wait, and the oldest one.
-  const [queues, matching, counts] = await Promise.all([
+  const [queues, matching, deliverables, payments, counts] = await Promise.all([
     Promise.all(
       QUEUE_TABS.map(async (tab) => {
         const items = ((await listQueue(payload, user, tab)) ?? []).filter(isOpen)
@@ -48,8 +51,12 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
       }),
     ),
     listMatchingQueue(payload, user),
+    listDeliverableQueue(payload, user),
+    listPaymentLog(payload, user, { filter: 'action' }),
     teamCounts(payload, user),
   ])
+  const toCheck = (deliverables ?? []).filter((d) => d.section === 'check')
+  const firstPayment = payments?.rows[0] ?? null
   const now = new Date()
   const format = await getFormatter()
   const firstToDecide = matching?.[0] ?? null
@@ -84,6 +91,32 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
         ? firstToDecide.decideBy
           ? t('decideBy', { name: firstToDecide.title, date: day(firstToDecide.decideBy) })
           : firstToDecide.title
+        : t('queueEmpty'),
+    },
+    {
+      key: 'deliverables',
+      href: '/team/deliverables',
+      label: t('queue.deliverables'),
+      count: toCheck.length,
+      sub: toCheck[0]
+        ? t('oldest', {
+            name: toCheck[0].title,
+            waited: tq('waited', {
+              count: Math.max(0, calendarDaysBetween(new Date(toCheck[0].since), now)),
+            }),
+          })
+        : t('queueEmpty'),
+    },
+    {
+      key: 'payments',
+      href: '/team/payments',
+      label: t('queue.payments'),
+      count: payments?.action ?? 0,
+      sub: firstPayment
+        ? t('firstPayment', {
+            name: firstPayment.title,
+            status: tp(`status.${firstPayment.status}`),
+          })
         : t('queueEmpty'),
     },
   ]

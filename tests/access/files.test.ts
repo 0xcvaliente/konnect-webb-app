@@ -16,9 +16,9 @@ import {
   login,
   resetDatabase,
   rest,
-  selectStudent,
   SENTINEL,
   sessionFor,
+  workingMatch,
   type World,
 } from '../helpers/world'
 
@@ -436,18 +436,19 @@ describe('deliverable files as each role', () => {
   })
 
   it('a deliverable lists only files of its own match, at most 10', async () => {
-    // beta gets a match on another project and uploads a file for it.
-    const { match: betaMatch } = await selectStudent(w.payload, w.admin, w.beta, w.projectOpen.id)
+    // beta and alpha each get a match on a new project that is in progress.
+    const betaWork = await workingMatch(w.payload, w.admin, w.beta, w.companyA, 'Beta work')
+    const alphaWork = await workingMatch(w.payload, w.admin, w.alpha, w.companyA, 'Alpha work')
     const betaFile = await w.payload.create({
       collection: 'deliverable-files',
-      data: { match: betaMatch.id },
+      data: { match: betaWork.match.id },
       file: pdf('beta.pdf'),
       ...as('beta'),
     })
     await expect(
       w.payload.create({
         collection: 'deliverables',
-        data: { match: w.match.id, files: [betaFile.id], status: 'submitted' },
+        data: { match: alphaWork.match.id, files: [betaFile.id], status: 'submitted' },
         ...as('alpha'),
       }),
     ).rejects.toThrow(/does not belong/)
@@ -458,7 +459,7 @@ describe('deliverable files as each role', () => {
         (
           await w.payload.create({
             collection: 'deliverable-files',
-            data: { match: w.match.id },
+            data: { match: alphaWork.match.id },
             file: pdf(`part-${i}.pdf`),
             ...as('alpha'),
           })
@@ -468,13 +469,13 @@ describe('deliverable files as each role', () => {
     await expect(
       w.payload.create({
         collection: 'deliverables',
-        data: { match: w.match.id, files: eleven, status: 'submitted' },
+        data: { match: alphaWork.match.id, files: eleven, status: 'submitted' },
         ...as('alpha'),
       }),
     ).rejects.toThrow()
     const ten = await w.payload.create({
       collection: 'deliverables',
-      data: { match: w.match.id, files: eleven.slice(0, 10), status: 'submitted' },
+      data: { match: alphaWork.match.id, files: eleven.slice(0, 10), status: 'submitted' },
       ...as('alpha'),
     })
     expect(ten.files).toHaveLength(10)
@@ -673,7 +674,14 @@ describe('files not in use: a limit per account, and a nightly clean-up', () => 
       ).toBe(403)
     }
 
-    // Handing files in on a deliverable frees their places.
+    // Handing files in on a deliverable frees their places. (Konnected first sends alpha's
+    // waiting hand-in back, so alpha may hand in again.)
+    await w.payload.update({
+      collection: 'deliverables',
+      id: w.deliverableHidden.id,
+      data: { status: 'returned', returnNote: 'Please add the appendix.' },
+      ...as('admin'),
+    })
     await w.payload.create({
       collection: 'deliverables',
       data: { match: w.match.id, files: made.slice(0, 10).map((d) => d.id), status: 'submitted' },

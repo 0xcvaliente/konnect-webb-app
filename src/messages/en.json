@@ -389,6 +389,55 @@
         "button": "Open the project",
         "ignore": "If you do not know this project, write to the Konnected team."
       }
+    },
+    "deliverables": {
+      "released": {
+        "subject": "Your deliverable is ready: “{title}”",
+        "heading": "Konnected released the work to you",
+        "body": "Konnected checked the work on “{title}” and released it to you. You can download it on the project page.",
+        "bodyFixed": "Konnected checked the fixed work on “{title}” and released it to you. You can download it on the project page.",
+        "accept": "Please accept the work, or ask for one round of fixes by {date}. After that it counts as accepted.",
+        "acceptFixed": "This was your one round of fixes, so the work now only needs your acceptance. After 7 days it counts as accepted.",
+        "invoice": "Konnected sends the invoice separately.",
+        "button": "Open the project",
+        "ignore": "If you do not know this project, write to the Konnected team."
+      },
+      "returned": {
+        "subject": "Konnected asked for more: “{title}”",
+        "heading": "Konnected asked for more",
+        "body": "Konnected checked what you sent for “{title}” and asks you to add or fix something before the company sees it.",
+        "next": "Open your application to read what Konnected asks, then send the work again.",
+        "button": "Open your application",
+        "ignore": "If you are not working on this project, write to the Konnected team."
+      },
+      "fixRequested": {
+        "subject": "A fix is asked: “{title}”",
+        "heading": "{company} asked for a fix",
+        "body": "{company} asked for a round of fixes on your work on “{title}”.",
+        "next": "Open your application to read what to fix, then send the fixed work. Konnected checks it before the company sees it again.",
+        "button": "Open your application",
+        "ignore": "If you are not working on this project, write to the Konnected team."
+      },
+      "acceptedStudent": {
+        "subject": "Your work is accepted: “{title}”",
+        "heading": "Your work is accepted",
+        "body": "{company} accepted your work on “{title}”. Well done.",
+        "bodyAuto": "The 7 days for fixes on “{title}” are over, so your work counts as accepted. Well done.",
+        "paid": "Konnected pays you in the monthly pay run after the company has paid.",
+        "unpaid": "This project is unpaid, so there is no payment.",
+        "button": "Open your application",
+        "ignore": "If you are not working on this project, write to the Konnected team."
+      },
+      "acceptedCompany": {
+        "subject": "The work is accepted: “{title}”",
+        "heading": "The work is accepted",
+        "body": "The work on “{title}” is accepted. Thank you for working with Konnected.",
+        "bodyAuto": "The 7 days for fixes on “{title}” are over, so the work counts as accepted.",
+        "paid": "Konnected sends the invoice separately. Payment terms are 14 days.",
+        "unpaid": "This project is unpaid, so there is nothing to pay.",
+        "button": "Open the project",
+        "ignore": "If you do not know this project, write to the Konnected team."
+      }
     }
   },
   "DesignGuide": {
@@ -1088,7 +1137,7 @@
   },
   "TeamHome": {
     "title": "Today",
-    "lede": "The team's daily work. Each queue opens on its oldest item. Deliverables and payments are added here step by step.",
+    "lede": "The team’s daily work. Each queue opens on its oldest item.",
     "twoStepTitle": "Keep 2-step verification on for your Google account",
     "twoStepBody": "Team accounts sign in with Google only, so your Google account protects every company and student record. Konnected cannot see whether 2-step verification is on: check it in your Google account.",
     "twoStepLink": "Open Google security settings",
@@ -1103,11 +1152,14 @@
       "companies": "Companies to approve",
       "projects": "Projects to review or publish",
       "students": "Student profiles to review",
-      "matching": "Applications to decide"
+      "matching": "Applications to decide",
+      "deliverables": "Deliverables to check",
+      "payments": "Payments that need the team"
     },
     "oldest": "Oldest: {name}, {waited}",
     "queueEmpty": "Nothing waits here.",
-    "decideBy": "First: {name}, decide by {date}"
+    "decideBy": "First: {name}, decide by {date}",
+    "firstPayment": "First: {name}, {status}"
   },
   "TeamAccounts": {
     "title": "Accounts",
@@ -1452,6 +1504,14 @@
       "release": {
         "title": "Konnected checks and releases",
         "body": "You see the result only after release."
+      },
+      "accept": {
+        "title": "Accept the work",
+        "body": "Accept it, or ask for one round of fixes within 7 days of release. After that it counts as accepted."
+      },
+      "close": {
+        "title": "Konnected closes the project",
+        "body": "The work is accepted. Konnected closes the project once everything is settled."
       }
     },
     "now": "Now",
@@ -1512,12 +1572,13 @@
       },
       "delivered": {
         "title": "Delivered",
-        "body": "Konnected checks the work before it is released to you."
+        "body": "Konnected released the work to you. Accept it, or ask for one round of fixes within 7 days."
       },
       "closed": {
         "title": "Finished",
         "body": "This project is closed."
-      }
+      },
+      "deliveredAccepted": "The work is accepted. Thank you."
     },
     "latestTitle": "Latest from Konnected",
     "latestEmpty": "Nothing yet. When Konnected has something to tell you about this project, you find it here.",
@@ -2170,5 +2231,378 @@
       "contactEmail": "contact email",
       "phone": "phone number"
     }
+  },
+  "Deliverables": {
+    "releasedOn": "Released {date}",
+    "sentOn": "Sent {date}",
+    "status": {
+      "company": {
+        "submitted": "With Konnected",
+        "returned": "With Konnected",
+        "released": "Ready for you",
+        "fix_requested": "Fix asked",
+        "accepted": "Accepted"
+      },
+      "team": {
+        "submitted": "To check",
+        "returned": "More asked",
+        "released": "Released",
+        "fix_requested": "Fix asked",
+        "accepted": "Accepted"
+      },
+      "student": {
+        "submitted": "With Konnected",
+        "returned": "More asked",
+        "released": "Released",
+        "fix_requested": "Fix asked",
+        "accepted": "Accepted"
+      }
+    },
+    "filesLabel": "Files",
+    "linksLabel": "Links",
+    "download": "Download",
+    "opensNewTab": "(opens in a new tab)",
+    "returnNoteTitle": "Konnected asked for more, {date}",
+    "fixNoteTitle": "The company asked for a fix, {date}",
+    "fixNoteTitleCompany": "You asked for a fix, {date}",
+    "acceptedLine": {
+      "company": "Accepted by the company, {date}.",
+      "team": "Accepted by Konnected for the company, {date}.",
+      "auto": "Counted as accepted after 7 days, {date}."
+    },
+    "errors": {
+      "forbidden": "You cannot do this.",
+      "not_found": "This could not be found. It may have been removed.",
+      "not_open": "Someone changed this meanwhile. The page now shows where it stands.",
+      "not_started": "The work has not started yet. It starts when the student agreement is signed.",
+      "closed": "Konnected closed this project. Nothing more can be handed in, released or fixed.",
+      "waiting": "Konnected is already checking a hand-in. Wait for its answer.",
+      "done": "The work was released. There is nothing more to hand in.",
+      "empty": "Add at least one file or link.",
+      "too_many_files": "Add at most 10 files.",
+      "bad_link": "A link is not a web address. Start it with https://",
+      "too_many_links": "Add at most 10 links.",
+      "note_required": "Write a short note first.",
+      "note_too_long": "The note is too long. Keep it under 2,000 characters.",
+      "fix_used": "The one round of fixes was already used.",
+      "fix_window": "The 7 days to ask for a fix are over, so the work counts as accepted.",
+      "generic": "Something went wrong. Try again in a moment."
+    }
+  },
+  "StudentWork": {
+    "title": {
+      "upload": "Upload your work",
+      "notStarted": "Your work",
+      "waiting": "Your work is with Konnected",
+      "fix": "A fix is asked",
+      "accepted": "Your work is accepted",
+      "released": "Your work is released",
+      "more": "Upload more",
+      "closed": "Your work"
+    },
+    "notStarted": {
+      "title": "The work starts after the agreement",
+      "body": "You can upload your work here once you and Konnected have signed the student agreement."
+    },
+    "closed": {
+      "title": "Konnected closed this project",
+      "body": "There is nothing more to hand in. Ask Konnected if something is missing."
+    },
+    "waiting": {
+      "title": "Konnected is checking your work",
+      "body": "You sent it on {date}. {company} sees it only after Konnected releases it."
+    },
+    "fix": {
+      "title": "{company} asked for a fix on {date}",
+      "body": "Fix what they ask, then send the fixed work. Konnected checks it before {company} sees it again.",
+      "bodyReturned": "Konnected checked your fix and asks for more before the company sees it."
+    },
+    "accepted": {
+      "title": "{company} accepted your work",
+      "titleAuto": "Your work counts as accepted",
+      "body": "Well done. On a paid project, Konnected pays you in the monthly pay run after the company has paid."
+    },
+    "released": {
+      "title": "Released to {company} on {date}",
+      "body": "{company} can accept it, or ask for one round of fixes until {date}. You get an email either way.",
+      "bodyFixed": "This was the one round of fixes. {company} only needs to accept it now."
+    },
+    "more": {
+      "title": "Konnected asked for more on {date}",
+      "body": "Add or fix what Konnected asks, then send the work again."
+    },
+    "ready": {
+      "title": "Ready when you are",
+      "body": "Upload the final files and links here. Konnected checks the work before {company} sees it."
+    },
+    "fixBadge": "One round of fixes",
+    "handInsTitle": "What you sent",
+    "sentToast": "Sent to Konnected.",
+    "filesLegend": "Files",
+    "filesListLabel": "Files you uploaded",
+    "removeFile": "Remove",
+    "dropTitle": "Add your files",
+    "dropHint": "PDF, Word, Excel, PowerPoint, PNG, JPG or zip. Up to 50 MB each.",
+    "chooseFiles": "Choose files",
+    "filesCount": "{count} of {max} files.",
+    "uploading": "Uploading…",
+    "uploadErrors": {
+      "type": "This type of file is not allowed. Use PDF, Word, Excel, PowerPoint, PNG, JPG or zip.",
+      "size": "The file is too large. The limit is 50 MB per file.",
+      "tooMany": "You have many files that are not handed in yet. Send or remove some first.",
+      "full": "Add at most {max} files.",
+      "generic": "The file could not be uploaded. Try again."
+    },
+    "linksLegend": "Links",
+    "linksHint": "For work that lives elsewhere, such as a shared document or a Figma file. Make sure the company can open it.",
+    "linkLabel": "Name (optional)",
+    "linkUrl": "Web address",
+    "removeLink": "Remove link",
+    "addLink": "Add a link",
+    "noteLabel": "Note (optional)",
+    "noteHint": "Anything Konnected and {company} should know about the work. Do not add your contact details.",
+    "sending": "Sending…",
+    "send": "Send to Konnected",
+    "waitForUploads": "Wait until every file is uploaded.",
+    "sendHint": "{company} sees nothing until Konnected releases it."
+  },
+  "CompanyWork": {
+    "title": "Deliverable",
+    "none": {
+      "title": "No deliverable yet",
+      "body": "Konnected releases the result here after it has checked it."
+    },
+    "fixOpen": {
+      "title": "You asked for a fix on {date}",
+      "body": "The student is fixing it. Konnected checks the fixed work and releases it here."
+    },
+    "accepted": {
+      "company": "You accepted the work on {date}",
+      "team": "Konnected recorded your acceptance on {date}",
+      "auto": "The work counts as accepted since {date}",
+      "window": "The work counts as accepted",
+      "body": "The 7 days for fixes are over or the work was accepted. On a paid project, Konnected invoices you separately."
+    },
+    "released": {
+      "title": "Released by Konnected on {date}",
+      "body": "Download the work and look through it."
+    },
+    "earlierTitle": "Earlier versions",
+    "acceptedToast": "Accepted. Thank you.",
+    "fixToast": "Sent. The student gets your note.",
+    "decideHint": "Accept the work, or ask for one round of fixes until {date}. After that it counts as accepted.",
+    "decideHintFixed": "This is the fixed work after your one round of fixes. Accept it when you have looked at it.",
+    "accept": "Accept the work",
+    "askFix": "Ask for a fix",
+    "fixLabel": "What should be fixed?",
+    "fixHint": "One round of fixes. The student sees your note, and Konnected checks the fixed work before you get it.",
+    "sendFix": "Send the fix request",
+    "cancel": "Cancel"
+  },
+  "TeamDeliverables": {
+    "back": "Back to today",
+    "title": "Deliverables",
+    "lede": "Students deliver to Konnected. Check each hand-in against the project, then release it to the company or ask the student for more.",
+    "whoLabel": "Show",
+    "mine": "Mine",
+    "everyone": "Everyone",
+    "emptyTitle": "Nothing to check",
+    "emptyBody": "No hand-ins wait for the team, and no work waits on a student or a company.",
+    "queueEmpty": "Nothing waits here.",
+    "queueEmptyMine": "Nothing waits on your companies.",
+    "section": {
+      "check": "To check",
+      "student": "Waiting on students",
+      "company": "Released, waiting on the company"
+    },
+    "studentFor": "{student} for {company}",
+    "fixTag": "Fix round",
+    "untilTag": "Fixes until {date}",
+    "expected": "Expected deliverable",
+    "fixRound": "{company} asked for a fix",
+    "fixRoundBody": "This hand-in is the fix round. Check it against the company’s note below.",
+    "waitingCompany": "Released. Waiting on {company}",
+    "waitingCompanyBody": "{company} can accept it or ask for one round of fixes until {date}. After that it counts as accepted.",
+    "waitingCompanyFixed": "This was the one round of fixes. The company only needs to accept it; after 7 days it counts as accepted.",
+    "waitingStudent": "Waiting on {student}",
+    "waitingStudentBody": "This comes back to the queue when the student sends the work again. Nothing to do until then.",
+    "done": "Done",
+    "donePaid": "The work is accepted. Record the invoice in the payment log.",
+    "doneUnpaid": "The work is accepted. This project is unpaid, so there is no payment to record.",
+    "toPayments": "Go to payments",
+    "earlierTitle": "Earlier hand-ins",
+    "activity": {
+      "create": "Sent by the student",
+      "status": "Now: {status}",
+      "other": "Changed"
+    },
+    "releasedToast": "Released to {company}. This project is unpaid, so there is no payment to record.",
+    "releasedToastPaid": "Released to {company}. Next, send the invoice and record it in the payment log.",
+    "returnedToast": "Sent to {student}. It comes back here after the next hand-in.",
+    "checksTitle": "Checks",
+    "checks": {
+      "matches": "Matches the expected deliverable",
+      "language": "In the agreed language",
+      "opens": "Files open and are complete"
+    },
+    "checksHint": "Tick every check before you release it.",
+    "seesNothing": "{company} sees nothing until you release it.",
+    "release": "Release to {company}",
+    "askMore": "Ask for more",
+    "templatesLabel": "Quick reasons",
+    "templates": {
+      "missing": {
+        "label": "Missing part",
+        "text": "A part of the deliverable is missing. Please add it and send the work again."
+      },
+      "language": {
+        "label": "Wrong language",
+        "text": "Please deliver the work in the language agreed for the project."
+      },
+      "broken": {
+        "label": "File will not open",
+        "text": "One of the files will not open. Please upload it again."
+      }
+    },
+    "moreLabel": "What should the student add or fix?",
+    "moreHint": "The student sees this on their application page and by email. The company does not.",
+    "sendToStudent": "Send to the student"
+  },
+  "TeamPayments": {
+    "back": "Back to today",
+    "title": "Payment log",
+    "lede": "The pilot tracks payments by hand. The company pays Konnected, and Konnected pays the student in the monthly pay run after the company has paid. Unpaid projects have no rows here.",
+    "nums": {
+      "to_invoice": "Invoices to send",
+      "overdue": "Invoices overdue",
+      "student_to_pay": "Students to pay",
+      "settled": "Settled"
+    },
+    "rules": "Prices exclude VAT; {vat} % VAT is added on the invoice. Payment terms are {days} days. Students are paid only after the company has paid.",
+    "filterLabel": "Show rows",
+    "filter": {
+      "action": "Needs action",
+      "all": "All",
+      "not_released": "Not released",
+      "to_invoice": "To invoice",
+      "invoice_sent": "Invoice sent",
+      "overdue": "Overdue",
+      "student_to_pay": "Student to pay",
+      "settled": "Settled"
+    },
+    "whoLabel": "Show",
+    "mine": "Mine",
+    "everyone": "Everyone",
+    "editTitle": "Record payment: {title}",
+    "who": "{company}, student {student}",
+    "status": {
+      "not_released": "Not released",
+      "to_invoice": "To invoice",
+      "invoice_sent": "Invoice sent",
+      "overdue": "Overdue",
+      "student_to_pay": "Student to pay",
+      "settled": "Settled"
+    },
+    "col": {
+      "project": "Project",
+      "price": "Price excl. VAT",
+      "vat": "VAT {rate} %",
+      "total": "Total",
+      "invoiceSent": "Invoice sent",
+      "invoicePaid": "Company paid",
+      "studentPaid": "Student paid",
+      "status": "Status"
+    },
+    "noPrice": "This project has no fixed price. Set it on the project before you send the invoice.",
+    "noPriceShort": "No price set",
+    "emptyTitle": "No payments yet",
+    "emptyBody": "A row appears here when Konnected selects a student for a paid project.",
+    "emptyFilterTitle": "Nothing here",
+    "emptyFilterBody": "No rows match this filter. Pick another one above.",
+    "tableTitle": "Payments",
+    "totalWithParts": "{total} ({price} + VAT {vat})",
+    "none": "–",
+    "edit": "Edit",
+    "line": {
+      "not_released": "Nothing to invoice until the work is released.",
+      "to_invoice": "Released {date}. Send the invoice.",
+      "to_invoice_nodate": "Released. Send the invoice.",
+      "invoice_sent": "Due {date}.",
+      "overdue": "Was due {date}.",
+      "student_to_pay": "Pay the student in the next pay run.",
+      "settled": "The company and the student are paid."
+    },
+    "savedToast": "Payment saved.",
+    "form": {
+      "invoiceNumber": "Invoice number",
+      "invoiceSent": "Invoice sent",
+      "invoiceSentHint": "Due 14 days later.",
+      "invoicePaid": "Company paid",
+      "studentPaid": "Student paid",
+      "studentPaidHint": "In the monthly pay run, after the company paid.",
+      "notes": "Notes",
+      "notesHint": "Only the team sees the notes. Do not write bank details here.",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "forbidden": "Only the Konnected team can record payments.",
+      "not_found": "This row could not be found. It may have been removed.",
+      "not_open": "Someone saved this row meanwhile. Load it again.",
+      "unpaid": "An unpaid project has no payments.",
+      "future": "A date cannot be after today.",
+      "paid_before_sent": "The company can only pay on or after the day the invoice was sent.",
+      "student_before_company": "The student is paid only on or after the day the company paid.",
+      "bad_date": "A date is not valid.",
+      "too_long": "The invoice number or the notes are too long.",
+      "generic": "Something went wrong. Try again in a moment."
+    }
+  },
+  "CompanyPayments": {
+    "title": "Payments",
+    "lede": "Konnected invoices you when the work is released. You pay Konnected, never the student.",
+    "locked": "Payments open once Konnected has approved your company.",
+    "toStatus": "Go to your status",
+    "emptyTitle": "No invoices yet",
+    "emptyBody": "When Konnected selects a student for a paid project, its invoice is listed here. Konnected sends it after the work is released.",
+    "toPay": "To pay",
+    "toPayNumber": "To pay: {number}",
+    "status": {
+      "not_sent": "Not invoiced yet",
+      "sent": "To pay",
+      "overdue": "Overdue",
+      "paid": "Paid"
+    },
+    "amount": "Amount",
+    "amountValue": "{total}, including {rate} % VAT",
+    "none": "–",
+    "due": "Due",
+    "howToPay": "Pay as the invoice says. Payment terms are {days} days. Konnected marks it as paid when the payment arrives.",
+    "allTitle": "All invoices",
+    "invoiceNumber": "Invoice {number}",
+    "line": {
+      "paid": "Paid {date}",
+      "overdue": "Was due {date}",
+      "sent": "Sent {sent}, due {due}",
+      "not_sent": "Konnected invoices you after the work is released"
+    },
+    "breakdown": "{price} + {rate} % VAT {vat}",
+    "footnote": "Unpaid projects have no invoice."
+  },
+  "StudentPayments": {
+    "title": "Payments",
+    "lede": "Konnected pays you after your work is released. This page shows status only.",
+    "emptyTitle": "No payments yet",
+    "emptyBody": "When Konnected selects you for a paid project, it is listed here.",
+    "toProjects": "Find a project",
+    "listTitle": "Your payments",
+    "paidOn": "Paid {date}",
+    "waiting": "Paid in the monthly pay run after the company pays.",
+    "status": {
+      "paid": "Paid",
+      "waiting": "Not paid yet"
+    },
+    "detailsTitle": "Payout details",
+    "detailsBody": "There is nothing to fill in here. Konnected tells you if it needs anything more to pay you."
   }
 }

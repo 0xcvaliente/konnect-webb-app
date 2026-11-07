@@ -1,6 +1,6 @@
 import { type Access, APIError, type CollectionConfig, type Where } from 'payload'
 
-import { idIn, releasedFileIdsForCompany, releasedFileIdsForStudent } from '@/access/files'
+import { idIn, releasedFileIdsForCompany, sentFileIdsForStudent } from '@/access/files'
 import {
   adminOnlyField,
   adminOrStudentField,
@@ -29,16 +29,16 @@ export const DELIVERABLE_FILE_RULE: UploadRule = {
 export const MAX_DELIVERABLE_FILES = 10
 
 /**
- * Admins, or the student a file's match belongs to while Konnected has not released it: once a
- * deliverable is released its files stay as the company received them.
+ * Admins, or the student a file's match belongs to while the file is not on a hand-in they sent:
+ * Konnected checks a hand-in as it was sent, and the company receives it as it was released.
  */
 const deleteAccess: Access = async ({ req }) => {
   const { user } = req
   if (isAdmin(user)) return true
   if (!isStudent(user)) return false
-  const released = await releasedFileIdsForStudent(req, user!.id)
+  const sent = await sentFileIdsForStudent(req, user!.id)
   const and: Where[] = [{ 'match.student.user': { equals: user!.id } }]
-  if (released.length) and.push({ id: { not_in: released } })
+  if (sent.length) and.push({ id: { not_in: sent } })
   return { and }
 }
 
@@ -48,7 +48,7 @@ const deleteAccess: Access = async ({ req }) => {
  *
  * Read: the matched student, admins, and the company of the project only after Konnected released
  * a deliverable that lists the file. Create: the matched student and admins. Change: admins only
- * (upload a new file instead). Delete: admins, and the student until the file is released.
+ * (upload a new file instead). Delete: admins, and the student until the file is on a hand-in.
  */
 export const DeliverableFiles: CollectionConfig = {
   slug: 'deliverable-files',

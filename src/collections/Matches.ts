@@ -118,7 +118,37 @@ export const Matches: CollectionConfig = {
         return data
       },
     ],
-    afterChange: [logActivityAfterChange()],
+    afterChange: [
+      logActivityAfterChange(),
+      async ({ doc, operation, req }) => {
+        // One payment log row per paid match (Kanban card "Manual payment log in admin"), made
+        // with the match, in the same transaction, as the team member who selected the student
+        // (access control on; the Payments hook refuses unpaid projects and copies the price).
+        if (operation !== 'create') return doc
+        const projectId = relationId(doc.project)
+        // Bypass: read only whether the project is paid; the acting user is the team.
+        const project = projectId
+          ? await req.payload.findByID({
+              collection: 'projects',
+              id: projectId,
+              depth: 0,
+              select: { paidOrUnpaid: true },
+              overrideAccess: true,
+              disableErrors: true,
+              req,
+            })
+          : null
+        if (project?.paidOrUnpaid === 'paid') {
+          await req.payload.create({
+            collection: 'payments',
+            data: { match: doc.id },
+            overrideAccess: false,
+            req,
+          })
+        }
+        return doc
+      },
+    ],
     afterDelete: [logActivityAfterDelete()],
   },
   indexes: [{ fields: ['project'], unique: true }],

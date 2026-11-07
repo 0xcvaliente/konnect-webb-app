@@ -506,3 +506,110 @@ export function studentFoundEmail(
     footer: all.common.accountFooter,
   })
 }
+
+// ---------- Deliverables: released, more asked, a fix asked, accepted ----------
+
+/**
+ * "Your deliverable is ready": to the company when Konnected releases the work. Says it can accept
+ * it or ask for one round of fixes within 7 days. No student details: the work is on the project
+ * page, behind sign-in.
+ */
+export function deliverableReleasedEmail(
+  locale: EmailLocale,
+  {
+    title,
+    fixUntil,
+    paid,
+    fixRound,
+    href,
+  }: { title: string; fixUntil: string; paid: boolean; fixRound: boolean; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.deliverables.released
+  const paragraphs = [
+    (fixRound ? m.bodyFixed : m.body).replace('{title}', title),
+    fixRound ? m.acceptFixed : m.accept.replace('{date}', formatDay(locale, fixUntil)),
+  ]
+  if (paid) paragraphs.push(m.invoice)
+  return render({
+    locale,
+    subject: m.subject.replace('{title}', title),
+    heading: m.heading,
+    paragraphs,
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+/** "Konnected asked for more": to the student, before the company sees anything. */
+export function deliverableReturnedEmail(
+  locale: EmailLocale,
+  { title, href }: { title: string; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.deliverables.returned
+  return render({
+    locale,
+    subject: m.subject.replace('{title}', title),
+    heading: m.heading,
+    paragraphs: [m.body.replace('{title}', title), m.next],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+/** "A fix is asked": to the student. The company's words wait in the app, behind sign-in. */
+export function deliverableFixEmail(
+  locale: EmailLocale,
+  { title, company, href }: { title: string; company: string; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.deliverables.fixRequested
+  return render({
+    locale,
+    subject: m.subject.replace('{title}', title),
+    heading: m.heading.replace('{company}', company),
+    paragraphs: [m.body.replace('{title}', title).replace('{company}', company), m.next],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+/**
+ * "The work is accepted": to the student and to the company. `auto` when the 7 days for fixes
+ * passed without an answer.
+ */
+export function deliverableAcceptedEmail(
+  locale: EmailLocale,
+  {
+    to,
+    title,
+    company,
+    auto,
+    paid,
+    href,
+  }: {
+    to: 'student' | 'company'
+    title: string
+    company: string
+    auto: boolean
+    paid: boolean
+    href: string
+  },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = to === 'student' ? all.deliverables.acceptedStudent : all.deliverables.acceptedCompany
+  const body = (auto ? m.bodyAuto : m.body).replace('{title}', title).replace('{company}', company)
+  return render({
+    locale,
+    subject: m.subject.replace('{title}', title),
+    heading: m.heading,
+    paragraphs: [body, paid ? m.paid : m.unpaid],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}

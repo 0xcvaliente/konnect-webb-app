@@ -389,6 +389,55 @@
         "button": "Åpne prosjektet",
         "ignore": "Hvis dere ikke kjenner til dette prosjektet, skriv til Konnected-teamet."
       }
+    },
+    "deliverables": {
+      "released": {
+        "subject": "Leveransen er klar: «{title}»",
+        "heading": "Konnected har frigitt arbeidet til dere",
+        "body": "Konnected har sjekket arbeidet med «{title}» og frigitt det til dere. Dere kan laste det ned på prosjektsiden.",
+        "bodyFixed": "Konnected har sjekket det rettede arbeidet med «{title}» og frigitt det til dere. Dere kan laste det ned på prosjektsiden.",
+        "accept": "Godta arbeidet, eller be om én runde med rettelser innen {date}. Etter det regnes det som godtatt.",
+        "acceptFixed": "Dette var den ene runden med rettelser, så nå trenger arbeidet bare at dere godtar det. Etter 7 dager regnes det som godtatt.",
+        "invoice": "Konnected sender fakturaen separat.",
+        "button": "Åpne prosjektet",
+        "ignore": "Hvis dere ikke kjenner til dette prosjektet, skriv til Konnected-teamet."
+      },
+      "returned": {
+        "subject": "Konnected ber om mer: «{title}»",
+        "heading": "Konnected ber om mer",
+        "body": "Konnected har sjekket det du sendte for «{title}», og ber deg legge til eller rette noe før bedriften ser det.",
+        "next": "Åpne søknaden din for å lese hva Konnected ber om, og send arbeidet på nytt.",
+        "button": "Åpne søknaden din",
+        "ignore": "Hvis du ikke jobber med dette prosjektet, skriv til Konnected-teamet."
+      },
+      "fixRequested": {
+        "subject": "Bedriften ber om en rettelse: «{title}»",
+        "heading": "{company} ber om en rettelse",
+        "body": "{company} ber om en runde med rettelser på arbeidet ditt med «{title}».",
+        "next": "Åpne søknaden din for å lese hva som skal rettes, og send det rettede arbeidet. Konnected sjekker det før bedriften ser det igjen.",
+        "button": "Åpne søknaden din",
+        "ignore": "Hvis du ikke jobber med dette prosjektet, skriv til Konnected-teamet."
+      },
+      "acceptedStudent": {
+        "subject": "Arbeidet ditt er godtatt: «{title}»",
+        "heading": "Arbeidet ditt er godtatt",
+        "body": "{company} har godtatt arbeidet ditt med «{title}». Godt jobbet.",
+        "bodyAuto": "De 7 dagene for rettelser på «{title}» er over, så arbeidet ditt regnes som godtatt. Godt jobbet.",
+        "paid": "Konnected betaler deg i den månedlige lønnskjøringen etter at bedriften har betalt.",
+        "unpaid": "Dette prosjektet er ubetalt, så det er ingen betaling.",
+        "button": "Åpne søknaden din",
+        "ignore": "Hvis du ikke jobber med dette prosjektet, skriv til Konnected-teamet."
+      },
+      "acceptedCompany": {
+        "subject": "Arbeidet er godtatt: «{title}»",
+        "heading": "Arbeidet er godtatt",
+        "body": "Arbeidet med «{title}» er godtatt. Takk for at dere jobber med Konnected.",
+        "bodyAuto": "De 7 dagene for rettelser på «{title}» er over, så arbeidet regnes som godtatt.",
+        "paid": "Konnected sender fakturaen separat. Betalingsfristen er 14 dager.",
+        "unpaid": "Dette prosjektet er ubetalt, så det er ingenting å betale.",
+        "button": "Åpne prosjektet",
+        "ignore": "Hvis dere ikke kjenner til dette prosjektet, skriv til Konnected-teamet."
+      }
     }
   },
   "DesignGuide": {
@@ -1088,7 +1137,7 @@
   },
   "TeamHome": {
     "title": "I dag",
-    "lede": "Teamets daglige arbeid. Hver kø åpner på den eldste saken. Leveranser og betalinger kommer hit etter hvert.",
+    "lede": "Teamets daglige arbeid. Hver kø åpner på det eldste elementet.",
     "twoStepTitle": "Ha totrinnsbekreftelse på for Google-kontoen din",
     "twoStepBody": "Teamkontoer logger inn bare med Google, så Google-kontoen din beskytter alle opplysninger om bedrifter og studenter. Konnected kan ikke se om totrinnsbekreftelse er på: sjekk det i Google-kontoen din.",
     "twoStepLink": "Åpne sikkerhetsinnstillingene i Google",
@@ -1103,11 +1152,14 @@
       "companies": "Bedrifter til godkjenning",
       "projects": "Prosjekter til vurdering eller publisering",
       "students": "Studentprofiler til gjennomgang",
-      "matching": "Søknader å avgjøre"
+      "matching": "Søknader å avgjøre",
+      "deliverables": "Leveranser å sjekke",
+      "payments": "Betalinger som trenger teamet"
     },
     "oldest": "Eldst: {name}, {waited}",
     "queueEmpty": "Ingenting venter her.",
-    "decideBy": "Først: {name}, avgjør innen {date}"
+    "decideBy": "Først: {name}, avgjør innen {date}",
+    "firstPayment": "Først: {name}, {status}"
   },
   "TeamAccounts": {
     "title": "Kontoer",
@@ -1452,6 +1504,14 @@
       "release": {
         "title": "Konnected sjekker og frigir",
         "body": "Du ser resultatet først når det er frigitt."
+      },
+      "accept": {
+        "title": "Godta arbeidet",
+        "body": "Godta det, eller be om én runde med rettelser innen 7 dager etter at det ble frigitt. Etter det regnes det som godtatt."
+      },
+      "close": {
+        "title": "Konnected avslutter prosjektet",
+        "body": "Arbeidet er godtatt. Konnected avslutter prosjektet når alt er gjort opp."
       }
     },
     "now": "Nå",
@@ -1512,12 +1572,13 @@
       },
       "delivered": {
         "title": "Levert",
-        "body": "Konnected sjekker arbeidet før det frigis til deg."
+        "body": "Konnected har frigitt arbeidet til dere. Godta det, eller be om én runde med rettelser innen 7 dager."
       },
       "closed": {
         "title": "Ferdig",
         "body": "Dette prosjektet er avsluttet."
-      }
+      },
+      "deliveredAccepted": "Arbeidet er godtatt. Takk."
     },
     "latestTitle": "Siste fra Konnected",
     "latestEmpty": "Ingenting ennå. Når Konnected har noe å fortelle deg om dette prosjektet, finner du det her.",
@@ -2170,5 +2231,378 @@
       "contactEmail": "kontakt-e-post",
       "phone": "telefonnummer"
     }
+  },
+  "Deliverables": {
+    "releasedOn": "Frigitt {date}",
+    "sentOn": "Sendt {date}",
+    "status": {
+      "company": {
+        "submitted": "Hos Konnected",
+        "returned": "Hos Konnected",
+        "released": "Klar for dere",
+        "fix_requested": "Rettelse bedt om",
+        "accepted": "Godtatt"
+      },
+      "team": {
+        "submitted": "Til sjekk",
+        "returned": "Bedt om mer",
+        "released": "Frigitt",
+        "fix_requested": "Rettelse bedt om",
+        "accepted": "Godtatt"
+      },
+      "student": {
+        "submitted": "Hos Konnected",
+        "returned": "Bedt om mer",
+        "released": "Frigitt",
+        "fix_requested": "Rettelse bedt om",
+        "accepted": "Godtatt"
+      }
+    },
+    "filesLabel": "Filer",
+    "linksLabel": "Lenker",
+    "download": "Last ned",
+    "opensNewTab": "(åpnes i en ny fane)",
+    "returnNoteTitle": "Konnected ba om mer, {date}",
+    "fixNoteTitle": "Bedriften ba om en rettelse, {date}",
+    "fixNoteTitleCompany": "Dere ba om en rettelse, {date}",
+    "acceptedLine": {
+      "company": "Godtatt av bedriften, {date}.",
+      "team": "Godtatt av Konnected på vegne av bedriften, {date}.",
+      "auto": "Regnet som godtatt etter 7 dager, {date}."
+    },
+    "errors": {
+      "forbidden": "Du kan ikke gjøre dette.",
+      "not_found": "Vi fant ikke dette. Det kan ha blitt fjernet.",
+      "not_open": "Noen endret dette i mellomtiden. Siden viser nå hvordan det står.",
+      "not_started": "Arbeidet har ikke startet ennå. Det starter når studentavtalen er signert.",
+      "closed": "Konnected har avsluttet dette prosjektet. Ingenting mer kan leveres, frigis eller rettes.",
+      "waiting": "Konnected sjekker allerede en innlevering. Vent på svaret.",
+      "done": "Arbeidet er frigitt. Det er ikke noe mer å levere.",
+      "empty": "Legg til minst én fil eller lenke.",
+      "too_many_files": "Legg til høyst 10 filer.",
+      "bad_link": "En lenke er ikke en nettadresse. Start den med https://",
+      "too_many_links": "Legg til høyst 10 lenker.",
+      "note_required": "Skriv en kort kommentar først.",
+      "note_too_long": "Kommentaren er for lang. Hold den under 2 000 tegn.",
+      "fix_used": "Den ene runden med rettelser er allerede brukt.",
+      "fix_window": "De 7 dagene for å be om en rettelse er over, så arbeidet regnes som godtatt.",
+      "generic": "Noe gikk galt. Prøv igjen om litt."
+    }
+  },
+  "StudentWork": {
+    "title": {
+      "upload": "Last opp arbeidet ditt",
+      "notStarted": "Arbeidet ditt",
+      "waiting": "Arbeidet ditt er hos Konnected",
+      "fix": "Det er bedt om en rettelse",
+      "accepted": "Arbeidet ditt er godtatt",
+      "released": "Arbeidet ditt er frigitt",
+      "more": "Last opp mer",
+      "closed": "Arbeidet ditt"
+    },
+    "notStarted": {
+      "title": "Arbeidet starter etter avtalen",
+      "body": "Du kan laste opp arbeidet ditt her når du og Konnected har signert studentavtalen."
+    },
+    "closed": {
+      "title": "Konnected har avsluttet dette prosjektet",
+      "body": "Det er ikke noe mer å levere. Spør Konnected hvis noe mangler."
+    },
+    "waiting": {
+      "title": "Konnected sjekker arbeidet ditt",
+      "body": "Du sendte det {date}. {company} ser det først når Konnected frigir det."
+    },
+    "fix": {
+      "title": "{company} ba om en rettelse {date}",
+      "body": "Rett det de ber om, og send det rettede arbeidet. Konnected sjekker det før {company} ser det igjen.",
+      "bodyReturned": "Konnected har sjekket rettelsen din og ber om mer før bedriften ser den."
+    },
+    "accepted": {
+      "title": "{company} har godtatt arbeidet ditt",
+      "titleAuto": "Arbeidet ditt regnes som godtatt",
+      "body": "Godt jobbet. På et betalt prosjekt betaler Konnected deg i den månedlige lønnskjøringen etter at bedriften har betalt."
+    },
+    "released": {
+      "title": "Frigitt til {company} {date}",
+      "body": "{company} kan godta det, eller be om én runde med rettelser til og med {date}. Du får e-post uansett.",
+      "bodyFixed": "Dette var den ene runden med rettelser. Nå trenger {company} bare å godta det."
+    },
+    "more": {
+      "title": "Konnected ba om mer {date}",
+      "body": "Legg til eller rett det Konnected ber om, og send arbeidet på nytt."
+    },
+    "ready": {
+      "title": "Klar når du er det",
+      "body": "Last opp de endelige filene og lenkene her. Konnected sjekker arbeidet før {company} ser det."
+    },
+    "fixBadge": "Én runde med rettelser",
+    "handInsTitle": "Det du har sendt",
+    "sentToast": "Sendt til Konnected.",
+    "filesLegend": "Filer",
+    "filesListLabel": "Filer du har lastet opp",
+    "removeFile": "Fjern",
+    "dropTitle": "Legg til filene dine",
+    "dropHint": "PDF, Word, Excel, PowerPoint, PNG, JPG eller zip. Opptil 50 MB per fil.",
+    "chooseFiles": "Velg filer",
+    "filesCount": "{count} av {max} filer.",
+    "uploading": "Laster opp …",
+    "uploadErrors": {
+      "type": "Denne filtypen er ikke tillatt. Bruk PDF, Word, Excel, PowerPoint, PNG, JPG eller zip.",
+      "size": "Filen er for stor. Grensen er 50 MB per fil.",
+      "tooMany": "Du har mange filer som ikke er levert ennå. Send eller fjern noen først.",
+      "full": "Legg til høyst {max} filer.",
+      "generic": "Filen kunne ikke lastes opp. Prøv igjen."
+    },
+    "linksLegend": "Lenker",
+    "linksHint": "For arbeid som ligger et annet sted, som et delt dokument eller en Figma-fil. Sjekk at bedriften kan åpne det.",
+    "linkLabel": "Navn (valgfritt)",
+    "linkUrl": "Nettadresse",
+    "removeLink": "Fjern lenken",
+    "addLink": "Legg til en lenke",
+    "noteLabel": "Kommentar (valgfritt)",
+    "noteHint": "Det Konnected og {company} bør vite om arbeidet. Ikke skriv kontaktinformasjonen din her.",
+    "sending": "Sender …",
+    "send": "Send til Konnected",
+    "waitForUploads": "Vent til alle filene er lastet opp.",
+    "sendHint": "{company} ser ingenting før Konnected frigir det."
+  },
+  "CompanyWork": {
+    "title": "Leveranse",
+    "none": {
+      "title": "Ingen leveranse ennå",
+      "body": "Konnected frigir resultatet her når det er sjekket."
+    },
+    "fixOpen": {
+      "title": "Dere ba om en rettelse {date}",
+      "body": "Studenten retter det nå. Konnected sjekker det rettede arbeidet og frigir det her."
+    },
+    "accepted": {
+      "company": "Dere godtok arbeidet {date}",
+      "team": "Konnected registrerte at dere godtok det {date}",
+      "auto": "Arbeidet regnes som godtatt fra {date}",
+      "window": "Arbeidet regnes som godtatt",
+      "body": "De 7 dagene for rettelser er over, eller arbeidet er godtatt. På et betalt prosjekt sender Konnected fakturaen separat."
+    },
+    "released": {
+      "title": "Frigitt av Konnected {date}",
+      "body": "Last ned arbeidet og se gjennom det."
+    },
+    "earlierTitle": "Tidligere versjoner",
+    "acceptedToast": "Godtatt. Takk.",
+    "fixToast": "Sendt. Studenten får kommentaren deres.",
+    "decideHint": "Godta arbeidet, eller be om én runde med rettelser til og med {date}. Etter det regnes det som godtatt.",
+    "decideHintFixed": "Dette er det rettede arbeidet etter den ene runden med rettelser. Godta det når dere har sett på det.",
+    "accept": "Godta arbeidet",
+    "askFix": "Be om en rettelse",
+    "fixLabel": "Hva skal rettes?",
+    "fixHint": "Én runde med rettelser. Studenten ser kommentaren deres, og Konnected sjekker det rettede arbeidet før dere får det.",
+    "sendFix": "Send ønsket om rettelse",
+    "cancel": "Avbryt"
+  },
+  "TeamDeliverables": {
+    "back": "Tilbake til i dag",
+    "title": "Leveranser",
+    "lede": "Studentene leverer til Konnected. Sjekk hver innlevering mot prosjektet, og frigi den til bedriften eller be studenten om mer.",
+    "whoLabel": "Vis",
+    "mine": "Mine",
+    "everyone": "Alle",
+    "emptyTitle": "Ingenting å sjekke",
+    "emptyBody": "Ingen innleveringer venter på teamet, og ikke noe arbeid venter på en student eller en bedrift.",
+    "queueEmpty": "Ingenting venter her.",
+    "queueEmptyMine": "Ingenting venter på bedriftene dine.",
+    "section": {
+      "check": "Til sjekk",
+      "student": "Venter på studenter",
+      "company": "Frigitt, venter på bedriften"
+    },
+    "studentFor": "{student} for {company}",
+    "fixTag": "Rettelsesrunde",
+    "untilTag": "Rettelser til {date}",
+    "expected": "Forventet leveranse",
+    "fixRound": "{company} ba om en rettelse",
+    "fixRoundBody": "Denne innleveringen er rettelsesrunden. Sjekk den mot bedriftens kommentar nedenfor.",
+    "waitingCompany": "Frigitt. Venter på {company}",
+    "waitingCompanyBody": "{company} kan godta det eller be om én runde med rettelser til og med {date}. Etter det regnes det som godtatt.",
+    "waitingCompanyFixed": "Dette var den ene runden med rettelser. Bedriften trenger bare å godta det; etter 7 dager regnes det som godtatt.",
+    "waitingStudent": "Venter på {student}",
+    "waitingStudentBody": "Dette kommer tilbake i køen når studenten sender arbeidet på nytt. Ingenting å gjøre før det.",
+    "done": "Ferdig",
+    "donePaid": "Arbeidet er godtatt. Registrer fakturaen i betalingsloggen.",
+    "doneUnpaid": "Arbeidet er godtatt. Prosjektet er ubetalt, så det er ingen betaling å registrere.",
+    "toPayments": "Gå til betalinger",
+    "earlierTitle": "Tidligere innleveringer",
+    "activity": {
+      "create": "Sendt av studenten",
+      "status": "Nå: {status}",
+      "other": "Endret"
+    },
+    "releasedToast": "Frigitt til {company}. Prosjektet er ubetalt, så det er ingen betaling å registrere.",
+    "releasedToastPaid": "Frigitt til {company}. Send fakturaen og registrer den i betalingsloggen.",
+    "returnedToast": "Sendt til {student}. Den kommer tilbake hit etter neste innlevering.",
+    "checksTitle": "Sjekkpunkter",
+    "checks": {
+      "matches": "Stemmer med forventet leveranse",
+      "language": "På det avtalte språket",
+      "opens": "Filene åpner seg og er komplette"
+    },
+    "checksHint": "Kryss av for alle sjekkpunktene før du frigir den.",
+    "seesNothing": "{company} ser ingenting før du frigir det.",
+    "release": "Frigi til {company}",
+    "askMore": "Be om mer",
+    "templatesLabel": "Raske begrunnelser",
+    "templates": {
+      "missing": {
+        "label": "En del mangler",
+        "text": "En del av leveransen mangler. Legg den til og send arbeidet på nytt."
+      },
+      "language": {
+        "label": "Feil språk",
+        "text": "Lever arbeidet på språket som er avtalt for prosjektet."
+      },
+      "broken": {
+        "label": "Filen åpner seg ikke",
+        "text": "En av filene åpner seg ikke. Last den opp på nytt."
+      }
+    },
+    "moreLabel": "Hva skal studenten legge til eller rette?",
+    "moreHint": "Studenten ser dette på søknadssiden sin og på e-post. Bedriften ser det ikke.",
+    "sendToStudent": "Send til studenten"
+  },
+  "TeamPayments": {
+    "back": "Tilbake til i dag",
+    "title": "Betalingslogg",
+    "lede": "I piloten registrerer vi betalinger for hånd. Bedriften betaler Konnected, og Konnected betaler studenten i den månedlige lønnskjøringen etter at bedriften har betalt. Ubetalte prosjekter har ingen rader her.",
+    "nums": {
+      "to_invoice": "Fakturaer å sende",
+      "overdue": "Forfalte fakturaer",
+      "student_to_pay": "Studenter å betale",
+      "settled": "Oppgjort"
+    },
+    "rules": "Prisene er uten mva.; {vat} % mva. legges til på fakturaen. Betalingsfristen er {days} dager. Studentene får betalt først etter at bedriften har betalt.",
+    "filterLabel": "Vis rader",
+    "filter": {
+      "action": "Trenger handling",
+      "all": "Alle",
+      "not_released": "Ikke frigitt",
+      "to_invoice": "Skal faktureres",
+      "invoice_sent": "Faktura sendt",
+      "overdue": "Forfalt",
+      "student_to_pay": "Student skal betales",
+      "settled": "Oppgjort"
+    },
+    "whoLabel": "Vis",
+    "mine": "Mine",
+    "everyone": "Alle",
+    "editTitle": "Registrer betaling: {title}",
+    "who": "{company}, student {student}",
+    "status": {
+      "not_released": "Ikke frigitt",
+      "to_invoice": "Skal faktureres",
+      "invoice_sent": "Faktura sendt",
+      "overdue": "Forfalt",
+      "student_to_pay": "Student skal betales",
+      "settled": "Oppgjort"
+    },
+    "col": {
+      "project": "Prosjekt",
+      "price": "Pris uten mva.",
+      "vat": "Mva. {rate} %",
+      "total": "Totalt",
+      "invoiceSent": "Faktura sendt",
+      "invoicePaid": "Bedriften betalte",
+      "studentPaid": "Studenten fikk betalt",
+      "status": "Status"
+    },
+    "noPrice": "Prosjektet har ingen fast pris. Sett den på prosjektet før du sender fakturaen.",
+    "noPriceShort": "Ingen pris satt",
+    "emptyTitle": "Ingen betalinger ennå",
+    "emptyBody": "En rad dukker opp her når Konnected velger en student til et betalt prosjekt.",
+    "emptyFilterTitle": "Ingenting her",
+    "emptyFilterBody": "Ingen rader passer med dette filteret. Velg et annet ovenfor.",
+    "tableTitle": "Betalinger",
+    "totalWithParts": "{total} ({price} + mva. {vat})",
+    "none": "–",
+    "edit": "Endre",
+    "line": {
+      "not_released": "Ingenting å fakturere før arbeidet er frigitt.",
+      "to_invoice": "Frigitt {date}. Send fakturaen.",
+      "to_invoice_nodate": "Frigitt. Send fakturaen.",
+      "invoice_sent": "Forfaller {date}.",
+      "overdue": "Forfalt {date}.",
+      "student_to_pay": "Betal studenten i neste lønnskjøring.",
+      "settled": "Bedriften og studenten har betalt og fått betalt."
+    },
+    "savedToast": "Betalingen er lagret.",
+    "form": {
+      "invoiceNumber": "Fakturanummer",
+      "invoiceSent": "Faktura sendt",
+      "invoiceSentHint": "Forfaller 14 dager senere.",
+      "invoicePaid": "Bedriften betalte",
+      "studentPaid": "Studenten fikk betalt",
+      "studentPaidHint": "I den månedlige lønnskjøringen, etter at bedriften har betalt.",
+      "notes": "Notater",
+      "notesHint": "Bare teamet ser notatene. Ikke skriv bankopplysninger her.",
+      "save": "Lagre",
+      "cancel": "Avbryt"
+    },
+    "errors": {
+      "forbidden": "Bare Konnected-teamet kan registrere betalinger.",
+      "not_found": "Vi fant ikke denne raden. Den kan ha blitt fjernet.",
+      "not_open": "Noen lagret denne raden i mellomtiden. Last den inn på nytt.",
+      "unpaid": "Et ubetalt prosjekt har ingen betalinger.",
+      "future": "En dato kan ikke være etter i dag.",
+      "paid_before_sent": "Bedriften kan bare betale samme dag som eller etter at fakturaen ble sendt.",
+      "student_before_company": "Studenten får betalt først samme dag som eller etter at bedriften har betalt.",
+      "bad_date": "En dato er ikke gyldig.",
+      "too_long": "Fakturanummeret eller notatene er for lange.",
+      "generic": "Noe gikk galt. Prøv igjen om litt."
+    }
+  },
+  "CompanyPayments": {
+    "title": "Betalinger",
+    "lede": "Konnected fakturerer dere når arbeidet er frigitt. Dere betaler Konnected, aldri studenten.",
+    "locked": "Betalinger åpner når Konnected har godkjent bedriften deres.",
+    "toStatus": "Gå til statussiden",
+    "emptyTitle": "Ingen fakturaer ennå",
+    "emptyBody": "Når Konnected velger en student til et betalt prosjekt, vises fakturaen her. Konnected sender den når arbeidet er frigitt.",
+    "toPay": "Til betaling",
+    "toPayNumber": "Til betaling: {number}",
+    "status": {
+      "not_sent": "Ikke fakturert ennå",
+      "sent": "Til betaling",
+      "overdue": "Forfalt",
+      "paid": "Betalt"
+    },
+    "amount": "Beløp",
+    "amountValue": "{total}, inkludert {rate} % mva.",
+    "none": "–",
+    "due": "Forfaller",
+    "howToPay": "Betal slik fakturaen sier. Betalingsfristen er {days} dager. Konnected markerer den som betalt når betalingen kommer.",
+    "allTitle": "Alle fakturaer",
+    "invoiceNumber": "Faktura {number}",
+    "line": {
+      "paid": "Betalt {date}",
+      "overdue": "Forfalt {date}",
+      "sent": "Sendt {sent}, forfaller {due}",
+      "not_sent": "Konnected fakturerer dere når arbeidet er frigitt"
+    },
+    "breakdown": "{price} + {rate} % mva. {vat}",
+    "footnote": "Ubetalte prosjekter har ingen faktura."
+  },
+  "StudentPayments": {
+    "title": "Betalinger",
+    "lede": "Konnected betaler deg etter at arbeidet ditt er frigitt. Denne siden viser bare status.",
+    "emptyTitle": "Ingen betalinger ennå",
+    "emptyBody": "Når Konnected velger deg til et betalt prosjekt, vises det her.",
+    "toProjects": "Finn et prosjekt",
+    "listTitle": "Betalingene dine",
+    "paidOn": "Betalt {date}",
+    "waiting": "Betales i den månedlige lønnskjøringen etter at bedriften har betalt.",
+    "status": {
+      "paid": "Betalt",
+      "waiting": "Ikke betalt ennå"
+    },
+    "detailsTitle": "Utbetaling",
+    "detailsBody": "Det er ingenting å fylle ut her. Konnected sier fra hvis vi trenger noe mer for å betale deg."
   }
 }

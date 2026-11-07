@@ -1,5 +1,7 @@
 import type { PayloadRequest, Where } from 'payload'
 
+import { RELEASED_STATUSES } from '@/lib/deliverables/fields'
+
 import { relationId } from './roles'
 
 /**
@@ -60,17 +62,24 @@ async function deliverableFileIds(req: PayloadRequest, where: Where): Promise<nu
   return ids(deliverables.docs.flatMap((d) => d.files ?? []))
 }
 
-/** Deliverable files a company may read: those on released deliverables of its own projects. */
+/**
+ * Deliverable files a company may read: those on deliverables of its own projects that Konnected
+ * released (also after the company accepted them or asked for fixes).
+ */
 export const releasedFileIdsForCompany = (req: PayloadRequest, companyId: number) =>
   deliverableFileIds(req, {
-    and: [{ 'match.project.company': { equals: companyId } }, { status: { equals: 'released' } }],
+    and: [
+      { 'match.project.company': { equals: companyId } },
+      { status: { in: [...RELEASED_STATUSES] } },
+    ],
   })
 
-/** A student's files that Konnected already released. They can no longer be deleted. */
-export const releasedFileIdsForStudent = (req: PayloadRequest, userId: number) =>
-  deliverableFileIds(req, {
-    and: [{ 'match.student.user': { equals: userId } }, { status: { equals: 'released' } }],
-  })
+/**
+ * A student's files on a hand-in they sent. They can no longer be deleted: Konnected checks a
+ * hand-in as it was sent, and the company receives it as Konnected released it.
+ */
+export const sentFileIdsForStudent = (req: PayloadRequest, userId: number) =>
+  deliverableFileIds(req, { 'match.student.user': { equals: userId } })
 
 /** Brief files on projects that match `where`. */
 async function attachmentIds(req: PayloadRequest, where: Where): Promise<number[]> {

@@ -31,7 +31,7 @@ type Rel = number | { id: number } | null | undefined
  */
 
 /** A student's own address and language, from their profile or application. */
-async function studentRecipient(
+export async function studentRecipient(
   req: PayloadRequest,
   profileId: number | undefined,
 ): Promise<{ id: number; email: string; locale: EmailLocale } | null> {

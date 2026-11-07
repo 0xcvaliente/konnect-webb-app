@@ -85,7 +85,7 @@ const UPCOMING: Record<ProjectStatus, { key: string; state: 'cur' | 'next' }[]> 
   published: [{ key: 'select', state: 'cur' }],
   matched: [{ key: 'work', state: 'cur' }],
   in_progress: [{ key: 'deliver', state: 'cur' }],
-  delivered: [{ key: 'release', state: 'cur' }],
+  delivered: [{ key: 'accept', state: 'cur' }],
   closed: [],
 }
 
@@ -96,13 +96,19 @@ const UPCOMING: Record<ProjectStatus, { key: string; state: 'cur' | 'next' }[]> 
 export async function ProjectTimeline({
   status,
   history,
+  accepted = false,
 }: {
   status: ProjectStatus
   history: HistoryEntry[]
+  /** The released work is accepted: Konnected closes the project next. */
+  accepted?: boolean
 }) {
   const t = await getTranslations('ProjectStatus')
   const format = await getFormatter()
-  const upcoming = UPCOMING[status]
+  const upcoming =
+    status === 'delivered' && accepted
+      ? [{ key: 'close', state: 'cur' as const }]
+      : UPCOMING[status]
   const hasCurrent = upcoming.some((u) => u.state === 'cur')
 
   const past: Step[] = history.map((entry, i) => {
