@@ -13,6 +13,8 @@ import { todayInOslo } from '@/lib/projects/fields'
 import { approveProject, type SessionUser } from '@/lib/team/approvals'
 import type { ActivityLog, Project, User } from '@/payload-types'
 
+import { signedAgreement, uploadTemplate } from '../helpers/agreements'
+import { buildDocx } from '../helpers/docx'
 import {
   asUser,
   createWorld,
@@ -50,7 +52,10 @@ const form = (values: Record<string, string | number>) => {
   return data
 }
 
-/** Create a project for a company and move it through `path` as the team. */
+/**
+ * Create a project for a company and move it through `path` as the team. Before publishing, the
+ * company agreement is signed by the company and Konnected (the publishing gate).
+ */
 async function project(
   company: World['companyA'],
   title: string,
@@ -71,6 +76,12 @@ async function project(
     overrideAccess: true,
   })
   for (const status of path) {
+    if (status === 'published') {
+      await signedAgreement(w.payload, w.admin, company.user, {
+        kind: 'company',
+        projectId: doc.id,
+      })
+    }
     doc = await w.payload.update({
       collection: 'projects',
       id: doc.id,
@@ -105,6 +116,25 @@ beforeAll(async () => {
   studentCookie = await login(w.beta.user.email)
   companyCookie = await login(w.companyB.user.email)
   adminCookie = await sessionFor(w.admin.id)
+  // Every published project needs its company agreement signed. The world's test template asks for
+  // the price, which an unpaid project has none of; this list does not care what the agreement
+  // says, so a company template without the price replaces it.
+  const template = await uploadTemplate(
+    w.payload,
+    w.admin,
+    'company',
+    buildDocx([
+      'Company agreement (TEST, no price)',
+      'Reference {{agreement.reference}}, made {{agreement.date}}.',
+      'Between Konnected and {{company.name}}. Project: {{project.title}}.',
+    ]),
+  )
+  await w.payload.update({
+    collection: 'agreement-templates',
+    id: template.id,
+    data: { status: 'published' },
+    ...as(w.admin),
+  })
   // A company name no other text in the world contains, for the search by company.
   await w.payload.update({
     collection: 'companies',
