@@ -14,6 +14,7 @@ import {
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { MAX_RUNNING_PROJECTS, NOTE_MAX } from '@/lib/applications/fields'
 import { applyError, runningProjectCount } from '@/lib/applications/rules'
+import { lockRow } from '@/lib/db/locks'
 import { sendApplicationReceivedEmail } from '@/lib/email/applicationEmails'
 import { sendNotSelectedEmails } from '@/lib/email/matchingEmails'
 import {
@@ -131,8 +132,13 @@ export const Applications: CollectionConfig = {
           data.note = note || null
 
           // The project must be published, and applications open (the closing day is today or
-          // later in Oslo, or not set).
+          // later in Oslo, or not set). Lock the project row first (share mode): a selection
+          // running on it holds the row for update, so this apply waits for it and then reads
+          // `matched`; and a selection starting now waits for this apply, then sees it among the
+          // open applications. Without the lock, an apply could slip in as `applied` on a project
+          // that was matched meanwhile.
           const projectId = relationId(data.project)
+          if (projectId) await lockRow(req, 'projects', projectId, 'share')
           const project = projectId
             ? await req.payload.findByID({
                 collection: 'projects',

@@ -10,6 +10,10 @@ import type { PayloadRequest } from 'payload'
  *
  * Always lock in the same order to avoid deadlocks: project, then application, then student
  * profile. A lock taken twice in one transaction is free.
+ *
+ * `share` (`FOR SHARE`) is for a write that only depends on a row staying as it is: a student
+ * applying locks the project in share mode, so applies to one project do not wait for each other,
+ * but an apply and a selection on that project (`FOR UPDATE`) run one after the other.
  */
 
 const TABLES = {
@@ -22,6 +26,8 @@ export type LockableCollection = keyof typeof TABLES
 
 type Executor = { execute: (query: ReturnType<typeof sql>) => Promise<unknown> }
 
+export type LockMode = 'update' | 'share'
+
 /**
  * Lock one row until `req`'s transaction ends. Throws when there is no transaction: without one
  * the lock would end at once and protect nothing (Payload opens one for every create, update and
@@ -31,12 +37,16 @@ export async function lockRow(
   req: PayloadRequest,
   collection: LockableCollection,
   id: number,
+  mode: LockMode = 'update',
 ): Promise<void> {
   const transactionID = req.transactionID ? await req.transactionID : undefined
   const tx = transactionID === undefined ? undefined : req.payload.db.sessions?.[transactionID]
   if (!tx) throw new Error('lockRow needs an open transaction')
   if (!Number.isInteger(id) || id < 1) return
+  const table = sql.identifier(TABLES[collection])
   await (tx.db as Executor).execute(
-    sql`SELECT 1 FROM ${sql.identifier(TABLES[collection])} WHERE "id" = ${id} FOR UPDATE`,
+    mode === 'share'
+      ? sql`SELECT 1 FROM ${table} WHERE "id" = ${id} FOR SHARE`
+      : sql`SELECT 1 FROM ${table} WHERE "id" = ${id} FOR UPDATE`,
   )
 }

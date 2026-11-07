@@ -1,3 +1,5 @@
+import pg from 'pg'
+import { commitTransaction, createLocalReq, initTransaction, killTransaction } from 'payload'
 import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 
 import { findOwnApplication, ownSharedItems } from '@/lib/applications/student'
@@ -453,6 +455,53 @@ describe('what a selection needs', () => {
   })
 })
 
+/** Wait until some database session is waiting for a row lock (the apply behind the selection). */
+async function waitForLockWait() {
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 })
+  try {
+    for (let i = 0; i < 200; i++) {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'`,
+      )
+      if (rows.length > 0) return
+      await new Promise((resolve) => setTimeout(resolve, 25))
+    }
+    throw new Error('The apply never waited for the selection')
+  } finally {
+    await pool.end()
+  }
+}
+
+/**
+ * After a selection and an apply on one project: the apply was refused as not open, or it holds
+ * as `not_selected`. Never an `applied` (or shortlisted) row on a matched project.
+ */
+async function expectNoOpenApplicationOnMatched(
+  projectId: number,
+  profileId: number,
+  outcome: PromiseSettledResult<unknown>,
+) {
+  expect(await projectStatus(projectId)).toBe('matched')
+  const open = await w.payload.count({
+    collection: 'applications',
+    where: {
+      and: [{ project: { equals: projectId } }, { status: { in: ['applied', 'shortlisted'] } }],
+    },
+  })
+  expect(open.totalDocs).toBe(0)
+  const own = await w.payload.find({
+    collection: 'applications',
+    where: { and: [{ project: { equals: projectId } }, { student: { equals: profileId } }] },
+    depth: 0,
+  })
+  if (outcome.status === 'rejected') {
+    expect((outcome as PromiseRejectedResult).reason).toMatchObject({ data: { code: 'not_open' } })
+    expect(own.docs).toHaveLength(0)
+  } else {
+    expect(own.docs[0]?.status).toBe('not_selected')
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
 describe('two decisions at the same moment', () => {
   it('two team members select different students on one project: one match, one selected', async () => {
@@ -506,6 +555,46 @@ describe('two decisions at the same moment', () => {
       where: { student: { equals: w.beta.profile.id } },
     })
     expect(running.totalDocs).toBe(2)
+  })
+
+  it('a student applies while the team selects: never an open application on a matched project', async () => {
+    const { project, applications } = await threeApplicants('Apply race')
+    const late = await student('late')
+    const results = await Promise.allSettled([
+      setStatus(applications.gamma.id, 'selected'),
+      apply(late.user, project.id),
+    ])
+    expect(results[0].status).toBe('fulfilled')
+    await expectNoOpenApplicationOnMatched(project.id, late.profile.id, results[1])
+  })
+
+  it('an apply that starts while a selection holds the project waits, then is refused', async () => {
+    const { project, applications } = await threeApplicants('Apply waits')
+    const late = await student('late2')
+    // The selection runs in its own transaction, held open until the apply is waiting on it.
+    const req = await createLocalReq({ user: asUser(w.admin) as never }, w.payload)
+    await initTransaction(req)
+    let applying: Promise<Application> | undefined
+    try {
+      await w.payload.update({
+        collection: 'applications',
+        id: applications.gamma.id,
+        data: { status: 'selected' },
+        overrideAccess: false,
+        req,
+      })
+      applying = apply(late.user, project.id)
+      applying.catch(() => {})
+      await waitForLockWait()
+      await commitTransaction(req)
+    } catch (error) {
+      await killTransaction(req)
+      throw error
+    }
+    const [outcome] = await Promise.allSettled([applying])
+    expect(outcome.status).toBe('rejected')
+    expect((outcome as PromiseRejectedResult).reason).toMatchObject({ data: { code: 'not_open' } })
+    await expectNoOpenApplicationOnMatched(project.id, late.profile.id, outcome)
   })
 
   it('the student withdraws while the team selects: never both', async () => {
