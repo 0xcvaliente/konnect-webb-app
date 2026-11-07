@@ -11,6 +11,7 @@ import * as migration_20261106_201633_accounts_team_basics from './20261106_2016
 import * as migration_20261106_210116_accounts_hold_against_stale_writes from './20261106_210116_accounts_hold_against_stale_writes';
 import * as migration_20261106_213730_project_submission_form from './20261106_213730_project_submission_form';
 import * as migration_20261106_224507_approval_queue_reviews from './20261106_224507_approval_queue_reviews';
+import * as migration_20261107_001309_student_project_list from './20261107_001309_student_project_list';
 
 export const migrations = [
   {
@@ -76,6 +77,11 @@ export const migrations = [
   {
     up: migration_20261106_224507_approval_queue_reviews.up,
     down: migration_20261106_224507_approval_queue_reviews.down,
-    name: '20261106_224507_approval_queue_reviews'
+    name: '20261106_224507_approval_queue_reviews',
+  },
+  {
+    up: migration_20261107_001309_student_project_list.up,
+    down: migration_20261107_001309_student_project_list.down,
+    name: '20261107_001309_student_project_list'
   },
 ];

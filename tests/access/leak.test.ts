@@ -56,7 +56,7 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   companies:
     '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt noteToCompany noteToCompanyAt infoRequestedAt reviewRequestedAt resentAt user { id email } teamOwner { id email } logo { id url } } } }',
   projects:
-    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit deadline fee noteToCompany noteToCompanyAt submittedAt status companyName company { id name } attachments { id originalName } } } }',
+    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt status companyName company { id name } attachments { id originalName } } } }',
   applications:
     '{ Applications(limit: 100) { docs { id status note student { id name contactEmail user { id email } } project { id title } } } }',
   matches:
@@ -81,6 +81,8 @@ let adminCookie: string
 
 /** Konnected's note to company A on its matched project. Only the team and company A read it. */
 const NOTE_TO_COMPANY = 'Leak-Check-Note-To-Company-A'
+/** What the student is paid on that project. Students and the team read it; companies never. */
+const STUDENT_PAY = 31_337
 
 beforeAll(async () => {
   await resetDatabase()
@@ -90,7 +92,7 @@ beforeAll(async () => {
   await world.payload.update({
     collection: 'projects',
     id: world.projectOpen.id,
-    data: { noteToCompany: NOTE_TO_COMPANY, fee: 43_210 },
+    data: { noteToCompany: NOTE_TO_COMPANY, fee: 43_210, studentPay: STUDENT_PAY },
     user: asUser(world.admin),
     overrideAccess: false,
   })
@@ -205,6 +207,13 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       expect(all).toContain('Project A open')
       expect(all).not.toContain(NOTE_TO_COMPANY)
       expect(all).not.toContain('43210')
+      // What the student is paid is for students (positive control for the next check).
+      expect(all).toContain(String(STUDENT_PAY))
+    })
+
+    it('the owning company never reads what the student is paid', async () => {
+      const all = await sweep('company')
+      expect(all).not.toContain(String(STUDENT_PAY))
     })
   },
 )

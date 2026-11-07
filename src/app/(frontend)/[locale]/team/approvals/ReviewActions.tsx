@@ -354,6 +354,8 @@ export function ProjectActions({
   const priceError =
     approve.state.status === 'error' &&
     (approve.state.error === 'price_required' || approve.state.error === 'price_invalid')
+  const studentPayError =
+    approve.state.status === 'error' && approve.state.error === 'student_pay_invalid'
   const tpl = (key: 'deliverable' | 'workload' | 'language' | 'job' | 'paid') => ({
     label: t(`templates.${key}.label`),
     text: t(`templates.${key}.text`),
@@ -427,6 +429,21 @@ export function ProjectActions({
                 {parsed ? money(priceBreakdown(parsed).total) : '–'}
               </dd>
             </dl>
+            <Label htmlFor={`${base}-studentpay`} className="mt-2">
+              {t('studentPayLabel')}
+            </Label>
+            <Input
+              id={`${base}-studentpay`}
+              name="studentPay"
+              inputMode="numeric"
+              autoComplete="off"
+              className="max-w-[16rem]"
+              aria-invalid={studentPayError || undefined}
+              aria-describedby={`${base}-studentpay-hint`}
+            />
+            <p id={`${base}-studentpay-hint`} className="text-[0.82rem] text-muted-foreground">
+              {t('studentPayHint')}
+            </p>
           </div>
         )}
         {pay === 'unpaid' && (
