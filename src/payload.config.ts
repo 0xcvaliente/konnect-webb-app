@@ -24,10 +24,12 @@ import { ProblemReports } from './collections/ProblemReports'
 import { Projects } from './collections/Projects'
 import { Signatures } from './collections/Signatures'
 import { StudentProfiles } from './collections/StudentProfiles'
+import { TeamMembers } from './collections/TeamMembers'
 import { Users } from './collections/Users'
 import { isAdmin } from './access/roles'
 import { AGREEMENTS_QUEUE, generateAgreementTask, sendAgreementEmailTask } from './jobs/agreements'
 import { acceptDueDeliverablesTask } from './jobs/deliverables'
+import { teamMorningEmailTask } from './jobs/morningEmail'
 import { MAINTENANCE_QUEUE, removeUnusedFilesTask } from './jobs/removeUnusedFiles'
 import { emailAdapter } from './lib/email/adapter'
 import { MAX_UPLOAD_BYTES, MB } from './lib/uploads/fileRules'
@@ -60,6 +62,7 @@ export default buildConfig({
     AgreementPdfs,
     Payments,
     ProblemReports,
+    TeamMembers,
     ActivityLogs,
     MagicLinks,
   ],
@@ -94,6 +97,7 @@ export default buildConfig({
       generateAgreementTask,
       sendAgreementEmailTask,
       acceptDueDeliverablesTask,
+      teamMorningEmailTask,
     ],
     autoRun:
       process.env.RUN_JOBS_IN_APP === 'false'

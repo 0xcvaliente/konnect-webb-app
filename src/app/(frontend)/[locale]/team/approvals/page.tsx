@@ -30,6 +30,8 @@ import {
   type QueueItem,
 } from '@/lib/team/approvals'
 import { teamCounts } from '@/lib/team/counts'
+import { TakeButton } from '@/components/app/team/TeamForms'
+import { myOwnerIds } from '@/lib/team/members'
 import { requireTeam } from '@/lib/team/session'
 import { cn } from '@/lib/utils'
 import { promiseState } from '@/lib/workingDays'
@@ -70,6 +72,8 @@ export default async function TeamApprovalsPage({
   const search = await searchParams
   const tab: QueueTab = isQueueTab(search.tab) ? search.tab : 'companies'
   const mine = search.who === 'mine'
+  // Mine: my own items and those of anyone I cover today.
+  const mineSet = mine ? await myOwnerIds(payload, user) : null
   const asked = Number(search.item)
 
   const t = await getTranslations('TeamApprovals')
@@ -84,7 +88,7 @@ export default async function TeamApprovalsPage({
     QueueItem[]
   >
   const open = (items: QueueItem[]) => items.filter((item) => item.section !== 'waiting').length
-  const items = all[tab].filter((item) => !mine || item.owner?.id === user.id)
+  const items = all[tab].filter((item) => !mineSet || mineSet.has(item.owner?.id ?? 0))
   const selectedId =
     Number.isInteger(asked) && asked > 0
       ? asked
@@ -212,6 +216,12 @@ async function describer() {
     if (row.action === 'delete') return t('delete')
     if (row.action === 'info_requested') return t('infoRequested')
     if (row.action === 'info_answered') return t('infoAnswered')
+    if (row.action === 'reassign') {
+      if (row.field === 'takenBy') return t('taken', { name: row.toName ?? '?' })
+      return row.toName
+        ? t('reassigned', { from: row.fromName ?? t('nobody'), to: row.toName })
+        : t('unassigned')
+    }
     if (row.action === 'review_change') {
       if (row.field === 'fee') {
         return row.toStatus ? t('price', { price: row.toStatus }) : t('priceCleared')
@@ -279,6 +289,9 @@ async function CompanyDetail({ id, tab, mine, payload, user }: DetailProps) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <OwnerChip owner={view.owner} />
+            {!view.owner && (
+              <TakeButton collection="companies" id={company.id} label={company.name} />
+            )}
             <Badge tone={STATUS_TONE[company.status]}>{f(`status.${company.status}`)}</Badge>
           </div>
         </div>
@@ -413,6 +426,9 @@ async function ProjectDetail({ id, tab, mine, payload, user }: DetailProps) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <OwnerChip owner={view.owner} />
+            {!view.owner && (
+              <TakeButton collection="projects" id={view.project.id} label={view.project.title} />
+            )}
             <Badge tone={PROJECT_STATUS_TONE[project.status]}>{s(`pill.${project.status}`)}</Badge>
           </div>
         </div>
@@ -592,7 +608,10 @@ async function ProfileDetail({ id, tab, mine, payload, user }: DetailProps) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <OwnerChip owner={null} />
+            <OwnerChip owner={view.owner} />
+            {!view.owner && (
+              <TakeButton collection="student-profiles" id={profile.id} label={profile.name} />
+            )}
             {due && <DueChip due={due} />}
             <Badge tone={changed ? 'warn' : REVIEW_TONE[status]}>
               {changed ? tp('changedPill') : t(`reviewStatus.${status}`)}

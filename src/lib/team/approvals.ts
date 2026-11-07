@@ -23,6 +23,7 @@ import type {
 } from '@/payload-types'
 
 import { NOTE_MAX, type QueueTab, type ReviewError, type ReviewState } from './approvalFields'
+import { myOwnerIds } from './members'
 
 /**
  * The team's approval queue ("Konnected team daily work" mockup, Approvals): companies to
@@ -124,23 +125,23 @@ async function companyItems(payload: Payload, actor: SessionUser): Promise<Queue
       name: true,
       orgNumber: true,
       teamOwner: true,
+      takenBy: true,
       infoRequestedAt: true,
       reviewRequestedAt: true,
       createdAt: true,
     },
     ...asActor(actor),
   })
-  const owners = await ownersById(
-    payload,
-    actor,
-    found.docs.map((c) => relationId(c.teamOwner)),
-  )
+  // The owner, or whoever took it from the shared pool; nobody means the pool.
+  const ownerIdOf = (c: Pick<Company, 'teamOwner' | 'takenBy'>) =>
+    relationId(c.teamOwner) ?? relationId(c.takenBy)
+  const owners = await ownersById(payload, actor, found.docs.map(ownerIdOf))
   return found.docs.map((c) => ({
     id: c.id,
     title: c.name,
     subtitle: c.orgNumber ? formatOrgNumber(c.orgNumber) : null,
     since: (c.infoRequestedAt ?? c.reviewRequestedAt ?? c.createdAt) as string,
-    owner: owners.get(relationId(c.teamOwner) ?? 0) ?? null,
+    owner: owners.get(ownerIdOf(c) ?? 0) ?? null,
     section: c.infoRequestedAt ? 'waiting' : 'review',
     due: null,
   }))
@@ -160,22 +161,14 @@ async function projectItems(payload: Payload, actor: SessionUser): Promise<Queue
       submittedAt: true,
       noteToCompanyAt: true,
       updatedAt: true,
+      owner: true,
+      takenBy: true,
     },
     ...asActor(actor),
   })
-  const companyIds = [...new Set(found.docs.map((p) => relationId(p.company)).filter(Boolean))]
-  const companies = companyIds.length
-    ? await payload.find({
-        collection: 'companies',
-        where: { id: { in: companyIds } },
-        depth: 0,
-        pagination: false,
-        select: { teamOwner: true },
-        ...asActor(actor),
-      })
-    : { docs: [] as Pick<Company, 'id' | 'teamOwner'>[] }
-  const ownerOf = new Map(companies.docs.map((c) => [c.id, relationId(c.teamOwner)]))
-  const owners = await ownersById(payload, actor, [...ownerOf.values()])
+  const ownerIdOf = (p: Pick<Project, 'owner' | 'takenBy'>) =>
+    relationId(p.owner) ?? relationId(p.takenBy)
+  const owners = await ownersById(payload, actor, found.docs.map(ownerIdOf))
   return found.docs.map((p) => {
     const section: QueueSection =
       p.status === 'approved' ? 'publish' : p.status === 'changes_requested' ? 'waiting' : 'review'
@@ -188,7 +181,7 @@ async function projectItems(payload: Payload, actor: SessionUser): Promise<Queue
         : section === 'publish'
           ? p.updatedAt
           : (p.submittedAt ?? p.updatedAt)) as string,
-      owner: owners.get(ownerOf.get(relationId(p.company) ?? 0) ?? 0) ?? null,
+      owner: owners.get(ownerIdOf(p) ?? 0) ?? null,
       section,
       due: null,
     }
@@ -209,9 +202,15 @@ async function profileItems(payload: Payload, actor: SessionUser): Promise<Queue
       reviewNoteAt: true,
       changedSinceReviewAt: true,
       createdAt: true,
+      takenBy: true,
     },
     ...asActor(actor),
   })
+  const owners = await ownersById(
+    payload,
+    actor,
+    found.docs.map((s) => relationId(s.takenBy)),
+  )
   // Applications by profiles still waiting for review (or sent back for changes), counted per
   // student. Only ids are read.
   const notReviewed = found.docs.filter((s) => s.reviewStatus !== 'reviewed').map((s) => s.id)
@@ -248,8 +247,9 @@ async function profileItems(payload: Payload, actor: SessionUser): Promise<Queue
       title: s.name,
       subtitle: s.school ?? null,
       since,
-      // Profiles are not split by company: they sit in the shared pool.
-      owner: null,
+      // Profiles are not split by company: they sit in the shared pool until someone takes
+      // them (or makes the first review decision).
+      owner: owners.get(relationId(s.takenBy) ?? 0) ?? null,
       section,
       // Konnected promises a profile review within 2 working days.
       due: section === 'review' ? promiseState(new Date(since), PROFILE_REVIEW_DAYS) : null,
@@ -269,13 +269,15 @@ export async function listQueue(
   { mine = false }: { mine?: boolean } = {},
 ): Promise<QueueItem[] | null> {
   if (!actor || !isAdmin(actor)) return null
+  // Mine: my own items and those of anyone I cover today.
+  const ids = mine ? await myOwnerIds(payload, actor) : null
   const items =
     tab === 'companies'
       ? await companyItems(payload, actor)
       : tab === 'projects'
         ? await projectItems(payload, actor)
         : await profileItems(payload, actor)
-  return items.filter((item) => !mine || item.owner?.id === actor.id).sort(oldestFirst)
+  return items.filter((item) => !ids || ids.has(item.owner?.id ?? 0)).sort(oldestFirst)
 }
 
 /** Open items per tab (waiting on someone else does not count). */
@@ -314,7 +316,12 @@ export const isOpen = (item: QueueItem) => OPEN.includes(item.section)
 export type ActivityRow = Pick<
   ActivityLog,
   'id' | 'action' | 'field' | 'fromStatus' | 'toStatus' | 'note' | 'createdAt'
-> & { actorName: string | null }
+> & {
+  actorName: string | null
+  /** For a reassignment: the team members' names before and after (ids are stored). */
+  fromName?: string | null
+  toName?: string | null
+}
 
 /** The activity log of one record, newest first, read as the team member. */
 export async function activityOf(
@@ -333,6 +340,13 @@ export async function activityOf(
     depth: 1,
     ...asActor(actor),
   })
+  const memberIds = rows.docs
+    .filter((row) => row.action === 'reassign')
+    .flatMap((row) => [Number(row.fromStatus), Number(row.toStatus)])
+    .filter((id) => Number.isInteger(id) && id > 0)
+  const names = await ownersById(payload, actor, memberIds)
+  const nameOf = (value: string | null | undefined) =>
+    value ? (names.get(Number(value))?.name ?? null) : null
   return rows.docs.map((row) => {
     const by = typeof row.actor === 'object' && row.actor ? row.actor : null
     return {
@@ -344,6 +358,9 @@ export async function activityOf(
       note: row.note,
       createdAt: row.createdAt,
       actorName: by ? by.name || by.email : null,
+      ...(row.action === 'reassign'
+        ? { fromName: nameOf(row.fromStatus), toName: nameOf(row.toStatus) }
+        : {}),
     }
   })
 }
@@ -374,13 +391,10 @@ export async function loadCompanyReview(
   })) as Company | null
   if (!company) return null
   const user = typeof company.user === 'object' && company.user ? (company.user as User) : null
-  const owner =
-    typeof company.teamOwner === 'object' && company.teamOwner
-      ? {
-          id: company.teamOwner.id,
-          name: (company.teamOwner as User).name || (company.teamOwner as User).email,
-        }
-      : null
+  const ownerUser = [company.teamOwner, company.takenBy].find(
+    (u): u is User => typeof u === 'object' && u !== null,
+  )
+  const owner = ownerUser ? { id: ownerUser.id, name: ownerUser.name || ownerUser.email } : null
   const sameNumber = company.orgNumber
     ? (
         await payload.find({
@@ -431,11 +445,12 @@ export async function loadProjectReview(
   if (!project) return null
   const company =
     typeof project.company === 'object' && project.company ? (project.company as Company) : null
-  const owners = await ownersById(payload, actor, [relationId(company?.teamOwner)])
+  const ownerId = relationId(project.owner) ?? relationId(project.takenBy)
+  const owners = await ownersById(payload, actor, [ownerId])
   return {
     project,
     company: company ? { id: company.id, name: company.name, status: company.status } : null,
-    owner: owners.get(relationId(company?.teamOwner) ?? 0) ?? null,
+    owner: owners.get(ownerId ?? 0) ?? null,
     activity: await activityOf(payload, actor, 'projects', project.id),
   }
 }
@@ -452,6 +467,8 @@ export type ProfileReview = {
   applicationsBeforeReview: number
   /** What the student changed since the last review (empty when nothing or never reviewed). */
   changes: ProfileChange[]
+  /** Who took the profile from the shared pool, or null while it waits there. */
+  owner: Owner
   activity: ActivityRow[]
 }
 
@@ -506,6 +523,10 @@ export async function loadProfileReview(
     applications,
     applicationsBeforeReview,
     changes,
+    owner:
+      typeof profile.takenBy === 'object' && profile.takenBy
+        ? { id: profile.takenBy.id, name: profile.takenBy.name || profile.takenBy.email }
+        : null,
     activity: await activityOf(payload, actor, 'student-profiles', profile.id),
   }
 }

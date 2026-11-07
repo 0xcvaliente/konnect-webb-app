@@ -16,8 +16,14 @@ import {
   isCompany,
   relationId,
 } from '@/access/roles'
+import { isOnTeam, refuseTakenOnPoolTake } from '@/access/team'
 import { copyNameToUser } from '@/hooks/copyNameToUser'
-import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
+import {
+  logActivityAfterChange,
+  logActivityAfterDelete,
+  logReassignments,
+  writeActivity,
+} from '@/hooks/logActivity'
 import { sendCompanyReviewEmail } from '@/lib/email/companyEmails'
 import {
   COMPANY_STATUSES,
@@ -177,6 +183,7 @@ export const Companies: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
+      refuseTakenOnPoolTake('companies'),
       async ({ data, originalDoc, operation, req }) => {
         const role = effectiveRole(req.user)
         const admin = isAdmin(req.user)
@@ -261,6 +268,14 @@ export const Companies: CollectionConfig = {
         const status = data.status ?? originalDoc?.status
         if (status === 'approved' && originalDoc?.status !== 'approved') {
           data.approvedAt ??= new Date().toISOString()
+          // Whoever took the company from the shared pool, or else whoever approves it, becomes
+          // its owner on the team, unless the team already chose one (team split by company).
+          // Someone who has left the team is skipped.
+          const chosen = relationId(data.teamOwner ?? originalDoc?.teamOwner)
+          if (admin && !(await isOnTeam(req, chosen))) {
+            const taker = relationId(data.takenBy ?? originalDoc?.takenBy)
+            data.teamOwner = (await isOnTeam(req, taker)) ? taker : req.user!.id
+          }
         } else if (status !== 'approved') {
           data.approvedAt = null
         }
@@ -291,7 +306,7 @@ export const Companies: CollectionConfig = {
         // Admin changes only (field access drops these for everyone else): the linked user must
         // have the company role, and the Konnected owner must be on the team.
         if (admin) {
-          const checkRole = async (id: number | undefined, wanted: 'company' | 'admin') => {
+          const checkRole = async (id: number | undefined, wanted: 'company') => {
             if (!id) return
             const user = await req.payload.findByID({
               collection: 'users',
@@ -308,8 +323,12 @@ export const Companies: CollectionConfig = {
           if (relationId(data.user) !== relationId(originalDoc?.user)) {
             await checkRole(relationId(data.user), 'company')
           }
-          if (relationId(data.teamOwner) !== relationId(originalDoc?.teamOwner)) {
-            await checkRole(relationId(data.teamOwner), 'admin')
+          // A newly chosen owner or taker must be on the team (admin, on ADMIN_EMAILS, not paused).
+          for (const key of ['teamOwner', 'takenBy'] as const) {
+            const id = relationId(data[key])
+            if (id && id !== relationId(originalDoc?.[key]) && !(await isOnTeam(req, id))) {
+              throw new APIError(`Company: the ${key} must be on the team`, 400)
+            }
           }
         }
         return data
@@ -385,7 +404,46 @@ export const Companies: CollectionConfig = {
         }
         return doc
       },
+      logReassignments(['teamOwner', 'takenBy']),
       logActivityAfterChange({ statusField: 'status' }),
+      async ({ doc, previousDoc, operation, req }) => {
+        // Projects follow their company's owner: when the owner changes, every open project that
+        // followed the old owner (or had none) moves to the new one, in the same transaction and
+        // with the same note. A project the team moved to someone else on its own page stays.
+        // Bypass: the server re-saves the projects as part of the team's change; each move goes
+        // through the Projects hook and is logged there.
+        if (operation !== 'update' || !isAdmin(req.user)) return doc
+        const before = relationId(previousDoc?.teamOwner)
+        const after = relationId(doc.teamOwner)
+        if (!after || before === after) return doc
+        const followers = await req.payload.find({
+          collection: 'projects',
+          where: {
+            and: [
+              { company: { equals: doc.id } },
+              { status: { not_in: ['closed', 'rejected'] } },
+              before
+                ? { or: [{ owner: { equals: before } }, { owner: { exists: false } }] }
+                : { owner: { exists: false } },
+            ],
+          },
+          depth: 0,
+          pagination: false,
+          select: { owner: true },
+          overrideAccess: true,
+          req,
+        })
+        for (const project of followers.docs) {
+          await req.payload.update({
+            collection: 'projects',
+            id: project.id,
+            data: { owner: after },
+            overrideAccess: true,
+            req,
+          })
+        }
+        return doc
+      },
       copyNameToUser('contactName'),
     ],
     afterDelete: [logActivityAfterDelete()],
@@ -500,6 +558,20 @@ export const Companies: CollectionConfig = {
       relationTo: 'users',
       index: true,
       // Admin panel picker only (see withoutFilterOptions); the hook above checks the role.
+      filterOptions: { role: { equals: 'admin' } },
+      validate: withoutFilterOptions(validations.relationship as Validate),
+      access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { position: 'sidebar' },
+    },
+    {
+      // Who on the team took this new company from the shared pool to review it. Set by the
+      // team ("Take it"); the person who takes it becomes the owner at approval unless the team
+      // chose one. Team only.
+      name: 'takenBy',
+      label: 'Taken from the pool by',
+      type: 'relationship',
+      relationTo: 'users',
+      index: true,
       filterOptions: { role: { equals: 'admin' } },
       validate: withoutFilterOptions(validations.relationship as Validate),
       access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },

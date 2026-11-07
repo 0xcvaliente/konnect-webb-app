@@ -514,6 +514,21 @@
         "button": "Åpne prosjektet",
         "ignore": "Hvis dette ikke er deres prosjekt, skriv til Konnected-teamet."
       }
+    },
+    "teamMorning": {
+      "subject": "God morgen, {name}: {count} til deg i dag",
+      "heading": "God morgen, {name}",
+      "intro": "Dette er ditt i Konnected i dag.",
+      "overdue": "Forsinket ({count}):",
+      "today": "Frist i dag ({count}):",
+      "cover": "Dekker for {name} ({count}):",
+      "pool": "{count} venter i fellesbunken. Den eldste har ventet i {days} virkedager.",
+      "lineLate": "{kind}: {title}, {days} virkedager for sent",
+      "lineLateOne": "{kind}: {title}, 1 virkedag for sent",
+      "lineToday": "{kind}: {title}, frist i dag",
+      "profile": "en studentprofil",
+      "button": "Åpne Mitt arbeid",
+      "ignore": "Du får denne e-posten på virkedager når noe av ditt har frist i dag eller er forsinket."
     }
   },
   "DesignGuide": {
@@ -1793,7 +1808,11 @@
       "reviewedAgain": "Gjennomgått på nytt etter endringer",
       "status": "{from} til {to}",
       "statusTo": "Nå {to}",
-      "other": "Endret"
+      "other": "Endret",
+      "taken": "{name} tok den fra fellesbunken",
+      "reassigned": "Ansvarlig endret fra {from} til {to}",
+      "unassigned": "Ansvarlig fjernet",
+      "nobody": "ingen"
     },
     "errors": {
       "forbidden": "Økten din er avsluttet, eller dette er ikke en teamkonto. Logg inn på nytt.",
@@ -2974,7 +2993,11 @@
       "dueSet": "Leveringsdato satt til {date}",
       "dueMoved": "Leveringsdato flyttet fra {from} til {to}",
       "ended": "Match avsluttet",
-      "other": "Endret"
+      "other": "Endret",
+      "taken": "{name} tok den fra fellesbunken",
+      "reassigned": "Ansvarlig endret fra {from} til {to}",
+      "unassigned": "Ansvarlig fjernet",
+      "nobody": "ingen"
     },
     "toast": {
       "dateMoved": "Leveringsdatoen er flyttet. Begge får en e-post.",
@@ -2984,5 +3007,140 @@
       "changesSent": "Sendt til {company}.",
       "handled": "Rapporten er merket som håndtert."
     }
+  },
+  "TeamToday": {
+    "title": "I dag",
+    "ledeMine": "{mine, plural, =0 {Ingenting er ditt akkurat nå} one {# sak er din} other {# saker er dine}}, og {pool, plural, =0 {fellesbunken er tom} one {# venter i fellesbunken} other {# venter i fellesbunken}}.",
+    "ledeCover": "Til og med {date} dekker du for {names}.",
+    "ledeAll": "{count, plural, =0 {Ingenting venter på teamet.} one {# sak venter på teamet.} other {# saker venter på teamet.}} Hver sak viser hvem som er ansvarlig.",
+    "viewLabel": "Hvem sitt arbeid som vises",
+    "views": {
+      "mine": "Mitt arbeid",
+      "all": "Alle"
+    },
+    "yoursTitle": "Dine, {name}",
+    "yoursSub": "Det som haster mest først.",
+    "yoursEmpty": "Ingenting er ditt akkurat nå. Ta noe fra fellesbunken, eller se på Alle.",
+    "poolTitle": "Fellesbunken",
+    "poolBody": "Nye bedrifter, studentprofiler og prosjekter som ingen har tatt ennå. Ta en, så flyttes den til listen din. Etter {days} virkedager uten at noen har tatt den, blir den gul.",
+    "poolEmpty": "Fellesbunken er tom.",
+    "take": "Ta den",
+    "taking": "Tar…",
+    "taken": "Tatt. Den står på listen din nå.",
+    "poolWaited": "{count, plural, =0 {i bunken siden i dag} one {i bunken i # virkedag} other {i bunken i # virkedager}}",
+    "coverTitle": "Dekker for {name}",
+    "coverPill": "Borte {from} til {until}",
+    "coverBody": "Til og med {until} kommer sakene til {name} til deg, og oppstartsbedriftene ser deg som kontaktperson.",
+    "coverEmpty": "Ingenting av sakene til {name} er åpent akkurat nå.",
+    "teamLink": "Teamoversikt",
+    "numbersTitle": "Nøkkeltall",
+    "numbers": {
+      "inProgress": "Prosjekter i gang",
+      "waitingForStudent": "Venter på en student",
+      "agreementsOpen": "Avtaler som ikke er signert",
+      "studentsReviewed": "Studenter gjennomgått",
+      "activeCompanies": "Aktive bedrifter",
+      "pool": "I fellesbunken"
+    },
+    "overdueTitle": "Forsinket",
+    "overdueEmpty": "Ingenting er forsinket.",
+    "soonTitle": "Frist snart",
+    "soonEmpty": "Ingenting har frist i dag eller neste virkedag.",
+    "queuesTitle": "Alle køer",
+    "kind": {
+      "company": "Bedrift å godkjenne",
+      "profile": "Studentprofil å gjennomgå",
+      "project": "Prosjekt å gjennomgå",
+      "publish": "Prosjekt å publisere",
+      "decision": "Søknader å avgjøre",
+      "agreement": "Avtale å signere eller rette",
+      "deliverable": "Leveranse å sjekke",
+      "problem": "Problem meldt",
+      "noMatch": "Prosjekt uten match",
+      "payment": "Betaling som trenger teamet",
+      "workDue": "Arbeid med frist"
+    },
+    "itemSub": "{kind}, {detail}",
+    "due": {
+      "late": "{count, plural, one {# dag for sent} other {# dager for sent}}",
+      "today": "Frist i dag",
+      "left": "{count, plural, one {# dag igjen} other {# dager igjen}}"
+    },
+    "errors": {
+      "taken": "Noen har allerede tatt den. Siden viser nå hvem.",
+      "notFound": "Saken finnes ikke lenger. Last inn siden på nytt.",
+      "failed": "Det gikk ikke. Prøv igjen.",
+      "note": "Skriv et kort notat (minst 3 tegn).",
+      "owner": "Velg en i teamet.",
+      "dates": "Sjekk dagene: siste dag kommer etter første, i dag eller senere, høyst 90 dager borte.",
+      "cover": "Velg en annen i teamet til å dekke."
+    }
+  },
+  "TeamMembers": {
+    "title": "Team",
+    "back": "Tilbake til i dag",
+    "lede": "Arbeidet er delt etter bedrift. Den ansvarlige for en bedrift følger prosjektene fra godkjenning til betaling og er kontaktperson for oppstartsbedriften og studentene. Alle kan fortsatt se og gjøre alt.",
+    "you": "Deg",
+    "awayNow": "Borte",
+    "awayLater": "Borte fra {date}",
+    "nums": {
+      "active": "Aktive prosjekter",
+      "open": "Åpne saker",
+      "soon": "Frist snart",
+      "late": "Forsinket"
+    },
+    "owns": "{count, plural, =0 {Er ikke ansvarlig for noen bedrift ennå.} one {Ansvarlig for {names}.} other {Ansvarlig for {names}.}}",
+    "awayText": "Borte {from} til {until}, {cover} dekker.",
+    "coversText": "Dekker for {names} til og med {until}",
+    "awayTitle": "Fravær og stedfortreder",
+    "awayBody": "Mens noen er borte, vises sakene deres på listen til stedfortrederen, og stedfortrederens morgen-e-post tar dem med.",
+    "member": "Person i teamet",
+    "from": "Første dag borte",
+    "until": "Siste dag borte",
+    "cover": "Stedfortreder",
+    "chooseCover": "Velg en person",
+    "save": "Lagre",
+    "saving": "Lagrer…",
+    "saved": "Lagret.",
+    "clear": "Fjern fraværet",
+    "cleared": "Fraværet er fjernet.",
+    "currentAway": "Fravær som er satt",
+    "noAway": "Ingen har satt fravær.",
+    "awayRow": "{name}: {from} til {until}, {cover} dekker",
+    "ownersTitle": "Bedrifter og ansvarlige",
+    "ownersBody": "Prosjektene følger bedriftens ansvarlige. For å flytte bare ett prosjekt, bruk prosjektsiden.",
+    "company": "Bedrift",
+    "activeProjects": "Aktive prosjekter",
+    "owner": "Ansvarlig",
+    "noOwner": "Ingen ennå",
+    "ownerOf": "Ansvarlig for {company}",
+    "noteLabel": "Notat til den nye ansvarlige",
+    "noteHint": "Lagres i historikken sammen med endringen.",
+    "move": "Flytt",
+    "moving": "Flytter…",
+    "moved": "Flyttet. Historikken tar vare på notatet ditt.",
+    "noCompanies": "Ingen bedrift er godkjent eller venter ennå.",
+    "howTitle": "Slik deles arbeidet",
+    "how": {
+      "pool": "Nye bedrifter, studentprofiler og prosjekter venter i fellesbunken. Den som tar eller godkjenner en bedrift, blir ansvarlig for den.",
+      "follow": "Problemer, leveranser, avtaler og betalinger går til prosjektets ansvarlige.",
+      "cover": "Mens du er borte, får stedfortrederen sakene dine, både i I dag og i morgen-e-posten.",
+      "everyone": "Alle kan se og gjøre alt. Ansvaret avgjør bare hvem sin liste en sak havner på."
+    },
+    "morningTitle": "Morgen-e-post",
+    "morningBody": "På virkedager klokken 07.30 får hver i teamet en e-post med sakene sine som har frist i dag eller er forsinket, på språket i kontoen sin."
+  },
+  "TeamOwner": {
+    "title": "Ansvarlig",
+    "none": "Ingen er ansvarlig for prosjektet ennå. Det venter i fellesbunken.",
+    "follows": "Følger bedriftens ansvarlige.",
+    "moved": "Flyttet fra bedriftens ansvarlige, {name}.",
+    "contact": "Den ansvarlige følger prosjektet og svarer på spørsmål fra bedriften og studenten.",
+    "assign": "Gi til",
+    "noteLabel": "Notat til den nye ansvarlige",
+    "noteHint": "Lagres i historikken sammen med endringen.",
+    "move": "Flytt dette prosjektet",
+    "moving": "Flytter…",
+    "moved_toast": "Flyttet. Historikken tar vare på notatet ditt."
   }
 }

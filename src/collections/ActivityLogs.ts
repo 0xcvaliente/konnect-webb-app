@@ -24,7 +24,10 @@ export const ActivityLogs: CollectionConfig = {
       // review_change: a team decision that is not a status (a project's price or paid or unpaid
       // decision, a profile reviewed again after the student changed it), with `field`, `fromStatus`
       // and `toStatus`. info_requested / info_answered: the team asked a company for more
-      // information, and the company saved its corrected details.
+      // information, and the company saved its corrected details. reassign: a company's or a
+      // project's owner on the team changed, or someone took an item from the shared pool
+      // (`field` is `teamOwner`, `owner` or `takenBy`; `fromStatus` and `toStatus` hold user ids;
+      // `note` says why). away_change: a team member's away days or cover changed.
       options: [
         'create',
         'status_change',
@@ -34,6 +37,8 @@ export const ActivityLogs: CollectionConfig = {
         'review_change',
         'info_requested',
         'info_answered',
+        'reassign',
+        'away_change',
       ],
     },
     { name: 'targetCollection', type: 'text', required: true, index: true },

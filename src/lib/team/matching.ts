@@ -19,9 +19,10 @@ import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import type { ApplicationStatus } from '@/lib/transitions'
 import { promiseState, type PromiseState } from '@/lib/workingDays'
-import type { Application, Company, Cv, Match, Project, StudentProfile } from '@/payload-types'
+import type { Application, Cv, Match, Project, StudentProfile } from '@/payload-types'
 
 import { type ActivityRow, activityOf, type Owner, ownersById, type SessionUser } from './approvals'
+import { myOwnerIds } from './members'
 
 /**
  * The team's Matching screen (Kanban card "Admin applications queue and manual matching", mockup
@@ -97,22 +98,14 @@ export async function listMatchingQueue(
     where: { id: { in: [...open.keys()] } },
     depth: 0,
     pagination: false,
-    select: { title: true, companyName: true, company: true, deadline: true },
+    select: { title: true, companyName: true, company: true, deadline: true, owner: true },
     ...asActor(actor),
   })
-  const companyIds = [...new Set(projects.docs.map((p) => relationId(p.company)).filter(Boolean))]
-  const companies = companyIds.length
-    ? await payload.find({
-        collection: 'companies',
-        where: { id: { in: companyIds } },
-        depth: 0,
-        pagination: false,
-        select: { teamOwner: true },
-        ...asActor(actor),
-      })
-    : { docs: [] as Pick<Company, 'id' | 'teamOwner'>[] }
-  const ownerOf = new Map(companies.docs.map((c) => [c.id, relationId(c.teamOwner)]))
-  const owners = await ownersById(payload, actor, [...ownerOf.values()])
+  const owners = await ownersById(
+    payload,
+    actor,
+    projects.docs.map((p) => relationId(p.owner)),
+  )
   const today = todayInOslo()
 
   const items = projects.docs.map((p): MatchingItem => {
@@ -123,7 +116,7 @@ export async function listMatchingQueue(
       id: p.id,
       title: p.title,
       companyName: p.companyName ?? null,
-      owner: owners.get(ownerOf.get(relationId(p.company) ?? 0) ?? 0) ?? null,
+      owner: owners.get(relationId(p.owner) ?? 0) ?? null,
       open: counts.open,
       shortlisted: counts.shortlisted,
       closesOn,
@@ -134,8 +127,10 @@ export async function listMatchingQueue(
     }
   })
   const order = (item: MatchingItem) => item.decideBy ?? '9999-12-31'
+  // Mine: my own items and those of anyone I cover today.
+  const ids = mine ? await myOwnerIds(payload, actor) : null
   return items
-    .filter((item) => !mine || item.owner?.id === actor.id)
+    .filter((item) => !ids || ids.has(item.owner?.id ?? 0))
     .sort(
       (a, b) =>
         (a.section === b.section ? 0 : a.section === 'decide' ? -1 : 1) ||
@@ -230,9 +225,7 @@ export async function loadMatchingProject(
     ...asActor(actor),
   })) as Project | null
   if (!project) return null
-  const company =
-    typeof project.company === 'object' && project.company ? (project.company as Company) : null
-  const owners = await ownersById(payload, actor, [relationId(company?.teamOwner)])
+  const owners = await ownersById(payload, actor, [relationId(project.owner)])
 
   const applications = (
     await payload.find({
@@ -357,7 +350,7 @@ export async function loadMatchingProject(
   const closed = Boolean(closesOn && closesOn < todayInOslo())
   return {
     project,
-    owner: owners.get(relationId(company?.teamOwner) ?? 0) ?? null,
+    owner: owners.get(relationId(project.owner) ?? 0) ?? null,
     closesOn,
     decideBy: decisionDay(closesOn),
     due:

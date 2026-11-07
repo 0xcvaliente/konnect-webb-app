@@ -267,6 +267,15 @@ async function seed() {
     emailVerifiedAt: new Date().toISOString(),
   })
   const adminCtx = { ...admin, collection: 'users' as const }
+  // The rest of the team (team split by company): every other ADMIN_EMAILS address, named after
+  // the part before the @. They sign in with Google like the first one.
+  for (const email of adminEmails().filter((e) => e !== SEED_ADMIN_EMAIL)) {
+    const local = email.split('@')[0] ?? email
+    await ensureUser(payload, email, 'admin', {
+      name: local.charAt(0).toUpperCase() + local.slice(1),
+      emailVerifiedAt: new Date().toISOString(),
+    })
+  }
   const studentUser = await ensureUser(payload, 'student@konnected.test', 'student')
   const studentCtx = { ...studentUser, collection: 'users' as const }
   let companyUser = await ensureUser(payload, 'company@konnected.test', 'company')

@@ -30,6 +30,7 @@ import {
   type MatchingItem,
   type MatchingProject,
 } from '@/lib/team/matching'
+import { myOwnerIds } from '@/lib/team/members'
 import { requireTeam } from '@/lib/team/session'
 import { cn } from '@/lib/utils'
 
@@ -78,6 +79,8 @@ export default async function TeamMatchingPage({
   const { payload, user } = await requireTeam(locale)
   const search = await searchParams
   const mine = search.who === 'mine'
+  // Mine: my own items and those of anyone I cover today.
+  const mineSet = mine ? await myOwnerIds(payload, user) : null
   const asked = /^\d{1,10}$/.test(search.project ?? '') ? Number(search.project) : null
 
   const t = await getTranslations('TeamMatching')
@@ -86,7 +89,7 @@ export default async function TeamMatchingPage({
     listMatchingQueue(payload, user),
     teamCounts(payload, user),
   ])
-  const items = (all ?? []).filter((item) => !mine || item.owner?.id === user.id)
+  const items = (all ?? []).filter((item) => !mineSet || mineSet.has(item.owner?.id ?? 0))
   const selectedId = asked ?? items[0]?.id ?? null
   const view = selectedId ? await loadMatchingProject(payload, user, selectedId) : null
   const next = items.find((item) => item.id !== selectedId)
