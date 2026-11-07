@@ -11,7 +11,11 @@ import {
 } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { MAX_RUNNING_PROJECTS, NOTE_MAX } from '@/lib/applications/fields'
-import { applyError, runningProjectCount } from '@/lib/applications/rules'
+import {
+  applyError,
+  assertRoomForAnotherProject,
+  runningProjectCount,
+} from '@/lib/applications/rules'
 import { sendApplicationReceivedEmail } from '@/lib/email/applicationEmails'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import {
@@ -187,6 +191,14 @@ export const Applications: CollectionConfig = {
         const from = originalDoc?.status as ApplicationStatus
         const to = (data.status ?? from) as ApplicationStatus
         assertTransition(APPLICATION_TRANSITIONS, from, to, role, 'Application')
+        // At most 2 running projects per student: selecting is a pick, checked on the server.
+        if (from !== to && to === 'selected') {
+          await assertRoomForAnotherProject(
+            req,
+            relationId(originalDoc?.student),
+            relationId(originalDoc?.project),
+          )
+        }
         // When each step happened, for the student's progress and the team. Server only.
         if (from !== to) {
           if (to === 'shortlisted') data.shortlistedAt = now

@@ -1,7 +1,9 @@
 import { APIError, type Payload, type PayloadRequest } from 'payload'
 
+import { relationId } from '@/access/roles'
+
 import type { ApplyError } from './fields'
-import { RUNNING_PROJECT_STATUSES } from './fields'
+import { MAX_RUNNING_PROJECTS, RUNNING_PROJECT_STATUSES } from './fields'
 
 /**
  * Server-side counts and errors for applications. Used by the Applications hook (with `req`, so
@@ -31,6 +33,73 @@ export async function runningProjectCount(
     ...(req ? { req } : {}),
   })
   return totalDocs
+}
+
+/**
+ * Throw unless the team may pick the student for one more project: when an application becomes
+ * `selected` and when a match is created, or changes its student or project.
+ *
+ * Counted, each project once and leaving out the project being decided: the running projects
+ * (above), plus the picks still waiting for the project to move to `matched`, so two picks made
+ * one after the other cannot add up to more than 2 running projects:
+ * - a match whose project is still published (the team moves it to matched after the match);
+ * - a selected application whose project is still published (no match yet).
+ * `exceptMatchId` leaves out the match being changed.
+ *
+ * Bypass: `overrideAccess: true`, for the same reason as runningProjectCount. Only the decision
+ * leaves this function.
+ */
+export async function assertRoomForAnotherProject(
+  req: PayloadRequest,
+  profileId: number | null | undefined,
+  projectId: number | null | undefined,
+  exceptMatchId?: number,
+): Promise<void> {
+  if (!profileId) return
+  const [matches, selected] = await Promise.all([
+    req.payload.find({
+      collection: 'matches',
+      where: {
+        and: [
+          { student: { equals: profileId } },
+          { 'project.status': { in: ['published', ...RUNNING_PROJECT_STATUSES] } },
+          ...(exceptMatchId ? [{ id: { not_equals: exceptMatchId } }] : []),
+        ],
+      },
+      depth: 0,
+      pagination: false,
+      select: { project: true },
+      overrideAccess: true,
+      req,
+    }),
+    req.payload.find({
+      collection: 'applications',
+      where: {
+        and: [
+          { student: { equals: profileId } },
+          { status: { equals: 'selected' } },
+          { 'project.status': { equals: 'published' } },
+        ],
+      },
+      depth: 0,
+      pagination: false,
+      select: { project: true },
+      overrideAccess: true,
+      req,
+    }),
+  ])
+  const projects = new Set<number>()
+  for (const doc of [...matches.docs, ...selected.docs]) {
+    const id = relationId(doc.project)
+    if (id && id !== projectId) projects.add(id)
+  }
+  if (projects.size >= MAX_RUNNING_PROJECTS) {
+    throw applyError(
+      'too_many',
+      `The student already has ${MAX_RUNNING_PROJECTS} projects running or picked, the most at one time`,
+      403,
+    )
+  }
 }
 
 /**

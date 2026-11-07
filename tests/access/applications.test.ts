@@ -432,6 +432,80 @@ describe('the rules for applying', () => {
   })
 })
 
+describe('at most 2 projects when Konnected selects and matches', () => {
+  const setStatus = (id: number, status: Application['status'], user: User = w.admin) =>
+    w.payload.update({ collection: 'applications', id, data: { status }, ...as(user) })
+  const matchBeta = (project: number, application?: number) =>
+    w.payload.create({
+      collection: 'matches',
+      data: { project, student: w.beta.profile.id, ...(application ? { application } : {}) },
+      ...as(w.admin),
+    })
+
+  it('selecting or matching a student who already has 2 running projects is refused', async () => {
+    // beta applied to a third project before Konnected matched the other two.
+    const third = await published('A third project')
+    const late = await apply(w.beta.user, third.id)
+    await setStatus(late.id, 'shortlisted')
+    await runningProjectForBeta('Running one')
+    await runningProjectForBeta('Running two')
+
+    // The team (Local API and REST) cannot select beta for it, nor match beta on it.
+    await expect(setStatus(late.id, 'selected')).rejects.toThrow(/2 projects/)
+    const admin = await sessionFor(w.admin.id)
+    expect(
+      (await rest.patch(`applications/${late.id}`, { status: 'selected' }, admin)).status,
+    ).toBe(403)
+    await expect(matchBeta(third.id, late.id)).rejects.toThrow(/2 projects/)
+    // Nor move another student's match to beta.
+    await expect(
+      w.payload.update({
+        collection: 'matches',
+        id: w.match.id,
+        data: { student: w.beta.profile.id },
+        ...as(w.admin),
+      }),
+    ).rejects.toThrow(/2 projects/)
+    // Selecting is the team's alone: the student and the company are refused anyway.
+    await expect(setStatus(late.id, 'selected', w.beta.user)).rejects.toThrow()
+    await expect(setStatus(late.id, 'selected', w.companyA.user)).rejects.toThrow()
+    const anonymous = await rest.patch(`applications/${late.id}`, { status: 'selected' })
+    expect([401, 403, 404]).toContain(anonymous.status)
+
+    expect((await stored(late.id)).status).toBe('shortlisted')
+    const matches = await w.payload.count({
+      collection: 'matches',
+      where: { student: { equals: w.beta.profile.id } },
+    })
+    expect(matches.totalDocs).toBe(2)
+  })
+
+  it('picks waiting for their match count too, so two picks cannot become three', async () => {
+    const projects: Project[] = []
+    for (const title of ['Pick one', 'Pick two', 'Pick three'])
+      projects.push(await published(title))
+    const applications: Application[] = []
+    for (const project of projects) {
+      const a = await apply(w.beta.user, project.id)
+      await setStatus(a.id, 'shortlisted')
+      applications.push(a)
+    }
+    const [one, two, three] = applications as [Application, Application, Application]
+
+    // Two selections, no match yet: beta runs nothing, but a third pick is refused.
+    await setStatus(one.id, 'selected')
+    await setStatus(two.id, 'selected')
+    await expect(setStatus(three.id, 'selected')).rejects.toThrow(/2 projects/)
+    await expect(matchBeta(projects[2]!.id)).rejects.toThrow(/2 projects/)
+
+    // The two picks still get their matches (a project is not counted against itself).
+    await matchBeta(projects[0]!.id, one.id)
+    await matchBeta(projects[1]!.id, two.id)
+    await expect(setStatus(three.id, 'selected')).rejects.toThrow(/2 projects/)
+    expect((await stored(three.id)).status).toBe('shortlisted')
+  })
+})
+
 // ---------------------------------------------------------------------------------------------
 describe('withdrawing', () => {
   it('the student withdraws from applied or shortlisted, and the date is kept', async () => {
