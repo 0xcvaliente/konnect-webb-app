@@ -88,6 +88,8 @@ export const DeliverableFiles: CollectionConfig = {
             if (!profile || relationId(profile.user) !== req.user!.id) {
               throw new APIError('This match is not yours', 403)
             }
+            // Nothing more is uploaded once Konnected ended the match.
+            if (match.endedAt) throw new APIError('Konnected ended this match', 409)
           }
           data.uploadedBy = req.user?.id ?? null
         } else {

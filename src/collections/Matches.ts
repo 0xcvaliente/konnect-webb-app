@@ -10,13 +10,28 @@ import {
   isStudent,
   relationId,
 } from '@/access/roles'
-import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
 import { assertRoomForAnotherProject } from '@/lib/applications/rules'
+import { sendDueDateEmails } from '@/lib/email/problemEmails'
 import { selectionOf } from '@/lib/matching/rules'
+import { REPORTABLE_PROJECT_STATUSES } from '@/lib/problems/fields'
+import {
+  ACTIVE_MATCH,
+  type ProblemContext,
+  problemError,
+  resolveOpenReports,
+} from '@/lib/problems/rules'
+import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 
 /**
  * Konnected's pick of a student for a project. Made only by selecting an application (Matching);
  * only admin edits a match, and never its student, project or application.
+ *
+ * Konnected may end a match (Kanban card "Problem reports"): only by reopening or closing its
+ * project (the Projects hook ends it in the same change). An ended match keeps its history for the
+ * team and the student, loses its shared copy, and is no longer readable for the company. A project
+ * has at most one match that is not ended (a partial unique index, see the migration), so the team
+ * can match it again. Moving the due date (`endDate`) keeps the old dates in `dueDateHistory`.
  *
  * A company reads the matches of its own projects, but NOT the `student` or `application`
  * relations (field-level read is admin and student only). What the company learns about the
@@ -31,7 +46,10 @@ export const Matches: CollectionConfig = {
       if (isAdmin(user)) return true
       if (isStudent(user)) return { 'student.user': { equals: user!.id } }
       const companyId = companyIdOf(user)
-      return companyId ? { 'project.company': { equals: companyId } } : false
+      // Only the current match: once Konnected ends one, the company reads nothing about it.
+      return companyId
+        ? { and: [{ 'project.company': { equals: companyId } }, ACTIVE_MATCH] }
+        : false
     },
     create: ({ req: { user } }) => isAdmin(user),
     update: ({ req: { user } }) => isAdmin(user),
@@ -89,6 +107,71 @@ export const Matches: CollectionConfig = {
           throw new APIError('A match keeps its student, project and application', 400)
         }
 
+        const context = req.context as ProblemContext | undefined
+        if (operation === 'update') {
+          // An ended match is history: nothing on it changes any more.
+          if (originalDoc?.endedAt) {
+            throw problemError('not_open', 'This match has ended', 409)
+          }
+          // A match ends only when Konnected reopens or closes its project (the Projects hook sets
+          // the context for this one match). Any other attempt, through any API, is refused.
+          if ('endedAt' in data && data.endedAt) {
+            if (context?.endingMatch !== originalDoc?.id) {
+              throw problemError(
+                'forbidden',
+                'A match ends when Konnected reopens or closes its project',
+                400,
+              )
+            }
+            // Nothing about the student stays on an ended match for anyone but the team.
+            data.sharedInfo = {
+              name: null,
+              school: null,
+              programme: null,
+              year: null,
+              pitch: null,
+              skills: [],
+              experience: null,
+              cv: null,
+              contactEmail: null,
+              phone: null,
+            }
+            return data
+          }
+          // Moving the due date: only while the work runs, to today or later. The old date is kept.
+          const before = storedToDay(originalDoc?.endDate)
+          const after = 'endDate' in data ? storedToDay(data.endDate) : before
+          if (before && after !== before) {
+            const project = await req.payload.findByID({
+              collection: 'projects',
+              id: projectId,
+              depth: 0,
+              select: { status: true },
+              overrideAccess: true,
+              disableErrors: true,
+              req,
+            })
+            if (
+              !(REPORTABLE_PROJECT_STATUSES as readonly string[]).includes(project?.status ?? '')
+            ) {
+              throw problemError('not_open', 'The due date moves only while the work runs', 409)
+            }
+            if (!after || after < todayInOslo()) {
+              throw problemError('date_invalid', 'The new due date must be today or later', 400)
+            }
+            data.dueDateHistory = [
+              ...(originalDoc?.dueDateHistory ?? []),
+              { from: originalDoc!.endDate, to: data.endDate, changedAt: new Date().toISOString() },
+            ]
+          } else {
+            // The history is the server's: a client value never sticks.
+            data.dueDateHistory = originalDoc?.dueDateHistory ?? []
+          }
+        } else {
+          data.endedAt = null
+          data.dueDateHistory = []
+        }
+
         // Bypass for the read below: the server needs the full student profile to copy only the
         // shared fields.
         const profile = await req.payload.findByID({
@@ -120,6 +203,43 @@ export const Matches: CollectionConfig = {
     ],
     afterChange: [
       logActivityAfterChange(),
+      async ({ doc, previousDoc, operation, req }) => {
+        if (operation !== 'update') return doc
+        const note = (req.context as { activityNote?: string } | undefined)?.activityNote
+        // Konnected ended the match (the Projects hook, which writes the reason on the project).
+        if (doc.endedAt && !previousDoc?.endedAt) {
+          await writeActivity(req, {
+            action: 'status_change',
+            targetCollection: 'matches',
+            targetId: String(doc.id),
+            field: 'endedAt',
+            fromStatus: 'active',
+            toStatus: 'ended',
+          })
+          return doc
+        }
+        // The due date moved (or was set in answer to the student's report): log it with the
+        // team's note, settle the student's report, and tell both. Setting the first due date at
+        // kick-off is not a move: no email then.
+        const before = storedToDay(previousDoc?.endDate)
+        const after = storedToDay(doc.endDate)
+        if (after && before !== after) {
+          await writeActivity(req, {
+            action: 'review_change',
+            targetCollection: 'matches',
+            targetId: String(doc.id),
+            field: 'endDate',
+            fromStatus: before ?? undefined,
+            toStatus: after,
+            note: typeof note === 'string' && note.trim() ? note.trim().slice(0, 2000) : undefined,
+          })
+          const answered = await resolveOpenReports(req, doc.id, 'date_moved')
+          if (before || answered > 0) {
+            await sendDueDateEmails(req, doc, previousDoc?.endDate, doc.endDate)
+          }
+        }
+        return doc
+      },
       async ({ doc, operation, req }) => {
         // One payment log row per paid match (Kanban card "Manual payment log in admin"), made
         // with the match, in the same transaction, as the team member who selected the student
@@ -151,7 +271,8 @@ export const Matches: CollectionConfig = {
     ],
     afterDelete: [logActivityAfterDelete()],
   },
-  indexes: [{ fields: ['project'], unique: true }],
+  // One match per project that is not ended: a partial unique index made in the migration
+  // (20261107_..._problem_paths), which Payload's `indexes` cannot express.
   fields: [
     {
       name: 'project',
@@ -180,7 +301,29 @@ export const Matches: CollectionConfig = {
       access: { read: adminOnlyField },
     },
     { name: 'startDate', type: 'date' },
+    // The due date, agreed at kick-off. Konnected may move it later; `dueDateHistory` keeps the
+    // old dates (the company and the student read the dates, never why).
     { name: 'endDate', type: 'date' },
+    {
+      name: 'dueDateHistory',
+      type: 'array',
+      admin: { readOnly: true },
+      access: { create: adminOnlyField, update: adminOnlyField },
+      fields: [
+        { name: 'from', type: 'date' },
+        { name: 'to', type: 'date' },
+        { name: 'changedAt', type: 'date' },
+      ],
+    },
+    {
+      // When Konnected ended the match (set by the server only, with the project's reopen or
+      // close). Empty while the match runs. The company never reads an ended match.
+      name: 'endedAt',
+      type: 'date',
+      index: true,
+      admin: { readOnly: true, position: 'sidebar' },
+      access: { read: adminOrStudentField, create: adminOnlyField, update: adminOnlyField },
+    },
     {
       name: 'sharedInfo',
       type: 'group',

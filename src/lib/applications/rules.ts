@@ -2,6 +2,7 @@ import { APIError, type Payload, type PayloadRequest } from 'payload'
 
 import { relationId } from '@/access/roles'
 import { lockRow } from '@/lib/db/locks'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 
 import type { ApplyError } from './fields'
 import { MAX_RUNNING_PROJECTS, RUNNING_PROJECT_STATUSES } from './fields'
@@ -28,6 +29,8 @@ export async function runningProjectCount(
       and: [
         { student: { equals: profileId } },
         { 'project.status': { in: [...RUNNING_PROJECT_STATUSES] } },
+        // A match Konnected ended does not count, even when its project runs with someone else.
+        ACTIVE_MATCH,
       ],
     },
     overrideAccess: true,
@@ -68,6 +71,7 @@ export async function assertRoomForAnotherProject(
         and: [
           { student: { equals: profileId } },
           { 'project.status': { in: ['published', ...RUNNING_PROJECT_STATUSES] } },
+          ACTIVE_MATCH,
           ...(exceptMatchId ? [{ id: { not_equals: exceptMatchId } }] : []),
         ],
       },

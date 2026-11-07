@@ -1,6 +1,7 @@
 import { APIError, type PayloadRequest } from 'payload'
 
 import { relationId } from '@/access/roles'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import type { Agreement, Company, Match, Project, StudentProfile } from '@/payload-types'
 
 import { type AgreementSource, agreementValues } from './values'
@@ -83,7 +84,8 @@ async function companyGate(req: PayloadRequest, project: Project): Promise<Gate>
 async function studentGate(req: PayloadRequest, project: Project): Promise<Gate> {
   const matches = await req.payload.find({
     collection: 'matches',
-    where: { project: { equals: project.id } },
+    // The current match: an ended one's agreement opens nothing.
+    where: { and: [{ project: { equals: project.id } }, ACTIVE_MATCH] },
     depth: 0,
     limit: 1,
     overrideAccess: true,

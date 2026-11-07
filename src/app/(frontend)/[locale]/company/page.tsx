@@ -1,4 +1,6 @@
-import { PencilIcon } from 'lucide-react'
+import { PencilIcon, UserRoundIcon } from 'lucide-react'
+import config from '@payload-config'
+import { getPayload } from 'payload'
 import { hasLocale } from 'next-intl'
 import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -6,6 +8,7 @@ import { notFound } from 'next/navigation'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { CompanyReviewBanner } from '@/components/app/CompanyReviewBanner'
 import { CompanySteps } from '@/components/app/CompanySteps'
+import { OpenRow, StageBars, StageKey, stageName } from '@/components/app/dashboard/Parts'
 import { SiteShell } from '@/components/app/SiteShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +16,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { companyShellProps, STATUS_TONE } from '@/lib/companies/display'
+import { type CompanyNeed, loadCompanyHome } from '@/lib/companies/home'
 import { requireOwnCompany } from '@/lib/companies/session'
 
 // The company's status page, the start of the company area. While Konnected reviews the company
@@ -42,8 +46,29 @@ export default async function CompanyStatusPage({
       : undefined
   const logoUrl = typeof company.logo === 'object' ? company.logo?.url : null
 
-  const lede =
-    status === 'pending'
+  // An approved company's status page lists what needs it and every project with its stage
+  // ("Final pass" mockup, Status). Read as the company user with access control on.
+  const payload = await getPayload({ config })
+  const home = status === 'approved' ? await loadCompanyHome(payload, user) : null
+  const th = await getTranslations('CompanyHome')
+  const tw = await getTranslations('ProjectStatus')
+  const day = (value: string) => {
+    const [y, m, d] = value.split('-').map(Number)
+    return format.dateTime(new Date(Date.UTC(y!, m! - 1, d!, 12)), {
+      dateStyle: 'medium',
+      timeZone: 'Europe/Oslo',
+    })
+  }
+  const needHref = (need: CompanyNeed) =>
+    need.kind === 'agreement'
+      ? `/company/agreements/${need.id}`
+      : need.kind === 'accept'
+        ? `/company/projects/${need.projectId}`
+        : `/company/projects/${need.projectId}/edit`
+
+  const lede = home
+    ? th('lede', { count: home.needs.length })
+    : status === 'pending'
       ? company.infoRequestedAt
         ? t('ledeInfo')
         : t('ledePending')
@@ -58,6 +83,23 @@ export default async function CompanyStatusPage({
       title={t('title')}
       lede={lede}
     >
+      {home && home.needs.length > 0 && (
+        <Card className="gap-2">
+          <CardTitle>{th('needsTitle')}</CardTitle>
+          <ul className="grid">
+            {home.needs.map((need) => (
+              <OpenRow
+                key={`${need.kind}-${need.kind === 'agreement' ? need.id : need.projectId}`}
+                href={needHref(need)}
+                lead={<Badge tone="warn">{th('waiting.you')}</Badge>}
+                title={need.title}
+                sub={th(`need.${need.kind}`)}
+              />
+            ))}
+          </ul>
+        </Card>
+      )}
+
       <Card>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <CompanyAvatar name={company.name} logoUrl={logoUrl} />
@@ -116,6 +158,97 @@ export default async function CompanyStatusPage({
             </Button>
             <p className="text-[0.85rem] text-muted-foreground">{t('lockedNote')}</p>
           </Card>
+        </div>
+      ) : home ? (
+        <div className="grid items-start gap-6 sm:gap-[26px] md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+          <Card className="gap-3">
+            <CardTitle>{th('projectsTitle')}</CardTitle>
+            {home.projects.length ? (
+              <>
+                <ul className="grid">
+                  {await Promise.all(
+                    home.projects.map(async (p) => (
+                      <li
+                        key={p.id}
+                        className="grid gap-2.5 border-b border-line py-4 first:pt-1 last:border-b-0 last:pb-1"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+                          <h3 className="min-w-0 text-base font-semibold [overflow-wrap:anywhere]">
+                            <Link href={`/company/projects/${p.id}`} className="text-foreground">
+                              {p.title}
+                            </Link>
+                          </h3>
+                          {p.waitingOn ? (
+                            <Badge tone={p.waitingOn === 'you' ? 'warn' : 'info'}>
+                              {th(`waiting.${p.waitingOn}`)}
+                            </Badge>
+                          ) : (
+                            <Badge tone={p.status === 'rejected' ? 'bad' : 'mute'}>
+                              {tw(`pill.${p.status}`)}
+                            </Badge>
+                          )}
+                        </div>
+                        <StageBars status={p.status} />
+                        <div className="flex flex-wrap items-end justify-between gap-3">
+                          <p className="max-w-[62ch] min-w-0 flex-[1_1_260px] text-[0.88rem] text-muted-foreground">
+                            <b className="mr-1 font-semibold text-foreground">
+                              {await stageName(p.status)}
+                            </b>
+                            {th(`note.${p.note}`, { date: p.day ? day(p.day) : '' })}
+                          </p>
+                          {p.action && (
+                            <Button
+                              asChild
+                              size="sm"
+                              variant={p.waitingOn === 'you' ? 'main' : 'secondary'}
+                            >
+                              <Link
+                                href={
+                                  p.action === 'sign'
+                                    ? `/company/agreements/${p.agreementId}`
+                                    : p.action === 'edit'
+                                      ? `/company/projects/${p.id}/edit`
+                                      : `/company/projects/${p.id}`
+                                }
+                              >
+                                {th(`action.${p.action}`)}
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    )),
+                  )}
+                </ul>
+                <StageKey />
+              </>
+            ) : (
+              <p className="text-[0.9rem] text-muted-foreground">{th('projectsEmpty')}</p>
+            )}
+          </Card>
+          <aside className="grid min-w-0 gap-6 sm:gap-[26px]">
+            <Card className="gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle>{th('contactTitle')}</CardTitle>
+                <Badge tone="mute">{th('contactPill')}</Badge>
+              </div>
+              <p className="flex items-start gap-2.5 text-[0.9rem] text-muted-foreground">
+                <UserRoundIcon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+                <span>{th('contactBody')}</span>
+              </p>
+            </Card>
+            <Card className="gap-3">
+              <Button asChild className="w-full">
+                <Link href="/company/projects/new">{t('submitProject')}</Link>
+              </Button>
+              <Button asChild variant="normal" className="w-full">
+                <Link href="/company/projects">{t('myProjects')}</Link>
+              </Button>
+              <Button asChild variant="secondary" className="w-full">
+                <Link href="/company/profile">{t('view')}</Link>
+              </Button>
+            </Card>
+          </aside>
         </div>
       ) : (
         <div className="flex flex-wrap gap-3">

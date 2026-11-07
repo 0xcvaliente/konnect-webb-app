@@ -438,6 +438,82 @@
         "button": "Åpne prosjektet",
         "ignore": "Hvis dere ikke kjenner til dette prosjektet, skriv til Konnected-teamet."
       }
+    },
+    "problems": {
+      "received": {
+        "subject": "Konnected har fått meldingen din om «{title}»",
+        "heading": "Vi har fått meldingen din",
+        "body": "Konnected har fått meldingen din om «{title}» for {company}. Teamet svarer innen 2 virkedager og avtaler neste steg med deg.",
+        "next": "{company} får vite den nye planen, aldri notatet ditt. Jobb videre med det du kan til Konnected svarer.",
+        "button": "Åpne prosjektet ditt",
+        "ignore": "Hvis du ikke sendte dette, skriv til Konnected-teamet."
+      },
+      "dueDateStudent": {
+        "subject": "Ny leveringsdato for «{title}»",
+        "heading": "Leveringsdatoen er flyttet",
+        "body": "Konnected flyttet leveringsdatoen for «{title}» fra {from} til {date}.",
+        "next": "Last opp arbeidet i appen når det er klart. Konnected sjekker det før {company} ser det.",
+        "button": "Åpne prosjektet ditt",
+        "ignore": "Hvis du ikke jobber med dette prosjektet, skriv til Konnected-teamet.",
+        "bodySet": "Konnected satte leveringsdatoen for «{title}»: {date}."
+      },
+      "dueDateCompany": {
+        "subject": "Ny leveringsdato for «{title}»",
+        "heading": "Leveringsdatoen er flyttet",
+        "body": "Studenten trenger mer tid, og Konnected har avtalt en ny leveringsdato for «{title}»: {date} (var {from}).",
+        "next": "Konnected sjekker fortsatt arbeidet før det blir frigitt til dere.",
+        "button": "Åpne prosjektet",
+        "ignore": "Hvis dette ikke er deres prosjekt, skriv til Konnected-teamet.",
+        "bodySet": "Studenten trengte mer tid, og Konnected avtalte leveringsdatoen for «{title}»: {date}."
+      },
+      "endedStudent": {
+        "subject": "Arbeidet ditt med «{title}» er avsluttet",
+        "heading": "Konnected avsluttet matchen",
+        "body": "Konnected avsluttet arbeidet ditt med «{title}» for {company}, slik det ble avtalt med deg. Prosjektet ser etter en annen student.",
+        "next": "Filer du lastet opp blir hos Konnected; ingenting blir frigitt til {company}. Du kan søke på andre prosjekter.",
+        "button": "Se søknadene dine",
+        "ignore": "Hvis du har spørsmål, skriv til Konnected-teamet."
+      },
+      "closedStudent": {
+        "subject": "«{title}» er avsluttet",
+        "heading": "Prosjektet er avsluttet",
+        "body": "Konnected avsluttet «{title}» for {company} uten levering. Begrunnelsen fra Konnected:",
+        "next": "Filer du lastet opp blir hos Konnected; ingenting blir frigitt til {company}. Konnected gir deg beskjed om eventuell betaling.",
+        "button": "Se søknadene dine",
+        "ignore": "Hvis du har spørsmål, skriv til Konnected-teamet."
+      },
+      "rematchCompany": {
+        "subject": "«{title}»: Konnected finner en ny student",
+        "heading": "Konnected finner en ny student",
+        "body": "Studenten kunne ikke fortsette med «{title}», så Konnected avsluttet matchen og åpnet prosjektet for søknader igjen frem til {date}.",
+        "next": "Ingenting fra den første studenten ble frigitt til dere. Dere ser den nye studenten når Konnected har valgt en.",
+        "button": "Åpne prosjektet",
+        "ignore": "Hvis dette ikke er deres prosjekt, skriv til Konnected-teamet."
+      },
+      "closedNoDeliveryCompany": {
+        "subject": "«{title}» er avsluttet uten levering",
+        "heading": "Prosjektet er avsluttet",
+        "body": "Konnected avsluttet «{title}» uten levering. Begrunnelsen fra Konnected:",
+        "next": "Ingenting uferdig ble frigitt til dere. Konnected avgjør betaling fra sak til sak og gir beskjed om noe skal betales.",
+        "button": "Åpne prosjektet",
+        "ignore": "Hvis dette ikke er deres prosjekt, skriv til Konnected-teamet."
+      },
+      "closedNoMatchCompany": {
+        "subject": "«{title}» er avsluttet uten match",
+        "heading": "Prosjektet er avsluttet",
+        "body": "Konnected avsluttet «{title}» uten å velge en student. Begrunnelsen fra Konnected:",
+        "next": "Dere kan sende inn et nytt prosjekt når som helst.",
+        "button": "Åpne prosjektet",
+        "ignore": "Hvis dette ikke er deres prosjekt, skriv til Konnected-teamet."
+      },
+      "reopenedCompany": {
+        "subject": "Søknadene er åpnet igjen for «{title}»",
+        "heading": "Søknadene er åpne igjen",
+        "body": "Ingen student er valgt for «{title}» ennå, så Konnected åpnet prosjektet for søknader igjen frem til {date}.",
+        "next": "Konnected velger én student for hånd og gir dere beskjed.",
+        "button": "Åpne prosjektet",
+        "ignore": "Hvis dette ikke er deres prosjekt, skriv til Konnected-teamet."
+      }
     }
   },
   "DesignGuide": {
@@ -1154,12 +1230,30 @@
       "students": "Studentprofiler til gjennomgang",
       "matching": "Søknader å avgjøre",
       "deliverables": "Leveranser å sjekke",
-      "payments": "Betalinger som trenger teamet"
+      "payments": "Betalinger som trenger teamet",
+      "problems": "Rapporterte problemer",
+      "noMatch": "Prosjekter uten match"
     },
     "oldest": "Eldst: {name}, {waited}",
     "queueEmpty": "Ingenting venter her.",
     "decideBy": "Først: {name}, avgjør innen {date}",
-    "firstPayment": "Først: {name}, {status}"
+    "firstPayment": "Først: {name}, {status}",
+    "firstProblem": "Først: {name}, {kind}",
+    "firstNoMatch": "Først: {name}, søknadsfrist {date}",
+    "problemsTitle": "Rapporterte problemer",
+    "problemsEmpty": "Ingen studenter har rapportert et problem.",
+    "problemKind": {
+      "more_time": "{student} trenger mer tid",
+      "cannot_finish": "{student} kan ikke fullføre"
+    },
+    "kindShort": {
+      "more_time": "trenger mer tid",
+      "cannot_finish": "kan ikke fullføre"
+    },
+    "reportedOn": "{company}, rapportert {date}",
+    "noMatchTitle": "Prosjekter uten match",
+    "noMatchEmpty": "Alle prosjekter med utløpt søknadsfrist har en student.",
+    "noMatchSub": "{company}, frist {date}, {count, plural, =0 {ingen søknader venter} one {# søknad venter} other {# søknader venter}}"
   },
   "TeamAccounts": {
     "title": "Kontoer",
@@ -1605,7 +1699,32 @@
       "nothing": "Studenten har ikke valgt å dele noe med dere ennå. Konnected er fortsatt kontaktpunktet deres.",
       "notShared": "Ikke delt med dere: {items}. Dette blir hos Konnected.",
       "openCv": "Åpne CV"
-    }
+    },
+    "plan": {
+      "reopened_match": {
+        "title": "Konnected finner en ny student",
+        "body": "Studenten kunne ikke fortsette, så Konnected avsluttet matchen og åpnet prosjektet for søknader igjen frem til {date}. Ingenting fra den første studenten ble frigitt til dere."
+      },
+      "reopened": {
+        "title": "Søknadene er åpne igjen",
+        "body": "Ingen student ble valgt første gang. Konnected åpnet prosjektet for søknader igjen frem til {date}."
+      },
+      "no_delivery": {
+        "title": "Avsluttet uten levering",
+        "body": "Konnected avsluttet prosjektet {date}. Ingenting uferdig ble frigitt til dere. Begrunnelsen fra Konnected:"
+      },
+      "no_match": {
+        "title": "Avsluttet uten match",
+        "body": "Konnected avsluttet prosjektet {date} uten å velge en student. Begrunnelsen fra Konnected:"
+      },
+      "due_moved": {
+        "title": "Leveringsdatoen er flyttet til {date}",
+        "body": "Studenten trengte mer tid, og Konnected avtalte en ny dato (den var {from}). Konnected sjekker fortsatt arbeidet før det frigis til dere."
+      }
+    },
+    "dueTitle": "Leveringsdato",
+    "dueValue": "Leveres {date}",
+    "dueWas": "Flyttet fra {date}"
   },
   "TeamApprovals": {
     "title": "Godkjenninger",
@@ -1962,7 +2081,8 @@
     "shortlisted": "På kortlisten",
     "selected": "Valgt",
     "not_selected": "Ikke valgt",
-    "withdrawn": "Trukket"
+    "withdrawn": "Trukket",
+    "match_ended": "Match avsluttet"
   },
   "Apply": {
     "noteLabel": "Hvorfor passer du godt?",
@@ -2028,7 +2148,8 @@
     "withdrawn": "Trukket {date}",
     "emptyTitle": "Du har ikke søkt ennå",
     "emptyBody": "Søknadene du sender, vises her, med hva som skjer videre og når Konnected bestemmer seg.",
-    "emptyAction": "Se prosjekter"
+    "emptyAction": "Se prosjekter",
+    "ended": "Match avsluttet {date}"
   },
   "Application": {
     "back": "Tilbake til mine søknader",
@@ -2079,6 +2200,10 @@
       "withdrawn": {
         "title": "Trukket",
         "body": "Du trakk denne søknaden."
+      },
+      "ended": {
+        "title": "Match avsluttet",
+        "body": "Konnected avsluttet arbeidet ditt med dette prosjektet. Filer du lastet opp blir hos Konnected."
       }
     },
     "noteTitle": "Teksten din",
@@ -2118,7 +2243,9 @@
     "notFoundBody": "Lenken kan være gammel. Søknadene dine står under Mine søknader.",
     "seeAll": "Se mine søknader",
     "seesListLabel": "Delt med bedriften",
-    "seesNothingShared": "Du deler ingenting med {company} ennå. Velg hva du deler på profilen din."
+    "seesNothingShared": "Du deler ingenting med {company} ennå. Velg hva du deler på profilen din.",
+    "due": "Leveringsdato",
+    "seesEnded": "Ingenting lenger. Konnected sluttet å dele opplysningene dine med {company} da matchen ble avsluttet."
   },
   "TeamMatching": {
     "back": "Tilbake til i dag",
@@ -2286,7 +2413,8 @@
       "note_too_long": "Kommentaren er for lang. Hold den under 2 000 tegn.",
       "fix_used": "Den ene runden med rettelser er allerede brukt.",
       "fix_window": "De 7 dagene for å be om en rettelse er over, så arbeidet regnes som godtatt.",
-      "generic": "Noe gikk galt. Prøv igjen om litt."
+      "generic": "Noe gikk galt. Prøv igjen om litt.",
+      "ended": "Konnected har avsluttet denne matchen. Ingenting mer leveres eller frigis på den."
     }
   },
   "StudentWork": {
@@ -2604,5 +2732,257 @@
     },
     "detailsTitle": "Utbetaling",
     "detailsBody": "Det er ingenting å fylle ut her. Konnected sier fra hvis vi trenger noe mer for å betale deg."
+  },
+  "Problems": {
+    "errors": {
+      "forbidden": "Bare riktig konto kan gjøre dette. Logg inn på nytt.",
+      "not_found": "Vi fant ikke dette. Last inn siden på nytt.",
+      "not_open": "Dette går ikke lenger her: prosjektet har gått videre. Last inn siden på nytt.",
+      "already_open": "Konnected har allerede meldingen din og svarer snart.",
+      "note_required": "Skriv noen ord om hva som har skjedd.",
+      "note_too_long": "Teksten er for lang. Hold den under 2000 tegn.",
+      "kind_required": "Velg hva du trenger.",
+      "date_invalid": "Velg en dag i dag eller senere.",
+      "date_same": "Det er allerede leveringsdatoen. Velg en annen dag.",
+      "reason_required": "Skriv begrunnelsen. Bedriften og studenten får den på e-post.",
+      "reason_too_long": "Begrunnelsen er for lang. Hold den under 2000 tegn.",
+      "changed": "Noen andre svarte først. Last inn siden på nytt.",
+      "generic": "Noe gikk galt. Ingenting ble endret; prøv igjen."
+    }
+  },
+  "StudentProblem": {
+    "title": "Trenger du mer tid?",
+    "body": "Si fra til Konnected så tidlig som mulig. Konnected snakker med {company} og avtaler en ny leveringsdato, eller finner en annen student.",
+    "open": "Si fra til Konnected",
+    "legend": "Hva trenger du?",
+    "kind": {
+      "more_time": "Jeg trenger mer tid",
+      "cannot_finish": "Jeg kan ikke fullføre prosjektet"
+    },
+    "noteLabel": "Hva har skjedd?",
+    "noteHint": "Bare Konnected leser dette. {company} får vite den nye planen, ikke notatet ditt.",
+    "send": "Send til Konnected",
+    "cancel": "Avbryt",
+    "sent": "Sendt til Konnected.",
+    "openTitle": "Konnected har fått meldingen din",
+    "openBody": "Du skrev {date}: «{kind}». Konnected svarer innen 2 virkedager.",
+    "dueTitle": "Leveringsdato",
+    "due": "Leveres {date}",
+    "movedFrom": "Flyttet fra {date}",
+    "noDue": "Konnected avtaler leveringsdatoen med deg ved oppstart."
+  },
+  "StudentHome": {
+    "title": "Hei {name}",
+    "titleNoName": "Hei",
+    "titleFresh": "Velkommen, {name}",
+    "lede": "{count, plural, =0 {Ingenting venter på deg nå.} one {Én ting venter på deg.} other {# ting venter på deg.}} Alt annet ligger hos Konnected.",
+    "ledeFresh": "Du har svart på de første spørsmålene. Noen steg gjenstår før du søker.",
+    "needsTitle": "Venter på deg",
+    "needsEmpty": "Ingenting venter på deg nå.",
+    "toDo": "Å gjøre",
+    "need": {
+      "agreement": "Signer avtalen før arbeidet starter",
+      "profile_changes": "Konnected ba deg endre noe i profilen din",
+      "profile_changesTitle": "Profilen din",
+      "cv": "Konnected trenger hele bildet før du kan bli matchet.",
+      "cvTitle": "Last opp CV-en din",
+      "hand_in": "Last opp arbeidet når det er klart",
+      "more": "Konnected ba om mer før bedriften ser det",
+      "fix": "Bedriften ba om én runde med rettelser",
+      "due": "Leveres {date}"
+    },
+    "runningTitle": "Prosjektene dine",
+    "runningEmpty": "Ingen prosjekter pågår. Når Konnected velger deg, dukker arbeidet opp her.",
+    "due": "Leveres {date}",
+    "noDue": "Konnected avtaler leveringsdatoen med deg ved oppstart.",
+    "problemOpen": "Konnected har fått meldingen din",
+    "waitingTitle": "Venter på Konnected",
+    "waitingEmpty": "Ingen søknader venter på en avgjørelse.",
+    "decideBy": "{company}, Konnected avgjør innen {date}",
+    "waitingNoDate": "{company}, Konnected avgjør snart",
+    "profileTitle": "Profilen din",
+    "profileState": {
+      "waiting": "Til vurdering",
+      "changes_requested": "Endringer ønsket",
+      "reviewed": "Vurdert"
+    },
+    "stepQuestions": "De første spørsmålene",
+    "stepQuestionsDone": "Besvart ved registrering",
+    "stepCv": "CV",
+    "stepCvDone": "Lastet opp",
+    "stepCvMissing": "Ikke lastet opp ennå",
+    "stepReview": "Vurdert av Konnected",
+    "stepReviewWaiting": "Konnected vurderer hver profil før matching, innen 2 virkedager.",
+    "stepReviewChanges": "Konnected ba deg endre noe.",
+    "stepReviewDone": "Ferdig. Hold profilen din oppdatert.",
+    "openProfile": "Åpne profilen",
+    "uploadCv": "Last opp CV-en din",
+    "newTitle": "Nye prosjekter",
+    "newBody": "{count, plural, =0 {Ingen prosjekter tar imot søknader nå. Nye dukker opp her.} one {Ett prosjekt tar imot søknader.} other {# prosjekter tar imot søknader.}}",
+    "browse": "Se prosjekter",
+    "startTitle": "Kom i gang",
+    "start1Title": "Last opp CV-en din",
+    "start1Body": "Konnected trenger hele bildet før du kan bli matchet.",
+    "start2Title": "Sjekk hva en bedrift kan se",
+    "start2Body": "Ingenting deles før Konnected velger deg.",
+    "start2Action": "Åpne delingsvalg",
+    "start3Title": "Søk på et prosjekt",
+    "start3Body": "Profilen din fyller ut søknaden for deg.",
+    "appsTitle": "Søknadene dine",
+    "appsEmpty": "Ingenting ennå. Søknader du sender dukker opp her, med hva du skal gjøre videre."
+  },
+  "CompanyHome": {
+    "lede": "{count, plural, =0 {Ingenting venter på dere nå.} one {Én ting venter på dere.} other {# ting venter på dere.}} Alt annet ligger hos Konnected.",
+    "needsTitle": "Venter på dere",
+    "need": {
+      "agreement": "Signer avtalen så Konnected kan publisere prosjektet",
+      "changes": "Konnected ba om endringer",
+      "draft": "Gjør ferdig utkastet og send det til vurdering",
+      "accept": "Godta arbeidet, eller be om én runde med rettelser"
+    },
+    "projectsTitle": "Prosjektene deres",
+    "projectsEmpty": "Ingen prosjekter ennå. Send inn det første prosjektet, så vurderer Konnected det.",
+    "waiting": {
+      "you": "Venter på dere",
+      "konnected": "Venter på Konnected",
+      "student": "Studenten jobber"
+    },
+    "note": {
+      "draft": "Bare dere ser dette utkastet. Send det til vurdering når det er klart.",
+      "submitted": "Konnected vurderer hvert prosjekt før studentene ser det.",
+      "changes_requested": "Konnected ba om endringer. Rediger prosjektet og send det igjen.",
+      "rejected": "Konnected godkjente ikke dette prosjektet.",
+      "approved_sign": "Godkjent. Signer avtalen, så publiserer Konnected prosjektet.",
+      "approved": "Godkjent. Konnected publiserer det når avtalen er signert.",
+      "published": "Studenter kan søke frem til {date}. Konnected velger én student for hånd.",
+      "reopened_match": "Konnected finner en ny student. Søknadene er åpne frem til {date}.",
+      "reopened": "Søknadene er åpne igjen frem til {date}. Konnected velger én student for hånd.",
+      "matched": "Konnected har valgt en student og avtaler omfang og leveringsdato.",
+      "in_progress": "Studenten jobber. Konnected sjekker arbeidet før det frigis til dere.",
+      "in_progress_due": "Leveres {date}. Konnected sjekker arbeidet før det frigis til dere.",
+      "due_moved": "Leveringsdatoen er flyttet til {date}, avtalt av Konnected.",
+      "delivered_accept": "Konnected har frigitt arbeidet. Godta det, eller be om én runde med rettelser innen 7 dager.",
+      "delivered": "Levert. Konnected avslutter prosjektet når alt er på plass.",
+      "closed": "Ferdig.",
+      "closed_no_delivery": "Avsluttet uten levering.",
+      "closed_no_match": "Avsluttet uten match.",
+      "published_open": "Studenter kan søke. Konnected velger én student for hånd."
+    },
+    "action": {
+      "edit": "Rediger og send",
+      "sign": "Les og signer",
+      "accept": "Se arbeidet"
+    },
+    "open": "Åpne",
+    "stagesLabel": "De 7 stegene",
+    "contactTitle": "Kontaktpersonen deres hos Konnected",
+    "contactBody": "Konnected utnevner én person i teamet som kontaktperson for dere. Frem til da svarer hele teamet: svar på en hvilken som helst e-post fra Konnected.",
+    "contactPill": "Kommer snart"
+  },
+  "TeamProject": {
+    "back": "Tilbake til i dag",
+    "notFoundTitle": "Fant ikke prosjektet",
+    "notFoundBody": "Det kan være slettet, eller lenken er feil.",
+    "factsTitle": "Prosjekt",
+    "company": "Bedrift",
+    "closes": "Søknadsfrist",
+    "student": "Student",
+    "start": "Start",
+    "due": "Leveringsdato",
+    "applications": "Søknader",
+    "applicationsValue": "{total} totalt, {open} venter",
+    "notSet": "Ikke satt",
+    "noStudent": "Ikke valgt",
+    "openMatching": "Åpne i Matching",
+    "openDeliverables": "Åpne i Leveranser",
+    "openPanel": "Åpne i adminpanelet",
+    "problemTitle": "Problem rapportert",
+    "problemKind": {
+      "more_time": "{student} trenger mer tid",
+      "cannot_finish": "{student} kan ikke fullføre"
+    },
+    "reportedOn": "Rapportert {date}. Bare teamet ser notatet.",
+    "choose": "Velg hva som skjer videre. {company} og {student} får begge en e-post. {company} ser den nye planen, aldri studentens notat.",
+    "moveDate": "Flytt leveringsdatoen",
+    "newDue": "Ny leveringsdato",
+    "newDueHint": "Avtal den med studenten først. Bedriften får vite den nye datoen.",
+    "logNote": "Notat til loggen (valgfritt)",
+    "logNoteHint": "Bare teamet leser det.",
+    "saveDate": "Lagre ny leveringsdato",
+    "matchAgain": "Match på nytt",
+    "endConfirm": "Avslutte matchen med {student}?",
+    "end1": "{student} går ut av prosjektet og får en e-post.",
+    "end2": "Filer {student} lastet opp blir hos Konnected. Ingenting frigis til {company}.",
+    "end3": "Prosjektet tar imot søknader igjen, og du velger en ny student i Matching.",
+    "closesLabel": "Søknadsfrist",
+    "endButton": "Avslutt matchen og åpne igjen",
+    "closeNoDelivery": "Avslutt uten levering",
+    "reason": "Begrunnelse",
+    "reasonBothHint": "Begge får dette på e-post. Det blir liggende i aktivitetsloggen.",
+    "caseByCase": "Konnected avgjør betaling fra sak til sak. Skriv utfallet i begrunnelsen.",
+    "closeButton": "Avslutt prosjektet",
+    "handled": "Merk som håndtert",
+    "handledHint": "Du har snakket med studenten, og ingenting endres. Notatet blir værende på rapporten.",
+    "handledButton": "Merk som håndtert",
+    "cancel": "Avbryt",
+    "dueTitle": "Leveringsdato",
+    "dueEmpty": "Ingen leveringsdato ennå. Den avtales ved oppstart.",
+    "dueMoved": "Flyttet fra {from} til {to}",
+    "dueIntro": "Når du flytter leveringsdatoen, får studenten og bedriften beskjed. Den gamle datoen blir lagret.",
+    "noMatchTitle": "Ingen student valgt",
+    "noMatchBody": "Søknadsfristen gikk ut {date}. {count, plural, =0 {Ingen søknader venter.} one {Én søknad venter i Matching.} other {# søknader venter i Matching.}} Velg en student der, eller velg hva som skjer videre.",
+    "reopen": "Åpne søknadene igjen",
+    "newClosing": "Ny søknadsfrist",
+    "reopenButton": "Åpne igjen",
+    "askChanges": "Be bedriften endre det",
+    "changesLabel": "Hva bør bedriften endre?",
+    "changesHint": "Bedriften får dette på e-post og ser det på prosjektsiden sin.",
+    "sendChanges": "Send til bedriften",
+    "closeNoMatch": "Avslutt uten match",
+    "reasonCompanyHint": "Bedriften får dette på e-post. Åpne søknader blir ikke valgt, og hver student får en vennlig beskjed.",
+    "endedTitle": "Tidligere studenter",
+    "endedRow": "{student}, match avsluttet {date}",
+    "closedTitle": "Avsluttet",
+    "outcome": {
+      "delivered": "Avsluttet {date}.",
+      "no_delivery": "Avsluttet uten levering {date}.",
+      "no_match": "Avsluttet uten match {date}."
+    },
+    "reasonTitle": "Begrunnelse",
+    "reopened": {
+      "match_ended": "Søknadene ble åpnet igjen {date}, etter at matchen ble avsluttet.",
+      "no_match": "Søknadene ble åpnet igjen {date}, etter at ingen ble valgt."
+    },
+    "reportsTitle": "Problemrapporter",
+    "reportsEmpty": "Ingen problemer rapportert.",
+    "reportRow": "{kind}, {date}",
+    "resolution": {
+      "open": "Venter på teamet",
+      "date_moved": "Leveringsdato flyttet",
+      "match_ended": "Match avsluttet",
+      "closed": "Prosjekt avsluttet",
+      "no_change": "Håndtert, ingen endring"
+    },
+    "kindWord": {
+      "more_time": "Mer tid",
+      "cannot_finish": "Kan ikke fullføre"
+    },
+    "activity": {
+      "status": "{from} til {to}",
+      "created": "Opprettet",
+      "deadline": "Søknadsfrist {date}",
+      "dueSet": "Leveringsdato satt til {date}",
+      "dueMoved": "Leveringsdato flyttet fra {from} til {to}",
+      "ended": "Match avsluttet",
+      "other": "Endret"
+    },
+    "toast": {
+      "dateMoved": "Leveringsdatoen er flyttet. Begge får en e-post.",
+      "ended": "Matchen er avsluttet. Prosjektet tar imot søknader igjen.",
+      "closed": "Prosjektet er avsluttet. Begge får en e-post.",
+      "reopened": "Søknadene er åpnet igjen. Bedriften får en e-post.",
+      "changesSent": "Sendt til {company}.",
+      "handled": "Rapporten er merket som håndtert."
+    }
   }
 }

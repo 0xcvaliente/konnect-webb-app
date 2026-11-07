@@ -16,6 +16,7 @@ export const APPLICATION_STATUSES = [
   'selected',
   'not_selected',
   'withdrawn',
+  'match_ended',
 ] as const satisfies readonly ApplicationStatus[]
 
 /** The student's short note on why they fit, in characters. */
@@ -47,6 +48,7 @@ export const APPLICATION_STATUS_TONE: Record<
   selected: 'ok',
   not_selected: 'mute',
   withdrawn: 'mute',
+  match_ended: 'warn',
 }
 
 /**
@@ -101,6 +103,7 @@ export const STATUS_ORDER: Record<ApplicationStatus, number> = {
   selected: 0,
   shortlisted: 1,
   applied: 2,
-  not_selected: 3,
-  withdrawn: 4,
+  match_ended: 3,
+  not_selected: 4,
+  withdrawn: 5,
 }

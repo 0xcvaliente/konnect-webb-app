@@ -86,6 +86,8 @@ export default async function HomePage({
   if (user.role === 'student' && !(await findOwnProfile(payload, user as SessionUser))) {
     return redirect({ href: '/student/welcome', locale })
   }
+  // After that a student's home is the student home page.
+  if (user.role === 'student') return redirect({ href: '/student', locale })
   // A company registers its company first, once; after that its home is the status page.
   if (user.role === 'company') {
     return redirect({ href: companyIdOf(user) ? '/company' : '/company/welcome', locale })

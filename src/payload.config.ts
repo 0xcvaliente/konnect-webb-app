@@ -20,6 +20,7 @@ import { Deliverables } from './collections/Deliverables'
 import { MagicLinks } from './collections/MagicLinks'
 import { Matches } from './collections/Matches'
 import { Payments } from './collections/Payments'
+import { ProblemReports } from './collections/ProblemReports'
 import { Projects } from './collections/Projects'
 import { Signatures } from './collections/Signatures'
 import { StudentProfiles } from './collections/StudentProfiles'
@@ -58,6 +59,7 @@ export default buildConfig({
     Signatures,
     AgreementPdfs,
     Payments,
+    ProblemReports,
     ActivityLogs,
     MagicLinks,
   ],

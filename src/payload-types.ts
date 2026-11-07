@@ -83,6 +83,7 @@ export interface Config {
     signatures: Signature;
     'agreement-pdfs': AgreementPdf;
     payments: Payment;
+    'problem-reports': ProblemReport;
     'activity-logs': ActivityLog;
     'magic-links': MagicLink;
     'payload-kv': PayloadKv;
@@ -109,6 +110,7 @@ export interface Config {
     signatures: SignaturesSelect<false> | SignaturesSelect<true>;
     'agreement-pdfs': AgreementPdfsSelect<false> | AgreementPdfsSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
+    'problem-reports': ProblemReportsSelect<false> | ProblemReportsSelect<true>;
     'activity-logs': ActivityLogsSelect<false> | ActivityLogsSelect<true>;
     'magic-links': MagicLinksSelect<false> | MagicLinksSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -343,6 +345,11 @@ export interface Project {
   noteToCompany?: string | null;
   noteToCompanyAt?: string | null;
   submittedAt?: string | null;
+  closeReason?: string | null;
+  closeOutcome?: ('delivered' | 'no_delivery' | 'no_match') | null;
+  closedAt?: string | null;
+  reopenedAt?: string | null;
+  reopenReason?: ('match_ended' | 'no_match') | null;
   workload?: string | null;
   duration?: string | null;
   status:
@@ -385,7 +392,7 @@ export interface Application {
   id: number;
   student: number | StudentProfile;
   project: number | Project;
-  status: 'applied' | 'shortlisted' | 'selected' | 'not_selected' | 'withdrawn';
+  status: 'applied' | 'shortlisted' | 'selected' | 'not_selected' | 'withdrawn' | 'match_ended';
   note?: string | null;
   profileWaiting?: boolean | null;
   projectTitle?: string | null;
@@ -394,6 +401,7 @@ export interface Application {
   shortlistedAt?: string | null;
   decidedAt?: string | null;
   withdrawnAt?: string | null;
+  endedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -409,6 +417,15 @@ export interface Match {
   agreementNotes?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  dueDateHistory?:
+    | {
+        from?: string | null;
+        to?: string | null;
+        changedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  endedAt?: string | null;
   sharedInfo?: {
     name?: string | null;
     school?: string | null;
@@ -597,6 +614,23 @@ export interface Payment {
   invoicePaidAt?: string | null;
   studentPaidAt?: string | null;
   notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "problem-reports".
+ */
+export interface ProblemReport {
+  id: number;
+  match: number | Match;
+  project?: (number | null) | Project;
+  student?: (number | null) | StudentProfile;
+  kind: 'more_time' | 'cannot_finish';
+  note: string;
+  status: 'open' | 'resolved';
+  resolution?: ('date_moved' | 'match_ended' | 'closed' | 'no_change') | null;
+  resolvedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -829,6 +863,10 @@ export interface PayloadLockedDocument {
         value: number | Payment;
       } | null)
     | ({
+        relationTo: 'problem-reports';
+        value: number | ProblemReport;
+      } | null)
+    | ({
         relationTo: 'activity-logs';
         value: number | ActivityLog;
       } | null)
@@ -1010,6 +1048,11 @@ export interface ProjectsSelect<T extends boolean = true> {
   noteToCompany?: T;
   noteToCompanyAt?: T;
   submittedAt?: T;
+  closeReason?: T;
+  closeOutcome?: T;
+  closedAt?: T;
+  reopenedAt?: T;
+  reopenReason?: T;
   workload?: T;
   duration?: T;
   status?: T;
@@ -1032,6 +1075,7 @@ export interface ApplicationsSelect<T extends boolean = true> {
   shortlistedAt?: T;
   decidedAt?: T;
   withdrawnAt?: T;
+  endedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1046,6 +1090,15 @@ export interface MatchesSelect<T extends boolean = true> {
   agreementNotes?: T;
   startDate?: T;
   endDate?: T;
+  dueDateHistory?:
+    | T
+    | {
+        from?: T;
+        to?: T;
+        changedAt?: T;
+        id?: T;
+      };
+  endedAt?: T;
   sharedInfo?:
     | T
     | {
@@ -1264,6 +1317,22 @@ export interface PaymentsSelect<T extends boolean = true> {
   invoicePaidAt?: T;
   studentPaidAt?: T;
   notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "problem-reports_select".
+ */
+export interface ProblemReportsSelect<T extends boolean = true> {
+  match?: T;
+  project?: T;
+  student?: T;
+  kind?: T;
+  note?: T;
+  status?: T;
+  resolution?: T;
+  resolvedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

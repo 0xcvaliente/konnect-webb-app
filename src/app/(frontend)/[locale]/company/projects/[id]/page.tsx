@@ -1,5 +1,11 @@
 import config from '@payload-config'
-import { CircleCheckIcon, ClockIcon, MessageSquareTextIcon } from 'lucide-react'
+import {
+  CalendarClockIcon,
+  CircleCheckIcon,
+  ClockIcon,
+  MessageSquareTextIcon,
+  RotateCcwIcon,
+} from 'lucide-react'
 import { hasLocale } from 'next-intl'
 import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -24,6 +30,7 @@ import { requireOwnCompany } from '@/lib/companies/session'
 import { isEditable, PROJECT_STATUS_TONE } from '@/lib/projects/display'
 import { findOwnProject, findSelectedStudent, projectHistory } from '@/lib/projects/project'
 import { projectToView } from '@/lib/projects/view'
+import { storedToDay } from '@/lib/projects/fields'
 
 // The company's project page ("Final pass" mockup, company project page): where the project
 // stands, the selected student (only what that student agreed to share, from the match's shared
@@ -59,15 +66,35 @@ export default async function CompanyProjectPage({
   const payload = await getPayload({ config })
   const project = await findOwnProject(payload, user, Number(id), 1)
   if (!project) notFound()
-  const working = ['in_progress', 'delivered', 'closed'].includes(project.status)
-  const [history, student, work] = await Promise.all([
+  // A project closed without delivery or without a match has no work to show.
+  const working =
+    ['in_progress', 'delivered', 'closed'].includes(project.status) &&
+    project.closeOutcome !== 'no_delivery' &&
+    project.closeOutcome !== 'no_match'
+  const [history, student, work, current] = await Promise.all([
     projectHistory(payload, project.id),
     // Only the selected student's shared copy, once Konnected has selected one; never any other
     // applicant (a company cannot read applications at all).
     findSelectedStudent(payload, user, project.id),
     // Only the work Konnected released (the collection returns nothing else to a company).
     working ? loadCompanyWork(payload, user, project.id, project.status) : null,
+    // The current match's dates (the company reads only the match that runs now): the due date
+    // and the earlier ones Konnected moved it from. Never why.
+    payload.find({
+      collection: 'matches',
+      where: { project: { equals: project.id } },
+      limit: 1,
+      depth: 0,
+      select: { endDate: true, dueDateHistory: true },
+      user,
+      overrideAccess: false,
+    }),
   ])
+  const match = current.docs[0]
+  const dueDay = storedToDay(match?.endDate)
+  const movedFrom = (match?.dueDateHistory ?? [])
+    .map((h) => storedToDay(h.from))
+    .filter((d): d is string => Boolean(d))
   const { sent } = await searchParams
 
   const t = await getTranslations('CompanyProject')
@@ -90,6 +117,52 @@ export default async function CompanyProjectPage({
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     })
+  const longDay = (value: string) => {
+    const [y, m, d] = value.split('-').map(Number)
+    return format.dateTime(new Date(Date.UTC(y!, m! - 1, d!, 12)), {
+      dateStyle: 'long',
+      timeZone: 'Europe/Oslo',
+    })
+  }
+  // The new plan after a problem path: Konnected finds a new student, reopened applications,
+  // closed the project without delivery or without a match, or moved the due date. Never the
+  // student's own note.
+  const closesDay = storedToDay(project.deadline)
+  const plan: {
+    key: string
+    values: Record<string, string>
+    icon?: typeof RotateCcwIcon
+    reason: string | null
+  } | null =
+    status === 'published' && project.reopenedAt && closesDay
+      ? {
+          key: project.reopenReason === 'match_ended' ? 'reopened_match' : 'reopened',
+          values: { date: longDay(closesDay) },
+          icon: RotateCcwIcon,
+          reason: null,
+        }
+      : status === 'closed' &&
+          project.closedAt &&
+          (project.closeOutcome === 'no_delivery' || project.closeOutcome === 'no_match')
+        ? {
+            key: project.closeOutcome,
+            values: {
+              date: format.dateTime(new Date(project.closedAt), {
+                dateStyle: 'long',
+                timeZone: 'Europe/Oslo',
+              }),
+            },
+            icon: undefined,
+            reason: project.closeReason ?? null,
+          }
+        : (status === 'matched' || status === 'in_progress') && dueDay && movedFrom.length
+          ? {
+              key: 'due_moved',
+              values: { date: longDay(dueDay), from: longDay(movedFrom[movedFrom.length - 1]!) },
+              icon: CalendarClockIcon,
+              reason: null,
+            }
+          : null
   const noteDate = project.noteToCompanyAt
     ? format.dateTime(new Date(project.noteToCompanyAt), {
         dateStyle: 'medium',
@@ -122,7 +195,7 @@ export default async function CompanyProjectPage({
               <p className="font-semibold">{t('sentTitle')}</p>
               <p className="text-[0.88rem] text-muted-foreground">{t('sentBody')}</p>
             </Banner>
-          ) : (
+          ) : plan ? null : (
             <Banner
               tone={BANNER_TONE[status]}
               icon={status === 'submitted' || status === 'in_progress' ? ClockIcon : undefined}
@@ -135,6 +208,20 @@ export default async function CompanyProjectPage({
                     ? t('banner.deliveredAccepted')
                     : t(`banner.${status}.body`)}
               </p>
+            </Banner>
+          )}
+
+          {plan && (
+            <Banner tone="warn" icon={plan.icon}>
+              <p className="font-semibold">{t(`plan.${plan.key}.title`, plan.values)}</p>
+              <p className="text-[0.88rem] text-muted-foreground">
+                {t(`plan.${plan.key}.body`, plan.values)}
+              </p>
+              {plan.reason && (
+                <p className="mt-1 text-[0.88rem] [overflow-wrap:anywhere] whitespace-pre-line">
+                  {plan.reason}
+                </p>
+              )}
             </Banner>
           )}
 
@@ -187,6 +274,20 @@ export default async function CompanyProjectPage({
             </CardHeader>
             <ProjectTrack status={status} />
           </Card>
+          {dueDay &&
+            (status === 'matched' || status === 'in_progress' || status === 'delivered') && (
+              <Card className="gap-2">
+                <CardHeader>
+                  <CardTitle>{t('dueTitle')}</CardTitle>
+                </CardHeader>
+                <p className="font-medium">{t('dueValue', { date: longDay(dueDay) })}</p>
+                {movedFrom.length > 0 && (
+                  <p className="text-[0.85rem] text-muted-foreground">
+                    {t('dueWas', { date: longDay(movedFrom[movedFrom.length - 1]!) })}
+                  </p>
+                )}
+              </Card>
+            )}
           {price && (
             <Card>
               <CardHeader>

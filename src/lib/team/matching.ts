@@ -15,6 +15,7 @@ import {
   type SharedItem,
   sharedItemsOf,
 } from '@/lib/matching/fields'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import type { ApplicationStatus } from '@/lib/transitions'
 import { promiseState, type PromiseState } from '@/lib/workingDays'
@@ -263,7 +264,7 @@ export async function loadMatchingProject(
     ? ((
         await payload.find({
           collection: 'matches',
-          where: { student: { in: profileIds } },
+          where: { and: [{ student: { in: profileIds } }, ACTIVE_MATCH] },
           depth: 0,
           pagination: false,
           select: { student: true, project: true, createdAt: true },
@@ -344,7 +345,7 @@ export async function loadMatchingProject(
 
   const own = await payload.find({
     collection: 'matches',
-    where: { project: { equals: project.id } },
+    where: { and: [{ project: { equals: project.id } }, ACTIVE_MATCH] },
     limit: 1,
     depth: 0,
     ...asActor(actor),
@@ -402,7 +403,7 @@ async function refused(
   if (projectId) {
     const matched = await payload.count({
       collection: 'matches',
-      where: { project: { equals: projectId } },
+      where: { and: [{ project: { equals: projectId } }, ACTIVE_MATCH] },
       ...asActor(actor),
     })
     if (matched.totalDocs > 0) return fail('already_matched')

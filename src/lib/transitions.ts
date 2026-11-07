@@ -6,6 +6,7 @@ import { assertStudentAgreementSigned } from '@/lib/agreements/gates'
 import type { DeliverableStatus } from '@/lib/deliverables/fields'
 import { assertWorkSettled } from '@/lib/deliverables/gates'
 import { assertProjectHasMatch } from '@/lib/matching/rules'
+import { assertNoActiveMatch, assertProblemPathAllowed } from '@/lib/problems/rules'
 
 /** from -> to -> roles allowed to make that move. Anything not listed is rejected. */
 export type TransitionMap<S extends string> = Partial<Record<S, Partial<Record<S, Role[]>>>>
@@ -31,12 +32,19 @@ export const PROJECT_TRANSITIONS: TransitionMap<ProjectStatus> = {
   },
   changes_requested: { submitted: ['company', 'admin'] },
   approved: { published: ['admin'] },
-  published: { matched: ['admin'] },
-  matched: { in_progress: ['admin'] },
-  // The student delivering is wired up by the deliverables card. Admin only until then.
-  in_progress: { delivered: ['admin'] },
+  // No good match (Kanban card "Projects without a match"): Konnected asks the company for changes
+  // or closes the project without a match. Reopening applications is a new closing day, not a move.
+  published: { matched: ['admin'], changes_requested: ['admin'], closed: ['admin'] },
+  // A problem with the selected student (Kanban card "Problem reports"): Konnected ends the match
+  // and reopens applications (`published`), or closes the project without delivery. Either ends
+  // the match in the same change (Projects hook, lib/problems/paths.ts).
+  matched: { in_progress: ['admin'], published: ['admin'], closed: ['admin'] },
+  in_progress: { delivered: ['admin'], published: ['admin'], closed: ['admin'] },
   delivered: { closed: ['admin'] },
 }
+
+/** Project moves that end the selected student's match. */
+export const ENDS_MATCH: readonly ProjectStatus[] = ['matched', 'in_progress']
 
 /**
  * Project moves that also need something else. `published` to `matched` needs the match, which
@@ -60,6 +68,13 @@ export async function assertProjectGates(
   if (from === 'published' && to === 'matched') await assertProjectHasMatch(req, project?.id)
   if (from === 'matched' && to === 'in_progress') await assertStudentAgreementSigned(req, project)
   if (from === 'delivered' && to === 'closed') await assertWorkSettled(req, project?.id)
+  if (
+    (from === 'published' || ENDS_MATCH.includes(from)) &&
+    (to === 'published' || to === 'closed')
+  )
+    assertProblemPathAllowed(from, to, project)
+  if (from === 'published' && to === 'changes_requested')
+    await assertNoActiveMatch(req, project?.id)
 }
 
 export type CompanyStatus = 'pending' | 'approved' | 'rejected'
@@ -88,7 +103,7 @@ export const PROFILE_REVIEW_TRANSITIONS: TransitionMap<ProfileReviewStatus> = {
 }
 
 export type ApplicationStatus =
-  'applied' | 'shortlisted' | 'selected' | 'not_selected' | 'withdrawn'
+  'applied' | 'shortlisted' | 'selected' | 'not_selected' | 'withdrawn' | 'match_ended'
 
 /**
  * Konnected may select straight from `applied` (the mockup's Select button is on every reviewed
@@ -103,6 +118,19 @@ export const APPLICATION_TRANSITIONS: TransitionMap<ApplicationStatus> = {
     withdrawn: ['student'],
   },
   shortlisted: { selected: ['admin'], not_selected: ['admin'], withdrawn: ['student'] },
+  // Konnected ended the match (the student needed to stop, or the team closed the project). Made
+  // by the Projects hook when the match ends; the Applications hook checks the match is ended.
+  selected: { match_ended: ['admin'] },
+}
+
+/**
+ * A student's problem report ("I need more time", "I can't finish"). Only the team settles it:
+ * by moving the due date, ending the match, closing the project, or marking it handled.
+ */
+export type ProblemReportStatus = 'open' | 'resolved'
+
+export const PROBLEM_REPORT_TRANSITIONS: TransitionMap<ProblemReportStatus> = {
+  open: { resolved: ['admin'] },
 }
 
 export type { DeliverableStatus }

@@ -1,0 +1,326 @@
+import { ClockIcon, FileSearchIcon, RotateCcwIcon, TriangleAlertIcon } from 'lucide-react'
+import { hasLocale } from 'next-intl'
+import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server'
+import { notFound } from 'next/navigation'
+import type { ReactNode } from 'react'
+
+import { ActivityCard } from '@/app/(frontend)/[locale]/team/approvals/QueueParts'
+import { Banner } from '@/components/app/Banner'
+import { TeamShell } from '@/components/app/TeamShell'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardTitle } from '@/components/ui/card'
+import { Link } from '@/i18n/navigation'
+import { routing } from '@/i18n/routing'
+import { accountMenuUser } from '@/lib/account'
+import { PROJECT_STATUS_TONE } from '@/lib/projects/display'
+import { addDays } from '@/lib/workingDays'
+import { todayInOslo } from '@/lib/projects/fields'
+import { activityOf, type ActivityRow } from '@/lib/team/approvals'
+import { teamCounts } from '@/lib/team/counts'
+import { loadTeamProject } from '@/lib/team/projects'
+import { requireTeam } from '@/lib/team/session'
+
+import { ProblemPaths } from './ProblemPaths'
+
+// The team's project page ("Final pass" mockup, team project page, states "Problem reported" and
+// "No student selected"): where the project stands, the student's report with the three ways on
+// (move the due date, match again, close without delivery), or the choices for a project nobody
+// was selected for (reopen, ask the company for changes, close). Read as the team member with
+// access control on; the Server Actions and the collection hooks check everything again.
+export const dynamic = 'force-dynamic'
+
+type Row = ActivityRow & { source: 'project' | 'match' }
+
+export default async function TeamProjectPage({
+  params,
+}: {
+  params: Promise<{ locale: string; id: string }>
+}) {
+  const { locale, id } = await params
+  if (!hasLocale(routing.locales, locale)) notFound()
+  setRequestLocale(locale)
+  const { payload, user } = await requireTeam(locale)
+  const t = await getTranslations('TeamProject')
+  const ts = await getTranslations('ProjectStatus')
+  const tRole = await getTranslations('Roles')
+  const format = await getFormatter()
+  const counts = await teamCounts(payload, user)
+  const project = /^\d{1,10}$/.test(id) ? await loadTeamProject(payload, user, Number(id)) : null
+  const crumb = { href: '/team', label: t('back') }
+  const account = accountMenuUser(user, tRole('admin'))
+
+  if (!project) {
+    return (
+      <TeamShell
+        current="today"
+        counts={counts}
+        user={account}
+        crumb={crumb}
+        title={t('notFoundTitle')}
+      >
+        <Card className="max-w-[880px] items-center py-10 text-center">
+          <FileSearchIcon aria-hidden="true" className="size-8 text-primary" />
+          <p className="text-muted-foreground">{t('notFoundBody')}</p>
+        </Card>
+      </TeamShell>
+    )
+  }
+
+  const day = (value: string | null) => {
+    if (!value) return t('notSet')
+    const [y, m, d] = value.slice(0, 10).split('-').map(Number)
+    return format.dateTime(new Date(Date.UTC(y!, m! - 1, d!, 12)), {
+      dateStyle: 'medium',
+      timeZone: 'Europe/Oslo',
+    })
+  }
+  const at = (iso: string) =>
+    format.dateTime(new Date(iso), { dateStyle: 'medium', timeZone: 'Europe/Oslo' })
+  const today = todayInOslo()
+  const match = project.match
+  const report = project.openReport
+  const running =
+    Boolean(match) && (project.status === 'matched' || project.status === 'in_progress')
+  const student = match?.studentName || report?.studentName || ''
+
+  // The activity of the project and of its matches (the due date moves and the match's end).
+  const [matchRows] = await Promise.all([
+    Promise.all(
+      [match, ...project.endedMatches]
+        .filter(Boolean)
+        .map((m) => activityOf(payload, user, 'matches', m!.id)),
+    ),
+  ])
+  const rows: Row[] = [
+    ...project.activity.map((r) => ({ ...r, source: 'project' as const })),
+    ...matchRows.flat().map((r) => ({ ...r, source: 'match' as const })),
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const pill = (status: string | null | undefined) =>
+    status && ts.has(`pill.${status}`) ? ts(`pill.${status}` as 'pill.draft') : (status ?? '')
+  const describe = (row: ActivityRow) => {
+    const r = row as Row
+    if (r.source === 'match') {
+      if (r.field === 'endedAt') return t('activity.ended')
+      if (r.field === 'endDate')
+        return r.fromStatus
+          ? t('activity.dueMoved', { from: day(r.fromStatus), to: day(r.toStatus ?? null) })
+          : t('activity.dueSet', { date: day(r.toStatus ?? null) })
+      if (r.action === 'create') return pill('matched')
+      return t('activity.other')
+    }
+    if (r.action === 'create') return t('activity.created')
+    if (r.action === 'status_change')
+      return t('activity.status', { from: pill(r.fromStatus), to: pill(r.toStatus) })
+    if (r.field === 'deadline') return t('activity.deadline', { date: day(r.toStatus ?? null) })
+    return t('activity.other')
+  }
+
+  const facts: [string, ReactNode][] = [
+    [t('company'), project.companyName],
+    [t('closes'), day(project.closesOn)],
+    [t('student'), match ? match.studentName : t('noStudent')],
+  ]
+  if (match) {
+    facts.push([t('start'), day(match.startDay)], [t('due'), day(match.dueDay)])
+  }
+  facts.push([
+    t('applications'),
+    t('applicationsValue', { total: project.applications.total, open: project.applications.open }),
+  ])
+
+  return (
+    <TeamShell
+      current="today"
+      counts={counts}
+      user={account}
+      crumb={crumb}
+      title={<span className="[overflow-wrap:anywhere]">{project.title}</span>}
+      meta={
+        <span className="flex flex-wrap items-center gap-2">
+          <Badge tone={PROJECT_STATUS_TONE[project.status]}>{pill(project.status)}</Badge>
+          <span className="text-muted-foreground">{project.companyName}</span>
+        </span>
+      }
+    >
+      <div className="grid max-w-[1100px] items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <div className="grid min-w-0 gap-6">
+          {project.status === 'closed' && project.closedAt && (
+            <Card className="gap-3">
+              <CardTitle>{t('closedTitle')}</CardTitle>
+              <p>
+                {t(`outcome.${project.closeOutcome ?? 'delivered'}`, {
+                  date: at(project.closedAt),
+                })}
+              </p>
+              {project.closeReason && (
+                <div className="grid gap-1">
+                  <h3 className="text-[0.9rem] font-semibold">{t('reasonTitle')}</h3>
+                  <p className="[overflow-wrap:anywhere] whitespace-pre-line text-muted-foreground">
+                    {project.closeReason}
+                  </p>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {project.status === 'published' && project.reopenedAt && project.reopenReason && (
+            <Banner icon={RotateCcwIcon}>
+              <p>{t(`reopened.${project.reopenReason}`, { date: at(project.reopenedAt) })}</p>
+            </Banner>
+          )}
+
+          {running && report && (
+            <Card className="gap-4">
+              <CardTitle>{t('problemTitle')}</CardTitle>
+              <Banner tone="warn" icon={TriangleAlertIcon}>
+                <p className="font-semibold">
+                  {t(`problemKind.${report.kind}`, { student: report.studentName })}
+                </p>
+                <p className="text-[0.88rem] text-muted-foreground">
+                  {t('reportedOn', { date: at(report.createdAt) })}
+                </p>
+              </Banner>
+              <blockquote className="border-l-[3px] border-line py-0.5 pl-3.5 [overflow-wrap:anywhere] whitespace-pre-line">
+                {report.note}
+              </blockquote>
+              <p className="text-[0.88rem] text-muted-foreground">
+                {t('choose', { company: project.companyName, student })}
+              </p>
+              <ProblemPaths
+                mode="running"
+                projectId={project.id}
+                reportId={report.id}
+                student={student}
+                company={project.companyName}
+                today={today}
+                dueDay={
+                  match?.dueDay && match.dueDay >= today
+                    ? addDays(match.dueDay, 7)
+                    : addDays(today, 7)
+                }
+                closeDay={addDays(today, 7)}
+              />
+            </Card>
+          )}
+
+          {running && !report && (
+            <Card className="gap-4">
+              <CardTitle>{t('dueTitle')}</CardTitle>
+              <p className="inline-flex items-center gap-2">
+                <ClockIcon aria-hidden="true" className="size-4 text-primary" />
+                {match?.dueDay ? day(match.dueDay) : t('dueEmpty')}
+              </p>
+              <p className="text-[0.88rem] text-muted-foreground">{t('dueIntro')}</p>
+              <ProblemPaths
+                mode="running"
+                projectId={project.id}
+                student={student}
+                company={project.companyName}
+                today={today}
+                dueDay={
+                  match?.dueDay && match.dueDay >= today
+                    ? addDays(match.dueDay, 7)
+                    : addDays(today, 7)
+                }
+                closeDay={addDays(today, 7)}
+              />
+            </Card>
+          )}
+
+          {project.noMatch && (
+            <Card className="gap-4">
+              <CardTitle>{t('noMatchTitle')}</CardTitle>
+              <p>
+                {t('noMatchBody', {
+                  date: day(project.closesOn),
+                  count: project.applications.open,
+                })}
+              </p>
+              <ProblemPaths
+                mode="noMatch"
+                projectId={project.id}
+                student=""
+                company={project.companyName}
+                today={today}
+                dueDay={addDays(today, 7)}
+                closeDay={addDays(today, 7)}
+              />
+            </Card>
+          )}
+
+          <ActivityCard rows={rows} describe={describe} />
+        </div>
+
+        <aside className="grid min-w-0 gap-6">
+          <Card className="gap-4">
+            <CardTitle>{t('factsTitle')}</CardTitle>
+            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-[18px] gap-y-2.5">
+              {facts.map(([label, value]) => (
+                <div key={label} className="contents">
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="font-medium [overflow-wrap:anywhere]">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            {match && match.history.length > 0 && (
+              <ul className="grid gap-1 text-[0.85rem] text-muted-foreground">
+                {match.history.map((h) => (
+                  <li key={h.changedAt}>{t('dueMoved', { from: day(h.from), to: day(h.to) })}</li>
+                ))}
+              </ul>
+            )}
+            <div className="grid gap-2.5">
+              {project.status === 'published' && (
+                <Button asChild variant="normal" className="w-full">
+                  <Link href={`/team/matching?project=${project.id}`}>{t('openMatching')}</Link>
+                </Button>
+              )}
+              {running && (
+                <Button asChild variant="secondary" className="w-full">
+                  <Link href="/team/deliverables">{t('openDeliverables')}</Link>
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {project.endedMatches.length > 0 && (
+            <Card className="gap-3">
+              <CardTitle>{t('endedTitle')}</CardTitle>
+              <ul className="grid gap-1.5 text-[0.9rem]">
+                {project.endedMatches.map((m) => (
+                  <li key={m.id}>
+                    {t('endedRow', { student: m.studentName, date: at(m.endedAt!) })}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          <Card className="gap-3">
+            <CardTitle>{t('reportsTitle')}</CardTitle>
+            {project.reports.length ? (
+              <ul className="grid">
+                {project.reports.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line py-2 text-[0.9rem] last:border-b-0"
+                  >
+                    <span>
+                      {t('reportRow', { kind: t(`kindWord.${r.kind}`), date: at(r.createdAt) })}
+                    </span>
+                    <Badge tone={r.status === 'open' ? 'warn' : 'mute'}>
+                      {t(`resolution.${r.resolution ?? 'open'}`)}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[0.9rem] text-muted-foreground">{t('reportsEmpty')}</p>
+            )}
+          </Card>
+        </aside>
+      </div>
+    </TeamShell>
+  )
+}
