@@ -36,6 +36,7 @@ function Row({ application: a }: { application: OwnApplication }) {
   let second: string | null = null
   if (a.status === 'withdrawn' && a.withdrawnAt)
     second = t('withdrawn', { date: at(a.withdrawnAt) })
+  else if (a.status === 'match_ended' && a.endedAt) second = t('ended', { date: at(a.endedAt) })
   else if ((a.status === 'selected' || a.status === 'not_selected') && a.decidedAt)
     second = t('decided', { date: at(a.decidedAt) })
   else if (deciding)

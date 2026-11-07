@@ -121,9 +121,11 @@ export async function listStudentPayments(
     where: { id: { in: matchIds } },
     depth: 0,
     pagination: false,
-    select: { project: true },
+    select: { project: true, endedAt: true },
     ...asUser(user),
   })
+  // A match Konnected ended is shown only once the student was paid for it (case by case).
+  const ended = new Set(matches.docs.filter((m) => m.endedAt).map((m) => m.id))
   // A student no longer reads a matched project; the title and company are the copies kept on the
   // student's own application.
   const projectIds = [...new Set(matches.docs.map((m) => relationId(m.project as number)!))]
@@ -137,14 +139,16 @@ export async function listStudentPayments(
   })
   const projectOfMatch = new Map(matches.docs.map((m) => [m.id, relationId(m.project as number)!]))
   const applicationOf = new Map(applications.docs.map((a) => [relationId(a.project as number)!, a]))
-  return (payments.docs as Payment[]).map((p) => {
-    const application = applicationOf.get(projectOfMatch.get(relationId(p.match as number)!) ?? 0)
-    return {
-      id: p.id,
-      title: application?.projectTitle ?? '',
-      companyName: application?.companyName ?? null,
-      paidOn: storedToDay(p.studentPaidAt),
-      applicationId: application?.id ?? null,
-    }
-  })
+  return (payments.docs as Payment[])
+    .filter((p) => p.studentPaidAt || !ended.has(relationId(p.match as number)!))
+    .map((p) => {
+      const application = applicationOf.get(projectOfMatch.get(relationId(p.match as number)!) ?? 0)
+      return {
+        id: p.id,
+        title: application?.projectTitle ?? '',
+        companyName: application?.companyName ?? null,
+        paidOn: storedToDay(p.studentPaidAt),
+        applicationId: application?.id ?? null,
+      }
+    })
 }

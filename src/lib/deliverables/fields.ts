@@ -174,6 +174,8 @@ export const DELIVERABLE_ERRORS = [
   'not_started',
   /** Konnected closed the project: no more hand-ins, releases or fix requests. */
   'closed',
+  /** Konnected ended this match: its work stays with Konnected and is never released. */
+  'ended',
   /** A hand-in already waits for Konnected. */
   'waiting',
   /** The work was released and no fix was asked: nothing more to hand in. */

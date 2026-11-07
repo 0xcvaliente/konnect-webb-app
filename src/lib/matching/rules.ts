@@ -3,6 +3,7 @@ import { APIError, type PayloadRequest } from 'payload'
 import { relationId } from '@/access/roles'
 import { assertRoomForAnotherProject } from '@/lib/applications/rules'
 import { lockRow } from '@/lib/db/locks'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import { sendSelectionEmails } from '@/lib/email/matchingEmails'
 import type { Application, Match } from '@/payload-types'
 
@@ -93,7 +94,7 @@ export async function assertCanSelect(
   }
   const matched = await req.payload.count({
     collection: 'matches',
-    where: { project: { equals: projectId } },
+    where: { and: [{ project: { equals: projectId } }, ACTIVE_MATCH] },
     overrideAccess: true,
     req,
   })
@@ -132,7 +133,7 @@ export async function assertProjectHasMatch(
   const found = projectId
     ? await req.payload.count({
         collection: 'matches',
-        where: { project: { equals: projectId } },
+        where: { and: [{ project: { equals: projectId } }, ACTIVE_MATCH] },
         overrideAccess: true,
         req,
       })

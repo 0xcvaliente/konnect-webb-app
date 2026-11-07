@@ -31,6 +31,7 @@ const SLUGS = [
   'matches',
   'deliverables',
   'payments',
+  'problem-reports',
   'activity-logs',
   'cvs',
   'deliverable-files',
@@ -41,6 +42,9 @@ const SLUGS = [
   'signatures',
   'agreement-pdfs',
 ] as const
+
+/** alpha's problem report note. Only alpha and the team read it. */
+const PROBLEM_NOTE = 'Sentinel-Problem-Note-Alpha'
 
 // What a company must never see about student alpha. alpha shares only skills, so the skill is
 // allowed (and expected) in a match's sharedInfo. beta shares nothing.
@@ -59,6 +63,8 @@ const FORBIDDEN = [
   // Payment log card: the team's notes and what alpha is paid.
   'Leak-Payment-Notes',
   '4242.5',
+  // Problem reports card: alpha's note to Konnected about a running project.
+  PROBLEM_NOTE,
 ]
 
 const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
@@ -69,15 +75,17 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   companies:
     '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt noteToCompany noteToCompanyAt infoRequestedAt reviewRequestedAt resentAt user { id email } teamOwner { id email } logo { id url } } } }',
   projects:
-    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt status companyName company { id name } attachments { id originalName } } } }',
+    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt closeReason closeOutcome closedAt reopenedAt reopenReason status companyName company { id name } attachments { id originalName } } } }',
   applications:
-    '{ Applications(limit: 100) { docs { id status note profileWaiting projectTitle companyName closesOn shortlistedAt decidedAt withdrawnAt student { id name contactEmail user { id email } } project { id title } } } }',
+    '{ Applications(limit: 100) { docs { id status note profileWaiting projectTitle companyName closesOn shortlistedAt decidedAt withdrawnAt endedAt student { id name contactEmail user { id email } } project { id title } } } }',
   matches:
-    '{ Matches(limit: 100) { docs { id agreementNotes sharedInfo { name school programme year pitch skills experience contactEmail phone cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
+    '{ Matches(limit: 100) { docs { id agreementNotes endedAt endDate dueDateHistory { from to changedAt } sharedInfo { name school programme year pitch skills experience contactEmail phone cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
   deliverables:
     '{ Deliverables(limit: 100) { docs { id status note returnNote returnedAt fixNote fixRequestedAt releasedAt acceptedAt acceptedBy submittedAt links { label url } files { id originalName uploadedBy { id email } } match { id student { id name contactEmail } project { id } } } } }',
   payments:
     '{ Payments(limit: 100) { docs { id projectFee konnectedShare studentPay invoiceNumber invoiceSentAt invoicePaidAt studentPaidAt notes match { id student { id name } project { id } } } } }',
+  'problem-reports':
+    '{ ProblemReports(limit: 100) { docs { id kind note status resolution resolvedAt student { id name contactEmail user { id email } } match { id student { id name } sharedInfo { name } project { id title } } project { id title } } } }',
   'activity-logs': '{ ActivityLogs(limit: 100) { docs { id action targetCollection } } }',
   cvs: '{ Cvs(limit: 100) { docs { id filename originalName url owner { id email } } } }',
   'deliverable-files':
@@ -101,6 +109,7 @@ let matchedProject: { id: number }
 let selectionMail: { to: string; text: string; html: string; subject: string }[] = []
 let companyCookie: string
 let adminCookie: string
+let betaCookie: string
 
 /** Konnected's note to company A on its matched project. Only the team and company A read it. */
 const NOTE_TO_COMPANY = 'Leak-Check-Note-To-Company-A'
@@ -112,6 +121,7 @@ beforeAll(async () => {
   world = await createWorld()
   companyCookie = await login(world.companyA.user.email)
   adminCookie = await sessionFor(world.admin.id)
+  betaCookie = await login(world.beta.user.email)
   await world.payload.update({
     collection: 'projects',
     id: world.projectOpen.id,
@@ -181,6 +191,21 @@ beforeAll(async () => {
     (call) => call[0] as { to: string; text: string; html: string; subject: string },
   )
   spy.mockRestore()
+  // Problem reports card: alpha tells Konnected they need more time on the matched project, with
+  // a note only alpha and the team may read.
+  const alphaMatch = await world.payload.find({
+    collection: 'matches',
+    where: { project: { equals: matchedProject.id } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
+  await world.payload.create({
+    collection: 'problem-reports',
+    data: { match: alphaMatch.docs[0]!.id, kind: 'more_time', note: PROBLEM_NOTE } as never,
+    user: asUser(world.alpha.user),
+    overrideAccess: false,
+  })
   // The approval queue: Konnected asks alpha to change their profile (a note about a student),
   // and reviews beta, who then edits the profile (the team's copy and change marker hold beta's
   // personal data).
@@ -232,13 +257,13 @@ beforeAll(async () => {
 })
 
 /** Run one query through the Local API. A denied collection throws, which counts as no data. */
-async function localAll(user: World['admin'], slug: (typeof SLUGS)[number]) {
+async function localAll(user: World['admin'] | undefined, slug: (typeof SLUGS)[number]) {
   try {
     const res = await world.payload.find({
       collection: slug,
       depth: 5,
       limit: 100,
-      user: asUser(user),
+      ...(user ? { user: asUser(user) } : {}),
       overrideAccess: false,
     })
     return JSON.stringify(res)
@@ -247,9 +272,21 @@ async function localAll(user: World['admin'], slug: (typeof SLUGS)[number]) {
   }
 }
 
-async function everything(transport: 'local' | 'rest' | 'graphql', as: 'company' | 'admin') {
-  const user = as === 'company' ? world.companyA.user : world.admin
-  const cookie = as === 'company' ? companyCookie : adminCookie
+type Who = 'company' | 'admin' | 'otherStudent' | 'anonymous'
+
+async function everything(transport: 'local' | 'rest' | 'graphql', as: Who) {
+  const user = {
+    company: world.companyA.user,
+    admin: world.admin,
+    otherStudent: world.beta.user,
+    anonymous: undefined,
+  }[as]
+  const cookie = {
+    company: companyCookie,
+    admin: adminCookie,
+    otherStudent: betaCookie,
+    anonymous: undefined,
+  }[as]
   const parts: string[] = []
   for (const slug of SLUGS) {
     if (transport === 'local') parts.push(await localAll(user, slug))
@@ -290,6 +327,39 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       // Not the unreleased deliverable, not another company's project.
       expect(all).not.toContain('Not released yet')
       expect(all).not.toContain('Project B draft')
+    })
+  },
+)
+
+describe.each(['local', 'rest', 'graphql'] as const)(
+  'another student and an anonymous visitor read no one else’s data (%s)',
+  (transport) => {
+    // Everything about alpha, and the team's notes. beta may read beta's own records.
+    const ALPHA_AND_TEAM = [
+      ...Object.values(SENTINEL.alpha),
+      'Sentinel-Agreement-Notes',
+      'Sentinel-Review-Note-Alpha',
+      'Leak-Return-Note-Alpha',
+      'Leak-Payment-Notes',
+      PROBLEM_NOTE,
+    ]
+
+    it('another student (beta) reads nothing of alpha, in any collection at depth 5', async () => {
+      const all = await everything(transport, 'otherStudent')
+      for (const secret of ALPHA_AND_TEAM) {
+        expect(all, `leaked: ${secret}`).not.toContain(secret)
+      }
+      // Positive control: beta reads beta's own profile.
+      expect(all).toContain(SENTINEL.beta.name)
+    })
+
+    it('an anonymous visitor reads no student, team or company data at all', async () => {
+      const all = await everything(transport, 'anonymous')
+      for (const secret of [...ALPHA_AND_TEAM, ...Object.values(SENTINEL.beta)]) {
+        expect(all, `leaked: ${secret}`).not.toContain(secret)
+      }
+      expect(all).not.toContain('Project A')
+      expect(all).not.toContain(NOTE_TO_COMPANY)
     })
   },
 )
@@ -471,6 +541,8 @@ describe('company cannot reach student collections directly', () => {
       expect(all, transport).toContain('Not released yet')
       expect(all, transport).toContain('Leak-Payment-Notes')
       expect(all, transport).toContain('4242.5')
+      // The problem report card's note.
+      expect(all, transport).toContain(PROBLEM_NOTE)
     }
   })
 })
@@ -537,13 +609,21 @@ describe('matching: the company learns about its selected student only through t
       const res = await rest.get(`matches?depth=${depth}&limit=100`, companyCookie)
       for (const doc of res.json.docs as Record<string, unknown>[]) {
         expect(Object.keys(doc).sort(), `depth ${depth}`).toEqual(
-          ['createdAt', 'endDate', 'id', 'project', 'sharedInfo', 'startDate', 'updatedAt'].filter(
-            (key) => key in doc,
-          ),
+          [
+            'createdAt',
+            'dueDateHistory',
+            'endDate',
+            'id',
+            'project',
+            'sharedInfo',
+            'startDate',
+            'updatedAt',
+          ].filter((key) => key in doc),
         )
         expect(doc).not.toHaveProperty('student')
         expect(doc).not.toHaveProperty('application')
         expect(doc).not.toHaveProperty('agreementNotes')
+        expect(doc).not.toHaveProperty('endedAt')
       }
     }
     const gql = await graphql(

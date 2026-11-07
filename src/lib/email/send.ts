@@ -32,6 +32,13 @@ export type EmailType =
   | 'deliverable_returned'
   | 'deliverable_fix_requested'
   | 'deliverable_accepted'
+  | 'problem_received'
+  | 'due_date_moved'
+  | 'match_ended'
+  | 'project_rematch'
+  | 'project_closed_no_delivery'
+  | 'project_closed_no_match'
+  | 'applications_reopened'
 
 /**
  * Send an email after the answer has gone back to the browser, so the answer takes the

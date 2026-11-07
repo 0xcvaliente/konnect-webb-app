@@ -166,6 +166,8 @@ export type OwnApplication = {
   shortlistedAt: string | null
   decidedAt: string | null
   withdrawnAt: string | null
+  /** When Konnected ended the match made from this application. */
+  endedAt: string | null
   /** The last change, for "most recent". */
   updatedAt: string
   /** The project's id, for the link to its page while it is still listed. */
@@ -213,6 +215,7 @@ const APPLICATION_SELECT = {
   shortlistedAt: true,
   decidedAt: true,
   withdrawnAt: true,
+  endedAt: true,
   createdAt: true,
   updatedAt: true,
 } as const
@@ -231,6 +234,7 @@ const toOwn = (doc: Application, today: string): OwnApplication => {
     shortlistedAt: doc.shortlistedAt ?? null,
     decidedAt: doc.decidedAt ?? null,
     withdrawnAt: doc.withdrawnAt ?? null,
+    endedAt: doc.endedAt ?? null,
     updatedAt: doc.updatedAt,
     projectId,
     title: project?.title ?? doc.projectTitle ?? '',

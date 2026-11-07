@@ -71,7 +71,7 @@ async function workOn(req: PayloadRequest, matchId: number) {
     collection: 'matches',
     id: matchId,
     depth: 0,
-    select: { project: true, student: true },
+    select: { project: true, student: true, endedAt: true },
     overrideAccess: true,
     disableErrors: true,
     req,
@@ -206,6 +206,8 @@ export const Deliverables: CollectionConfig = {
             }
           }
 
+          // Konnected ended the match: nothing more is handed in on it.
+          if (work.match.endedAt) throw fail('ended', 'Konnected ended this match', 409)
           const state = deliveryState(work.items, work.projectStatus)
           if (state.blocked === 'not_started')
             throw fail('not_started', 'The work on this project has not started', 409)
@@ -285,6 +287,17 @@ export const Deliverables: CollectionConfig = {
         // Releasing work, or asking for its fix, only while the project runs. Once Konnected
         // closed it, the student can hand in nothing more.
         if (to === 'released' || to === 'fix_requested') {
+          // Nothing from a match Konnected ended is ever released to the company.
+          const ofMatch = await req.payload.findByID({
+            collection: 'matches',
+            id: relationId(originalDoc!.match as Rel)!,
+            depth: 0,
+            select: { endedAt: true },
+            overrideAccess: true,
+            disableErrors: true,
+            req,
+          })
+          if (!ofMatch || ofMatch.endedAt) throw fail('ended', 'Konnected ended this match', 409)
           const project = projectId
             ? await req.payload.findByID({
                 collection: 'projects',

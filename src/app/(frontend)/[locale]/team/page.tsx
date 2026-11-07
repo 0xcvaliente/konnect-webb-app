@@ -4,6 +4,8 @@ import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/serve
 import { notFound } from 'next/navigation'
 
 import { Banner } from '@/components/app/Banner'
+import { OpenRow } from '@/components/app/dashboard/Parts'
+import { Badge } from '@/components/ui/badge'
 import { TeamShell } from '@/components/app/TeamShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +18,7 @@ import { teamCounts } from '@/lib/team/counts'
 import { listDeliverableQueue } from '@/lib/team/deliverables'
 import { listMatchingQueue } from '@/lib/team/matching'
 import { listPaymentLog } from '@/lib/team/payments'
+import { listOpenProblems, listProjectsWithoutMatch } from '@/lib/team/projects'
 import { requireTeam } from '@/lib/team/session'
 import { calendarDaysBetween } from '@/lib/workingDays'
 
@@ -43,7 +46,7 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
   const tp = await getTranslations('TeamPayments')
 
   // The approval queues: how many items wait, and the oldest one.
-  const [queues, matching, deliverables, payments, counts] = await Promise.all([
+  const [queues, matching, deliverables, payments, counts, problems, noMatch] = await Promise.all([
     Promise.all(
       QUEUE_TABS.map(async (tab) => {
         const items = ((await listQueue(payload, user, tab)) ?? []).filter(isOpen)
@@ -54,7 +57,11 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
     listDeliverableQueue(payload, user),
     listPaymentLog(payload, user, { filter: 'action' }),
     teamCounts(payload, user),
+    listOpenProblems(payload, user),
+    listProjectsWithoutMatch(payload, user),
   ])
+  const problemList = problems ?? []
+  const noMatchList = noMatch ?? []
   const toCheck = (deliverables ?? []).filter((d) => d.section === 'check')
   const firstPayment = payments?.rows[0] ?? null
   const now = new Date()
@@ -91,6 +98,27 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
         ? firstToDecide.decideBy
           ? t('decideBy', { name: firstToDecide.title, date: day(firstToDecide.decideBy) })
           : firstToDecide.title
+        : t('queueEmpty'),
+    },
+    {
+      key: 'problems',
+      href: problemList[0] ? `/team/projects/${problemList[0].projectId}` : '/team',
+      label: t('queue.problems'),
+      count: problemList.length,
+      sub: problemList[0]
+        ? t('firstProblem', {
+            name: problemList[0].title,
+            kind: t(`kindShort.${problemList[0].kind}`),
+          })
+        : t('queueEmpty'),
+    },
+    {
+      key: 'noMatch',
+      href: noMatchList[0] ? `/team/projects/${noMatchList[0].projectId}` : '/team',
+      label: t('queue.noMatch'),
+      count: noMatchList.length,
+      sub: noMatchList[0]
+        ? t('firstNoMatch', { name: noMatchList[0].title, date: day(noMatchList[0].closedOn) })
         : t('queueEmpty'),
     },
     {
@@ -157,6 +185,54 @@ export default async function TeamHomePage({ params }: { params: Promise<{ local
           ))}
         </ul>
       </Card>
+
+      <div className="grid max-w-[880px] gap-5 md:grid-cols-2">
+        <Card className="gap-2">
+          <CardTitle>{t('problemsTitle')}</CardTitle>
+          {problemList.length ? (
+            <ul className="grid">
+              {problemList.map((p) => (
+                <OpenRow
+                  key={p.id}
+                  href={`/team/projects/${p.projectId}`}
+                  lead={<Badge tone="warn">{t(`kindShort.${p.kind}`)}</Badge>}
+                  title={p.title}
+                  sub={t('reportedOn', {
+                    company: p.companyName,
+                    date: format.dateTime(new Date(p.since), {
+                      dateStyle: 'medium',
+                      timeZone: 'Europe/Oslo',
+                    }),
+                  })}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[0.9rem] text-muted-foreground">{t('problemsEmpty')}</p>
+          )}
+        </Card>
+        <Card className="gap-2">
+          <CardTitle>{t('noMatchTitle')}</CardTitle>
+          {noMatchList.length ? (
+            <ul className="grid">
+              {noMatchList.map((p) => (
+                <OpenRow
+                  key={p.projectId}
+                  href={`/team/projects/${p.projectId}`}
+                  title={p.title}
+                  sub={t('noMatchSub', {
+                    company: p.companyName,
+                    date: day(p.closedOn),
+                    count: p.open,
+                  })}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[0.9rem] text-muted-foreground">{t('noMatchEmpty')}</p>
+          )}
+        </Card>
+      </div>
 
       <Banner icon={ShieldCheckIcon} className="max-w-[880px]">
         <p className="font-semibold">{t('twoStepTitle')}</p>

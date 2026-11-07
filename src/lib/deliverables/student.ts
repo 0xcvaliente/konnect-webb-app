@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { isCompany, isStudent } from '@/access/roles'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import type { SessionUser } from '@/lib/students/profile'
 import type { Deliverable, DeliverableFile } from '@/payload-types'
 
@@ -104,7 +105,8 @@ export async function loadStudentWork(
   if (!user || !isStudent(user) || !projectId) return null
   const found = await payload.find({
     collection: 'matches',
-    where: { project: { equals: projectId } },
+    // The student's own match while it runs. After Konnected ends it, nothing is left to do.
+    where: { and: [{ project: { equals: projectId } }, ACTIVE_MATCH] },
     limit: 1,
     depth: 0,
     select: { project: true },

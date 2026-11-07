@@ -23,6 +23,7 @@ import {
   lockApplicationForDecision,
   selectionOf,
 } from '@/lib/matching/rules'
+import { ACTIVE_MATCH, problemError } from '@/lib/problems/rules'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import {
   APPLICATION_TRANSITIONS,
@@ -213,10 +214,28 @@ export const Applications: CollectionConfig = {
         if (from !== to && to === 'selected') {
           await assertCanSelect(req, originalDoc as Application)
         }
+        // `match_ended` follows the match: only once Konnected ended the match made from this
+        // application (the Projects hook ends it first, in the same change).
+        if (from !== to && to === 'match_ended') {
+          const running = await req.payload.count({
+            collection: 'matches',
+            where: { and: [{ application: { equals: originalDoc!.id } }, ACTIVE_MATCH] },
+            overrideAccess: true,
+            req,
+          })
+          if (running.totalDocs > 0) {
+            throw problemError(
+              'not_open',
+              'End the match from the project first: reopen or close the project',
+              409,
+            )
+          }
+        }
         // When each step happened, for the student's progress and the team. Server only.
         if (from !== to) {
           if (to === 'shortlisted') data.shortlistedAt = now
           if (to === 'selected' || to === 'not_selected') data.decidedAt = now
+          if (to === 'match_ended') data.endedAt = now
           if (to === 'withdrawn') data.withdrawnAt = now
         }
         return data
@@ -267,7 +286,7 @@ export const Applications: CollectionConfig = {
       required: true,
       defaultValue: 'applied',
       index: true,
-      options: ['applied', 'shortlisted', 'selected', 'not_selected', 'withdrawn'],
+      options: ['applied', 'shortlisted', 'selected', 'not_selected', 'withdrawn', 'match_ended'],
     },
     {
       // Why the student fits, written when applying. Fixed after that.
@@ -305,5 +324,6 @@ export const Applications: CollectionConfig = {
     { name: 'shortlistedAt', label: 'Shortlisted', ...serverDate },
     { name: 'decidedAt', label: 'Decided', ...serverDate },
     { name: 'withdrawnAt', label: 'Withdrawn', ...serverDate },
+    { name: 'endedAt', label: 'Match ended', ...serverDate },
   ],
 }

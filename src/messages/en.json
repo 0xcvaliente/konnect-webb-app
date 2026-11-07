@@ -438,6 +438,82 @@
         "button": "Open the project",
         "ignore": "If you do not know this project, write to the Konnected team."
       }
+    },
+    "problems": {
+      "received": {
+        "subject": "Konnected has your message about “{title}”",
+        "heading": "We have your message",
+        "body": "Konnected got your message about “{title}” for {company}. The team answers within 2 working days and agrees the next step with you.",
+        "next": "{company} is told the new plan, never your note. Keep working on what you can until Konnected answers.",
+        "button": "Open your project",
+        "ignore": "If you did not send this, write to the Konnected team."
+      },
+      "dueDateStudent": {
+        "subject": "New due date for “{title}”",
+        "heading": "Your due date moved",
+        "body": "Konnected moved the due date for “{title}” from {from} to {date}.",
+        "next": "Upload your work in the app when it is ready. Konnected checks it before {company} sees it.",
+        "button": "Open your project",
+        "ignore": "If you are not working on this project, write to the Konnected team.",
+        "bodySet": "Konnected set the due date for “{title}”: {date}."
+      },
+      "dueDateCompany": {
+        "subject": "New due date for “{title}”",
+        "heading": "The due date moved",
+        "body": "The student needs more time, and Konnected agreed a new due date for “{title}”: {date} (it was {from}).",
+        "next": "Konnected still checks the work before it is released to you.",
+        "button": "Open your project",
+        "ignore": "If this is not your project, write to the Konnected team.",
+        "bodySet": "The student needed more time, and Konnected agreed the due date for “{title}”: {date}."
+      },
+      "endedStudent": {
+        "subject": "Your work on “{title}” has ended",
+        "heading": "Konnected ended the match",
+        "body": "Konnected ended your work on “{title}” for {company}, as agreed with you. The project looks for another student.",
+        "next": "Files you uploaded stay with Konnected; nothing is released to {company}. You can apply to other projects.",
+        "button": "See your applications",
+        "ignore": "If you have questions, write to the Konnected team."
+      },
+      "closedStudent": {
+        "subject": "“{title}” is closed",
+        "heading": "The project is closed",
+        "body": "Konnected closed “{title}” for {company} without delivery. Konnected's reason:",
+        "next": "Files you uploaded stay with Konnected; nothing is released to {company}. Konnected tells you about any payment.",
+        "button": "See your applications",
+        "ignore": "If you have questions, write to the Konnected team."
+      },
+      "rematchCompany": {
+        "subject": "“{title}”: Konnected is finding a new student",
+        "heading": "Konnected is finding a new student",
+        "body": "The student could not continue with “{title}”, so Konnected ended the match and opened the project for applications again until {date}.",
+        "next": "Nothing from the first student was released to you. You see the new student once Konnected selects one.",
+        "button": "Open your project",
+        "ignore": "If this is not your project, write to the Konnected team."
+      },
+      "closedNoDeliveryCompany": {
+        "subject": "“{title}” is closed without delivery",
+        "heading": "The project is closed",
+        "body": "Konnected closed “{title}” without delivery. Konnected's reason:",
+        "next": "Nothing unfinished was released to you. Konnected decides payment case by case and tells you if anything is owed.",
+        "button": "Open your project",
+        "ignore": "If this is not your project, write to the Konnected team."
+      },
+      "closedNoMatchCompany": {
+        "subject": "“{title}” is closed without a match",
+        "heading": "The project is closed",
+        "body": "Konnected closed “{title}” without selecting a student. Konnected's reason:",
+        "next": "You can submit a new project at any time.",
+        "button": "Open your project",
+        "ignore": "If this is not your project, write to the Konnected team."
+      },
+      "reopenedCompany": {
+        "subject": "Applications reopened for “{title}”",
+        "heading": "Applications are open again",
+        "body": "No student was selected for “{title}” yet, so Konnected opened the project for applications again until {date}.",
+        "next": "Konnected picks one student by hand and tells you.",
+        "button": "Open your project",
+        "ignore": "If this is not your project, write to the Konnected team."
+      }
     }
   },
   "DesignGuide": {
@@ -1154,12 +1230,30 @@
       "students": "Student profiles to review",
       "matching": "Applications to decide",
       "deliverables": "Deliverables to check",
-      "payments": "Payments that need the team"
+      "payments": "Payments that need the team",
+      "problems": "Problems reported",
+      "noMatch": "Projects without a match"
     },
     "oldest": "Oldest: {name}, {waited}",
     "queueEmpty": "Nothing waits here.",
     "decideBy": "First: {name}, decide by {date}",
-    "firstPayment": "First: {name}, {status}"
+    "firstPayment": "First: {name}, {status}",
+    "firstProblem": "First: {name}, {kind}",
+    "firstNoMatch": "First: {name}, applications closed {date}",
+    "problemsTitle": "Problems reported",
+    "problemsEmpty": "No student has reported a problem.",
+    "problemKind": {
+      "more_time": "{student} needs more time",
+      "cannot_finish": "{student} cannot finish"
+    },
+    "kindShort": {
+      "more_time": "needs more time",
+      "cannot_finish": "cannot finish"
+    },
+    "reportedOn": "{company}, reported {date}",
+    "noMatchTitle": "Projects without a match",
+    "noMatchEmpty": "Every project whose applications closed has a student.",
+    "noMatchSub": "{company}, closed {date}, {count, plural, =0 {no application waits} one {# application waits} other {# applications wait}}"
   },
   "TeamAccounts": {
     "title": "Accounts",
@@ -1605,7 +1699,32 @@
       "nothing": "The student has not chosen to share any details with you yet. Konnected stays your contact.",
       "notShared": "Not shared with you: {items}. These stay with Konnected.",
       "openCv": "Open CV"
-    }
+    },
+    "plan": {
+      "reopened_match": {
+        "title": "Konnected is finding a new student",
+        "body": "The student could not continue, so Konnected ended the match and opened the project for applications again until {date}. Nothing from the first student was released to you."
+      },
+      "reopened": {
+        "title": "Applications are open again",
+        "body": "No student was selected the first time. Konnected opened the project for applications again until {date}."
+      },
+      "no_delivery": {
+        "title": "Closed without delivery",
+        "body": "Konnected closed the project on {date}. Nothing unfinished was released to you. Konnected’s reason:"
+      },
+      "no_match": {
+        "title": "Closed without a match",
+        "body": "Konnected closed the project on {date} without selecting a student. Konnected’s reason:"
+      },
+      "due_moved": {
+        "title": "The due date moved to {date}",
+        "body": "The student needed more time, and Konnected agreed a new date (it was {from}). Konnected still checks the work before it is released to you."
+      }
+    },
+    "dueTitle": "Due date",
+    "dueValue": "Due {date}",
+    "dueWas": "Moved from {date}"
   },
   "TeamApprovals": {
     "title": "Approvals",
@@ -1962,7 +2081,8 @@
     "shortlisted": "Shortlisted",
     "selected": "Selected",
     "not_selected": "Not selected",
-    "withdrawn": "Withdrawn"
+    "withdrawn": "Withdrawn",
+    "match_ended": "Match ended"
   },
   "Apply": {
     "noteLabel": "Why are you a good fit?",
@@ -2028,7 +2148,8 @@
     "withdrawn": "Withdrawn {date}",
     "emptyTitle": "You have not applied yet",
     "emptyBody": "Applications you send show up here, with what happens next and when Konnected decides.",
-    "emptyAction": "Browse projects"
+    "emptyAction": "Browse projects",
+    "ended": "Match ended {date}"
   },
   "Application": {
     "back": "Back to my applications",
@@ -2079,6 +2200,10 @@
       "withdrawn": {
         "title": "Withdrawn",
         "body": "You withdrew this application."
+      },
+      "ended": {
+        "title": "Match ended",
+        "body": "Konnected ended your work on this project. Files you uploaded stay with Konnected."
       }
     },
     "noteTitle": "Your note",
@@ -2118,7 +2243,9 @@
     "notFoundBody": "The link may be old. Your applications are listed under My applications.",
     "seeAll": "See my applications",
     "seesListLabel": "Shared with the company",
-    "seesNothingShared": "You share nothing with {company} yet. Choose what to share on your profile."
+    "seesNothingShared": "You share nothing with {company} yet. Choose what to share on your profile.",
+    "due": "Due date",
+    "seesEnded": "Nothing any more. Konnected stopped sharing your details with {company} when the match ended."
   },
   "TeamMatching": {
     "back": "Back to today",
@@ -2286,7 +2413,8 @@
       "note_too_long": "The note is too long. Keep it under 2,000 characters.",
       "fix_used": "The one round of fixes was already used.",
       "fix_window": "The 7 days to ask for a fix are over, so the work counts as accepted.",
-      "generic": "Something went wrong. Try again in a moment."
+      "generic": "Something went wrong. Try again in a moment.",
+      "ended": "Konnected ended this match. Nothing more is handed in or released on it."
     }
   },
   "StudentWork": {
@@ -2604,5 +2732,257 @@
     },
     "detailsTitle": "Payout details",
     "detailsBody": "There is nothing to fill in here. Konnected tells you if it needs anything more to pay you."
+  },
+  "Problems": {
+    "errors": {
+      "forbidden": "Only the right account can do this. Sign in again.",
+      "not_found": "We could not find this. Load the page again.",
+      "not_open": "This is no longer possible here: the project moved on. Load the page again.",
+      "already_open": "Konnected already has your message and answers soon.",
+      "note_required": "Write a few words about what happened.",
+      "note_too_long": "The text is too long. Keep it under 2000 characters.",
+      "kind_required": "Choose what you need.",
+      "date_invalid": "Pick a day today or later.",
+      "date_same": "That is the due date already. Pick another day.",
+      "reason_required": "Write the reason. The company and the student get it by email.",
+      "reason_too_long": "The reason is too long. Keep it under 2000 characters.",
+      "changed": "Someone else answered first. Load the page again.",
+      "generic": "Something went wrong. Nothing changed; try again."
+    }
+  },
+  "StudentProblem": {
+    "title": "Need more time?",
+    "body": "Tell Konnected as early as you can. Konnected talks to {company} and agrees a new due date, or finds another student.",
+    "open": "Tell Konnected",
+    "legend": "What do you need?",
+    "kind": {
+      "more_time": "I need more time",
+      "cannot_finish": "I cannot finish the project"
+    },
+    "noteLabel": "What happened?",
+    "noteHint": "Only Konnected reads this. {company} is told the new plan, not your note.",
+    "send": "Send to Konnected",
+    "cancel": "Cancel",
+    "sent": "Sent to Konnected.",
+    "openTitle": "Konnected has your message",
+    "openBody": "You wrote on {date}: “{kind}”. Konnected answers within 2 working days.",
+    "dueTitle": "Due date",
+    "due": "Due {date}",
+    "movedFrom": "Moved from {date}",
+    "noDue": "Konnected agrees the due date with you at kick-off."
+  },
+  "StudentHome": {
+    "title": "Hi {name}",
+    "titleNoName": "Hi",
+    "titleFresh": "Welcome, {name}",
+    "lede": "{count, plural, =0 {Nothing needs you right now.} one {One thing needs you.} other {# things need you.}} Everything else is with Konnected.",
+    "ledeFresh": "You have answered the first questions. A few steps are left before you apply.",
+    "needsTitle": "Needs you",
+    "needsEmpty": "Nothing needs you right now.",
+    "toDo": "To do",
+    "need": {
+      "agreement": "Sign your agreement before the work starts",
+      "profile_changes": "Konnected asked you to change something in your profile",
+      "profile_changesTitle": "Your profile",
+      "cv": "Konnected needs the full picture before it can match you.",
+      "cvTitle": "Upload your CV",
+      "hand_in": "Upload your work when it is ready",
+      "more": "Konnected asked for more before the company sees it",
+      "fix": "The company asked for one round of fixes",
+      "due": "Due {date}"
+    },
+    "runningTitle": "Your projects",
+    "runningEmpty": "No project is running. When Konnected selects you, the work shows up here.",
+    "due": "Due {date}",
+    "noDue": "Konnected agrees the due date with you at kick-off.",
+    "problemOpen": "Konnected has your message",
+    "waitingTitle": "Waiting on Konnected",
+    "waitingEmpty": "No application waits for a decision.",
+    "decideBy": "{company}, Konnected decides by {date}",
+    "waitingNoDate": "{company}, Konnected decides soon",
+    "profileTitle": "Your profile",
+    "profileState": {
+      "waiting": "In review",
+      "changes_requested": "Changes asked",
+      "reviewed": "Reviewed"
+    },
+    "stepQuestions": "First questions",
+    "stepQuestionsDone": "Answered at sign-up",
+    "stepCv": "CV",
+    "stepCvDone": "Uploaded",
+    "stepCvMissing": "Not uploaded yet",
+    "stepReview": "Reviewed by Konnected",
+    "stepReviewWaiting": "Konnected reviews every profile before matching, within 2 working days.",
+    "stepReviewChanges": "Konnected asked you to change something.",
+    "stepReviewDone": "Done. Keep your profile up to date.",
+    "openProfile": "Open profile",
+    "uploadCv": "Upload your CV",
+    "newTitle": "New projects",
+    "newBody": "{count, plural, =0 {No project takes applications right now. New ones show up here.} one {One project takes applications.} other {# projects take applications.}}",
+    "browse": "Browse projects",
+    "startTitle": "Get started",
+    "start1Title": "Upload your CV",
+    "start1Body": "Konnected needs the full picture before it can match you.",
+    "start2Title": "Check what a company may see",
+    "start2Body": "Nothing is shared before Konnected selects you.",
+    "start2Action": "Open sharing choices",
+    "start3Title": "Apply to a project",
+    "start3Body": "Your profile fills in the application for you.",
+    "appsTitle": "Your applications",
+    "appsEmpty": "Nothing yet. Applications you send show up here, with what to do next."
+  },
+  "CompanyHome": {
+    "lede": "{count, plural, =0 {Nothing needs you right now.} one {One thing needs you.} other {# things need you.}} Everything else is with Konnected.",
+    "needsTitle": "Needs you",
+    "need": {
+      "agreement": "Sign the agreement so Konnected can publish the project",
+      "changes": "Konnected asked for changes",
+      "draft": "Finish the draft and send it for review",
+      "accept": "Accept the work, or ask for one round of fixes"
+    },
+    "projectsTitle": "Your projects",
+    "projectsEmpty": "No projects yet. Submit your first project and Konnected reviews it.",
+    "waiting": {
+      "you": "Waiting on you",
+      "konnected": "Waiting on Konnected",
+      "student": "Student is working"
+    },
+    "note": {
+      "draft": "Only you can see this draft. Send it for review when it is ready.",
+      "submitted": "Konnected reviews every project before students see it.",
+      "changes_requested": "Konnected asked for changes. Edit the project and send it again.",
+      "rejected": "Konnected did not approve this project.",
+      "approved_sign": "Approved. Sign the agreement, and Konnected publishes the project.",
+      "approved": "Approved. Konnected publishes it once the agreement is signed.",
+      "published": "Students can apply until {date}. Konnected picks one student by hand.",
+      "reopened_match": "Konnected is finding a new student. Applications are open until {date}.",
+      "reopened": "Applications are open again until {date}. Konnected picks one student by hand.",
+      "matched": "Konnected selected a student and agrees the scope and the due date.",
+      "in_progress": "The student is working. Konnected checks the work before it is released to you.",
+      "in_progress_due": "Delivery is due {date}. Konnected checks the work before it is released to you.",
+      "due_moved": "The due date moved to {date}, agreed by Konnected.",
+      "delivered_accept": "Konnected released the work. Accept it, or ask for one round of fixes within 7 days.",
+      "delivered": "Delivered. Konnected closes the project when everything is settled.",
+      "closed": "Finished.",
+      "closed_no_delivery": "Closed without delivery.",
+      "closed_no_match": "Closed without a match.",
+      "published_open": "Students can apply. Konnected picks one student by hand."
+    },
+    "action": {
+      "edit": "Edit and send",
+      "sign": "Review and sign",
+      "accept": "Review the work"
+    },
+    "open": "Open",
+    "stagesLabel": "The 7 stages",
+    "contactTitle": "Your contact at Konnected",
+    "contactBody": "Konnected names one person on the team as your contact. Until then, the whole team answers: reply to any email from Konnected.",
+    "contactPill": "Named soon"
+  },
+  "TeamProject": {
+    "back": "Back to today",
+    "notFoundTitle": "Project not found",
+    "notFoundBody": "It may have been deleted, or the link is wrong.",
+    "factsTitle": "Project",
+    "company": "Company",
+    "closes": "Applications close",
+    "student": "Student",
+    "start": "Start",
+    "due": "Due date",
+    "applications": "Applications",
+    "applicationsValue": "{total} in total, {open} waiting",
+    "notSet": "Not set",
+    "noStudent": "Not selected",
+    "openMatching": "Open in Matching",
+    "openDeliverables": "Open in Deliverables",
+    "openPanel": "Open in the admin panel",
+    "problemTitle": "Problem reported",
+    "problemKind": {
+      "more_time": "{student} needs more time",
+      "cannot_finish": "{student} cannot finish"
+    },
+    "reportedOn": "Reported {date}. Only the team sees the note.",
+    "choose": "Choose what happens next. {company} and {student} both get an email. {company} sees the new plan, never the student’s note.",
+    "moveDate": "Move the due date",
+    "newDue": "New due date",
+    "newDueHint": "Agree it with the student first. The company is told the new date.",
+    "logNote": "Note for the log (optional)",
+    "logNoteHint": "Only the team reads it.",
+    "saveDate": "Save new due date",
+    "matchAgain": "Match again",
+    "endConfirm": "End the match with {student}?",
+    "end1": "{student} leaves the project and gets an email.",
+    "end2": "Files {student} uploaded stay with Konnected. Nothing is released to {company}.",
+    "end3": "The project takes applications again, and you pick a new student in Matching.",
+    "closesLabel": "Applications close",
+    "endButton": "End match and reopen",
+    "closeNoDelivery": "Close without delivery",
+    "reason": "Reason",
+    "reasonBothHint": "Both get this by email. It stays in the activity log.",
+    "caseByCase": "Konnected decides payment case by case. Write the outcome in the reason.",
+    "closeButton": "Close project",
+    "handled": "Mark as handled",
+    "handledHint": "You talked to the student and nothing changes. The note stays with the report.",
+    "handledButton": "Mark handled",
+    "cancel": "Cancel",
+    "dueTitle": "Due date",
+    "dueEmpty": "No due date yet. It is agreed at kick-off.",
+    "dueMoved": "Moved from {from} to {to}",
+    "dueIntro": "Moving the due date tells the student and the company. The old date is kept.",
+    "noMatchTitle": "No student selected",
+    "noMatchBody": "Applications closed on {date}. {count, plural, =0 {No application waits.} one {One application waits in Matching.} other {# applications wait in Matching.}} Pick a student there, or choose what happens next.",
+    "reopen": "Reopen applications",
+    "newClosing": "New closing date",
+    "reopenButton": "Reopen",
+    "askChanges": "Ask the company to change it",
+    "changesLabel": "What should the company change?",
+    "changesHint": "The company gets this by email and sees it on its project page.",
+    "sendChanges": "Send to company",
+    "closeNoMatch": "Close without a match",
+    "reasonCompanyHint": "The company gets this by email. Open applications are not selected, and each student gets a kind note.",
+    "endedTitle": "Earlier students",
+    "endedRow": "{student}, match ended {date}",
+    "closedTitle": "Closed",
+    "outcome": {
+      "delivered": "Closed on {date}.",
+      "no_delivery": "Closed without delivery on {date}.",
+      "no_match": "Closed without a match on {date}."
+    },
+    "reasonTitle": "Reason",
+    "reopened": {
+      "match_ended": "Applications reopened on {date}, after the match ended.",
+      "no_match": "Applications reopened on {date}, after nobody was selected."
+    },
+    "reportsTitle": "Problem reports",
+    "reportsEmpty": "No problem reported.",
+    "reportRow": "{kind}, {date}",
+    "resolution": {
+      "open": "Waiting for the team",
+      "date_moved": "Due date moved",
+      "match_ended": "Match ended",
+      "closed": "Project closed",
+      "no_change": "Handled, no change"
+    },
+    "kindWord": {
+      "more_time": "More time",
+      "cannot_finish": "Cannot finish"
+    },
+    "activity": {
+      "status": "{from} to {to}",
+      "created": "Created",
+      "deadline": "Applications close {date}",
+      "dueSet": "Due date set to {date}",
+      "dueMoved": "Due date moved from {from} to {to}",
+      "ended": "Match ended",
+      "other": "Changed"
+    },
+    "toast": {
+      "dateMoved": "Due date moved. Both get an email.",
+      "ended": "Match ended. The project takes applications again.",
+      "closed": "Project closed. Both get an email.",
+      "reopened": "Applications reopened. The company gets an email.",
+      "changesSent": "Sent to {company}.",
+      "handled": "Report marked as handled."
+    }
   }
 }

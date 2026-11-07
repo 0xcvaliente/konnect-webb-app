@@ -84,7 +84,7 @@ async function allRows(payload: Payload, actor: SessionUser): Promise<PaymentRow
     where: { id: { in: matchIds } },
     depth: 0,
     pagination: false,
-    select: { project: true, student: true },
+    select: { project: true, student: true, endedAt: true },
     ...asActor(actor),
   })
   const projectIds = [...new Set(matches.docs.map((m) => relationId(m.project as number)!))]
@@ -153,7 +153,10 @@ async function allRows(payload: Payload, actor: SessionUser): Promise<PaymentRow
       studentPaid: storedToDay(p.studentPaidAt),
     }
     const releasedAt = firstRelease.get(matchId) ?? null
-    const isReleased = Boolean(releasedAt) || RELEASED_PROJECT.includes(project.status)
+    // A match Konnected ended had nothing released: its row waits for the team's case-by-case
+    // decision, not for an invoice, even when the project was delivered by the next student.
+    const isReleased =
+      Boolean(releasedAt) || (!match.endedAt && RELEASED_PROJECT.includes(project.status))
     rows.push({
       id: p.id,
       matchId,

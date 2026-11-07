@@ -21,7 +21,16 @@ import {
 } from '@/access/roles'
 import { draftingCompanyId } from '@/access/companies'
 import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
+import { sendMatchEndedEmails, sendNoMatchEmail } from '@/lib/email/problemEmails'
 import { sendProjectReviewEmail, sendProjectSubmittedEmail } from '@/lib/email/projectEmails'
+import {
+  CLOSE_OUTCOMES,
+  type CloseOutcome,
+  REASON_MAX,
+  REOPEN_REASONS,
+} from '@/lib/problems/fields'
+import { closeOpenApplications, endActiveMatch, problemError } from '@/lib/problems/rules'
+import { lockRow } from '@/lib/db/locks'
 import {
   COMPANY_EDITABLE,
   DURATION_WEEKS,
@@ -38,9 +47,14 @@ import {
   assertInitialStatus,
   assertProjectGates,
   assertTransition,
+  ENDS_MATCH,
   PROJECT_TRANSITIONS,
   type ProjectStatus,
 } from '@/lib/transitions'
+import { storedToDay, todayInOslo } from '@/lib/projects/fields'
+
+/** Statuses whose changes wait for each other (row lock in the hook below). */
+const LOCKED_FROM: readonly ProjectStatus[] = ['published', ...ENDS_MATCH]
 
 export const PROJECT_STATUSES: ProjectStatus[] = [
   'draft',
@@ -152,6 +166,25 @@ export const Projects: CollectionConfig = {
 
         const from = (originalDoc?.status ?? 'draft') as ProjectStatus
         const to = (data.status ?? from) as ProjectStatus
+        if (operation === 'update' && originalDoc?.id && LOCKED_FROM.includes(from)) {
+          // A published, matched or running project changes one save at a time: selecting a
+          // student, ending the match, closing, sending it back. Lock the row first (lock order:
+          // project, then match), then read the status again, so a save that waited on another
+          // one sees what it did instead of overwriting it.
+          await lockRow(req, 'projects', originalDoc.id)
+          const fresh = await req.payload.findByID({
+            collection: 'projects',
+            id: originalDoc.id,
+            depth: 0,
+            select: { status: true },
+            overrideAccess: true,
+            disableErrors: true,
+            req,
+          })
+          if (!fresh || fresh.status !== from) {
+            throw problemError('changed', 'The project changed meanwhile. Load it again.', 409)
+          }
+        }
         if (operation === 'update') {
           assertTransition(PROJECT_TRANSITIONS, from, to, role, 'Project')
           await assertProjectGates(req, from, to, originalDoc && { ...originalDoc, ...data })
@@ -246,9 +279,48 @@ export const Projects: CollectionConfig = {
         // When students first saw it: the project list sorts on it ("newest first"). Server only.
         if (to === 'published' && from !== 'published') data.publishedAt = new Date().toISOString()
         // Publishing goes through one gate: approved company, paid or unpaid and price, and the
-        // signed company agreement (lib/projects/publish.ts).
+        // signed company agreement (lib/projects/publish.ts). Reopening after a match ended
+        // (Kanban card "Problem reports") goes through it too, without comparing the closing day:
+        // the closing day for applications is Konnected's recruiting date, not a term for the
+        // company, and every reopen (after a match ended or after nobody fitted) sets a new one.
         if (to === 'published' && from !== 'published') {
-          await assertCanPublish(req, { ...next, fee: data.fee === null ? null : next.fee })
+          await assertCanPublish(
+            req,
+            { ...next, fee: data.fee === null ? null : next.fee },
+            ENDS_MATCH.includes(from) ? { ignore: ['project.deadline'] } : {},
+          )
+        }
+
+        // The problem paths (lib/problems): when and why the project was closed or reopened.
+        // Server only (field access keeps them admin-only to write; only admins make these moves).
+        const now = new Date().toISOString()
+        if (to === 'closed' && from !== 'closed') {
+          const outcome: CloseOutcome =
+            from === 'delivered' ? 'delivered' : from === 'published' ? 'no_match' : 'no_delivery'
+          data.closeOutcome = outcome
+          data.closedAt = now
+          data.closeReason = typeof next.closeReason === 'string' ? next.closeReason.trim() : null
+        }
+        if (to === 'published' && ENDS_MATCH.includes(from)) {
+          data.reopenedAt = now
+          data.reopenReason = 'match_ended'
+        }
+        // Applications closed and nobody was selected: Konnected opens them again with a new
+        // closing day (a change of day on the published project, not a status change).
+        if (
+          operation === 'update' &&
+          from === 'published' &&
+          to === 'published' &&
+          isAdmin(req.user) &&
+          data.deadline !== undefined
+        ) {
+          const before = storedToDay(originalDoc?.deadline)
+          const after = storedToDay(data.deadline)
+          const today = todayInOslo()
+          if (before && before < today && after && after >= today) {
+            data.reopenedAt = now
+            data.reopenReason = 'no_match'
+          }
         }
 
         // The date of Konnected's latest note follows the note. Only admins write either (field
@@ -300,15 +372,62 @@ export const Projects: CollectionConfig = {
           await sendProjectSubmittedEmail(req, doc)
         }
         // Tell the company what Konnected decided (changes asked, rejected, approved, published).
+        // A project reopened after its match ended gets the problem-path email instead (below).
         if (
           operation === 'update' &&
           doc.status !== previousDoc?.status &&
           (doc.status === 'changes_requested' ||
             doc.status === 'rejected' ||
             doc.status === 'approved' ||
-            doc.status === 'published')
+            (doc.status === 'published' && !ENDS_MATCH.includes(previousDoc?.status)))
         ) {
           await sendProjectReviewEmail(req, doc, doc.status)
+        }
+        return doc
+      },
+      async ({ doc, previousDoc, operation, req }) => {
+        // The problem paths, in the same transaction as the move, as the team member who made it
+        // (each write goes through its collection's rules and activity log).
+        if (operation !== 'update') return doc
+        const from = previousDoc?.status as ProjectStatus | undefined
+        const to = doc.status as ProjectStatus
+        if (
+          from &&
+          from !== to &&
+          ENDS_MATCH.includes(from) &&
+          (to === 'published' || to === 'closed')
+        ) {
+          // End the match and reopen applications, or close without delivery.
+          const ended = await endActiveMatch(
+            req,
+            doc.id,
+            to === 'published' ? 'match_ended' : 'closed',
+          )
+          if (ended) {
+            await sendMatchEndedEmails(req, ended, doc, to === 'published' ? 'reopened' : 'closed')
+          }
+        } else if (from === 'published' && to === 'closed') {
+          // Closed without a match: the open applications are not selected (each student gets
+          // the kind note), and the company gets the reason.
+          await closeOpenApplications(req, doc.id)
+          await sendNoMatchEmail(req, doc, 'closed')
+        } else if (
+          from === 'published' &&
+          to === 'published' &&
+          doc.reopenReason === 'no_match' &&
+          doc.reopenedAt &&
+          doc.reopenedAt !== previousDoc?.reopenedAt
+        ) {
+          // Not a status change, so log the new closing day here.
+          await writeActivity(req, {
+            action: 'review_change',
+            targetCollection: 'projects',
+            targetId: String(doc.id),
+            field: 'deadline',
+            fromStatus: storedToDay(previousDoc?.deadline) ?? undefined,
+            toStatus: storedToDay(doc.deadline) ?? undefined,
+          })
+          await sendNoMatchEmail(req, doc, 'reopened')
         }
         return doc
       },
@@ -447,6 +566,49 @@ export const Projects: CollectionConfig = {
       name: 'submittedAt',
       label: 'Sent for review',
       type: 'date',
+      access: teamWritesCompanyReads,
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // Why Konnected closed the project without delivery or without a match. Written by the team;
+      // the company reads it (it gets it by email too) and so does the team. Never the student's
+      // own words: the team writes the outcome.
+      name: 'closeReason',
+      label: 'Reason for closing',
+      type: 'textarea',
+      maxLength: REASON_MAX,
+      access: teamWritesCompanyReads,
+    },
+    {
+      // How the project closed. Set by the server with the move to `closed`.
+      name: 'closeOutcome',
+      label: 'Closed',
+      type: 'select',
+      options: [...CLOSE_OUTCOMES],
+      access: teamWritesCompanyReads,
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      name: 'closedAt',
+      label: 'Closed on',
+      type: 'date',
+      access: teamWritesCompanyReads,
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // When and why applications were opened again (the match ended, or nobody fitted). Set by
+      // the server. The company reads it: its project page says Konnected looks for a student.
+      name: 'reopenedAt',
+      label: 'Applications reopened',
+      type: 'date',
+      access: teamWritesCompanyReads,
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      name: 'reopenReason',
+      label: 'Why applications reopened',
+      type: 'select',
+      options: [...REOPEN_REASONS],
       access: teamWritesCompanyReads,
       admin: { readOnly: true, position: 'sidebar' },
     },

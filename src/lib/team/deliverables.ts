@@ -11,6 +11,7 @@ import {
   NOTE_MAX,
 } from '@/lib/deliverables/fields'
 import { type HandIn, toHandIn } from '@/lib/deliverables/student'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import type { Company, Deliverable, Match, Project, StudentProfile } from '@/payload-types'
 
 import { type ActivityRow, activityOf, type Owner, ownersById, type SessionUser } from './approvals'
@@ -212,9 +213,10 @@ async function matchFacts(
   actor: SessionUser,
   matchIds: number[],
 ): Promise<Map<number, MatchFact>> {
+  // Work on a match Konnected ended stays with Konnected: it waits for nobody, so it is not listed.
   const matches = await payload.find({
     collection: 'matches',
-    where: { id: { in: matchIds } },
+    where: { and: [{ id: { in: matchIds } }, ACTIVE_MATCH] },
     depth: 0,
     pagination: false,
     select: { project: true, student: true },

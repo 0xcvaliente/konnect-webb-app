@@ -13,6 +13,7 @@ import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { accountMenuUser } from '@/lib/account'
 import { AGREEMENT_KINDS } from '@/lib/agreements/fields'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import { requireTeam } from '@/lib/team/session'
 import type { Agreement, Company, Match, Project, StudentProfile } from '@/payload-types'
 
@@ -64,7 +65,7 @@ export default async function TeamAgreementsPage({
   const matched = (
     await payload.find({
       collection: 'matches',
-      where: { 'project.status': { equals: 'matched' } },
+      where: { and: [{ 'project.status': { equals: 'matched' } }, ACTIVE_MATCH] },
       depth: 1,
       limit: 100,
       ...as,

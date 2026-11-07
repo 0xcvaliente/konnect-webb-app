@@ -613,3 +613,61 @@ export function deliverableAcceptedEmail(
     footer: all.common.accountFooter,
   })
 }
+
+// ---------- Problem paths: sent to the student's or the company's own address ----------
+
+export type ProblemEmailKind =
+  | 'received'
+  | 'dueDateStudent'
+  | 'dueDateCompany'
+  | 'endedStudent'
+  | 'closedStudent'
+  | 'rematchCompany'
+  | 'closedNoDeliveryCompany'
+  | 'closedNoMatchCompany'
+  | 'reopenedCompany'
+
+/**
+ * The emails of the problem paths (Kanban cards "Problem reports" and "Projects without a match").
+ * The student's own note is never repeated; an email to the company names no student. `reason` is
+ * the team's reason for closing, written for both parties. Days are `YYYY-MM-DD`.
+ */
+export function problemPathEmail(
+  locale: EmailLocale,
+  kind: ProblemEmailKind,
+  {
+    title,
+    company = '',
+    date,
+    from,
+    reason,
+    href,
+  }: {
+    title: string
+    company?: string
+    date?: string | null
+    from?: string | null
+    reason?: string | null
+    href: string
+  },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.problems[kind]
+  const fill = (text: string) =>
+    text
+      .replace('{title}', title)
+      .replace('{company}', company)
+      .replace('{date}', date ? formatDay(locale, date) : '')
+      .replace('{from}', from ? formatDay(locale, from) : '')
+  // A due date set for the first time in answer to the student's report has no old date.
+  const body = 'bodySet' in m && !from ? m.bodySet : m.body
+  return render({
+    locale,
+    subject: fill(m.subject),
+    heading: fill(m.heading),
+    paragraphs: [fill(body), ...noteParagraphs(reason), fill(m.next)],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}

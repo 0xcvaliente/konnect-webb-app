@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 
 import { WithdrawForm } from '@/components/app/applications/WithdrawForm'
 import { StudentWork } from '@/components/app/deliverables/StudentWork'
+import { ProblemCard } from '@/components/app/problems/ProblemCard'
 import { Banner } from '@/components/app/Banner'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { SiteShell } from '@/components/app/SiteShell'
@@ -17,6 +18,7 @@ import { routing } from '@/i18n/routing'
 import { APPLICATION_STATUS_TONE, canWithdraw } from '@/lib/applications/fields'
 import { findOwnApplication, type OwnApplication, ownSharedItems } from '@/lib/applications/student'
 import { loadStudentWork } from '@/lib/deliverables/student'
+import { loadStudentProblem } from '@/lib/problems/student'
 import { requireStudent } from '@/lib/students/session'
 import { cn } from '@/lib/utils'
 
@@ -39,6 +41,7 @@ type StepKey =
   | 'selected'
   | 'notSelected'
   | 'withdrawn'
+  | 'ended'
 type Step = { key: string; title: string; when?: string | null; body?: string; state: StepState }
 
 /** Where the work stands once the student is selected: not started, running, or accepted. */
@@ -95,6 +98,13 @@ function useSteps(a: OwnApplication, work: WorkStage): Step[] {
     case 'withdrawn':
       if (wasShortlisted) steps.push(step('shortlisted', 'done', at(a.shortlistedAt)))
       steps.push(step('withdrawn', 'stop', at(a.withdrawnAt)))
+      break
+    case 'match_ended':
+      if (wasShortlisted) steps.push(step('shortlisted', 'done', at(a.shortlistedAt)))
+      steps.push(
+        step('selected', 'done', at(a.decidedAt), a.companyName),
+        step('ended', 'stop', at(a.endedAt)),
+      )
       break
   }
   return steps
@@ -265,6 +275,12 @@ export default async function StudentApplicationPage({
     application?.status === 'selected'
       ? await loadStudentWork(payload, user, application.projectId)
       : null
+  // The due date and the "Need more time?" card, while the student's match runs.
+  const problem =
+    application?.status === 'selected'
+      ? await loadStudentProblem(payload, user, application.projectId)
+      : null
+  const tp = await getTranslations('StudentProblem')
   const workStage: WorkStage = !work
     ? 'none'
     : work.state.accepted || work.state.blocked === 'closed'
@@ -350,6 +366,41 @@ export default async function StudentApplicationPage({
 
         <aside className="grid min-w-0 gap-6 md:gap-[26px]" aria-label={t('projectTitle')}>
           <ProjectFacts application={a} />
+          {problem && (
+            <Card className="gap-2">
+              <CardTitle>{tp('dueTitle')}</CardTitle>
+              <p className="font-medium">
+                {problem.dueDay ? tp('due', { date: format(problem.dueDay) }) : tp('noDue')}
+              </p>
+              {problem.movedFrom.length > 0 && (
+                <p className="text-[0.85rem] text-muted-foreground">
+                  {tp('movedFrom', {
+                    date: format(problem.movedFrom[problem.movedFrom.length - 1]!),
+                  })}
+                </p>
+              )}
+            </Card>
+          )}
+          {problem?.open ? (
+            <Card className="gap-0 p-0 sm:p-0">
+              <Banner icon={ClockIcon} className="rounded-card px-[22px] py-[18px] sm:px-[26px]">
+                <div className="grid gap-0.5">
+                  <p className="font-semibold">{tp('openTitle')}</p>
+                  <p className="text-[0.88rem] text-muted-foreground">
+                    {tp('openBody', {
+                      date: formatter.dateTime(new Date(problem.open.createdAt), {
+                        dateStyle: 'medium',
+                        timeZone: 'Europe/Oslo',
+                      }),
+                      kind: tp(`kind.${problem.open.kind}`),
+                    })}
+                  </p>
+                </div>
+              </Banner>
+            </Card>
+          ) : problem?.canReport && workStage !== 'done' ? (
+            <ProblemCard projectId={a.projectId!} company={a.companyName} />
+          ) : null}
           <Card className="gap-3">
             <CardTitle>{t('seesTitle', { company: a.companyName })}</CardTitle>
             {a.status === 'selected' ? (
@@ -384,7 +435,9 @@ export default async function StudentApplicationPage({
                 <span>
                   {deciding
                     ? t('seesOpen', { company: a.companyName })
-                    : t('seesNone', { company: a.companyName })}
+                    : a.status === 'match_ended'
+                      ? t('seesEnded', { company: a.companyName })
+                      : t('seesNone', { company: a.companyName })}
                 </span>
               </p>
             )}

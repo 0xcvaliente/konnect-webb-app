@@ -2,6 +2,7 @@ import { APIError, type PayloadRequest } from 'payload'
 
 import { relationId } from '@/access/roles'
 import { lockRow } from '@/lib/db/locks'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 
 import { type DeliveryItem, deliveryState, workSettled } from './fields'
 
@@ -27,7 +28,8 @@ export async function assertWorkSettled(
   await lockRow(req, 'projects', projectId)
   const matches = await req.payload.find({
     collection: 'matches',
-    where: { project: { equals: projectId } },
+    // Work on a match Konnected ended stays with Konnected; it never holds up the close.
+    where: { and: [{ project: { equals: projectId } }, ACTIVE_MATCH] },
     depth: 0,
     pagination: false,
     select: { project: true },

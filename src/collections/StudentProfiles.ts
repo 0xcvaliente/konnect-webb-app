@@ -12,6 +12,7 @@ import {
 import { copyNameToUser } from '@/hooks/copyNameToUser'
 import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
 import { sendProfileReviewEmail } from '@/lib/email/profileEmails'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import {
   canonical,
   changedFields,
@@ -212,9 +213,10 @@ export const StudentProfiles: CollectionConfig = {
           (key) => JSON.stringify(doc[key] ?? null) !== JSON.stringify(previousDoc?.[key] ?? null),
         )
         if (!changed) return doc
+        // Matches Konnected ended keep no copy, and stay as they are.
         const matches = await req.payload.find({
           collection: 'matches',
-          where: { student: { equals: doc.id } },
+          where: { and: [{ student: { equals: doc.id } }, ACTIVE_MATCH] },
           depth: 0,
           pagination: false,
           overrideAccess: true,

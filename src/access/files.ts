@@ -1,6 +1,7 @@
 import type { PayloadRequest, Where } from 'payload'
 
 import { RELEASED_STATUSES } from '@/lib/deliverables/fields'
+import { ACTIVE_MATCH } from '@/lib/problems/rules'
 
 import { relationId } from './roles'
 
@@ -30,7 +31,8 @@ export const idIn = (list: number[]): Where | false => (list.length ? { id: { in
 export async function cvIdsSharedWith(req: PayloadRequest, companyId: number): Promise<number[]> {
   const matches = await req.payload.find({
     collection: 'matches',
-    where: { 'project.company': { equals: companyId } },
+    // Only the current match: after Konnected ends one, the company opens nothing of that student.
+    where: { and: [{ 'project.company': { equals: companyId } }, ACTIVE_MATCH] },
     depth: 0,
     pagination: false,
     overrideAccess: true,
@@ -98,7 +100,8 @@ async function attachmentIds(req: PayloadRequest, where: Where): Promise<number[
 export async function briefIdsForStudent(req: PayloadRequest, userId: number): Promise<number[]> {
   const matches = await req.payload.find({
     collection: 'matches',
-    where: { 'student.user': { equals: userId } },
+    // Brief attachments are for the selected student only, while the match runs.
+    where: { and: [{ 'student.user': { equals: userId } }, ACTIVE_MATCH] },
     depth: 0,
     pagination: false,
     overrideAccess: true,

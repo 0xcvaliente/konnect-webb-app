@@ -1,7 +1,7 @@
 import { APIError, type PayloadRequest } from 'payload'
 
 import { relationId } from '@/access/roles'
-import { assertCompanyAgreementSigned } from '@/lib/agreements/gates'
+import { assertCompanyAgreementSigned, type IgnoredTerm } from '@/lib/agreements/gates'
 import { isValidPrice } from '@/lib/money'
 import type { Project } from '@/payload-types'
 
@@ -17,9 +17,14 @@ import type { Project } from '@/payload-types'
  * the team's approval queue (publishProject) publishes through this hook too.
  *
  * `project` is the stored project with the update merged in. `req` carries the transaction, so
- * the checks read related records with it.
+ * the checks read related records with it. `ignore` leaves terms out of the company agreement
+ * comparison (reopening applications after a match ended: the new closing day).
  */
-export async function assertCanPublish(req: PayloadRequest, project: Project): Promise<void> {
+export async function assertCanPublish(
+  req: PayloadRequest,
+  project: Project,
+  { ignore = [] }: { ignore?: readonly IgnoredTerm[] } = {},
+): Promise<void> {
   const companyId = relationId(project.company)
   // Bypass: the server reads the company's status whatever the acting user may read. Only the
   // status is used.
@@ -43,7 +48,7 @@ export async function assertCanPublish(req: PayloadRequest, project: Project): P
   if (project.paidOrUnpaid === 'paid' && !isValidPrice(project.fee)) {
     throw new APIError('Project: a paid project needs a fixed price before publishing', 400)
   }
-  await assertCompanyAgreementSigned(req, project)
+  await assertCompanyAgreementSigned(req, project, ignore)
 }
 
 /**
