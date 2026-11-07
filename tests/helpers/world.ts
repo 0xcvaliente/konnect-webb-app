@@ -15,7 +15,13 @@ export const ADMIN_EMAIL = 'admin@konnected.test'
 let payloadPromise: Promise<Payload> | undefined
 export const getTestPayload = (): Promise<Payload> => (payloadPromise ??= getPayload({ config }))
 
-/** Empty every application table between tests. The migrations table is kept. */
+/**
+ * Empty every application table between tests. The migrations table is kept.
+ *
+ * Work a previous test left running after its response (an agreement's PDF job, an email) may
+ * still hold row locks; PostgreSQL can then pick the TRUNCATE as a deadlock victim. Try again a
+ * few times: the other work finishes and the TRUNCATE goes through.
+ */
 export async function resetDatabase(): Promise<void> {
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
   try {
@@ -24,7 +30,16 @@ export async function resetDatabase(): Promise<void> {
     )
     if (rows.length) {
       const tables = rows.map((r) => `"${r.tablename}"`).join(', ')
-      await pool.query(`TRUNCATE ${tables} RESTART IDENTITY CASCADE`)
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await pool.query(`TRUNCATE ${tables} RESTART IDENTITY CASCADE`)
+          break
+        } catch (error) {
+          const deadlock = (error as { code?: string }).code === '40P01'
+          if (!deadlock || attempt >= 5) throw error
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt))
+        }
+      }
     }
   } finally {
     await pool.end()
