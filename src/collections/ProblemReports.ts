@@ -11,7 +11,7 @@ import {
 } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { lockRow } from '@/lib/db/locks'
-import { sendProblemReceivedEmail } from '@/lib/email/problemEmails'
+import { sendProblemReceivedEmail, sendProblemReportedToTeam } from '@/lib/email/problemEmails'
 import {
   cleanText,
   PROBLEM_KINDS,
@@ -163,8 +163,13 @@ export const ProblemReports: CollectionConfig = {
     afterChange: [
       logActivityAfterChange({ statusField: 'status' }),
       async ({ doc, operation, req }) => {
-        // "Konnected has your message", to the student. The note is not repeated.
-        if (operation === 'create') await sendProblemReceivedEmail(req, doc)
+        // "Konnected has your message", to the student, and "a problem was reported" to the
+        // project's owner on the team (or the whole team for the shared pool). The note is in
+        // neither.
+        if (operation === 'create') {
+          await sendProblemReceivedEmail(req, doc)
+          await sendProblemReportedToTeam(req, doc)
+        }
         return doc
       },
     ],

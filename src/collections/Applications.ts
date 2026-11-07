@@ -23,7 +23,7 @@ import {
   lockApplicationForDecision,
   selectionOf,
 } from '@/lib/matching/rules'
-import { ACTIVE_MATCH, problemError } from '@/lib/problems/rules'
+import { ACTIVE_MATCH, type ProblemContext, problemError } from '@/lib/problems/rules'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import {
   APPLICATION_TRANSITIONS,
@@ -230,6 +230,22 @@ export const Applications: CollectionConfig = {
               409,
             )
           }
+        }
+        // Back into the pool ("match again", owner answer 51): only while the Projects hook
+        // reopens this application's project after its match ended (server context; no API
+        // request can set it).
+        if (from !== to && from === 'not_selected' && to === 'applied') {
+          const projectId = relationId(originalDoc?.project)
+          const returning = (req.context as ProblemContext | undefined)?.returningToPool
+          if (!projectId || returning !== projectId) {
+            throw problemError(
+              'not_open',
+              'An application goes back into the pool only when Konnected matches the project again',
+              400,
+            )
+          }
+          data.shortlistedAt = null
+          data.decidedAt = null
         }
         // When each step happened, for the student's progress and the team. Server only.
         if (from !== to) {

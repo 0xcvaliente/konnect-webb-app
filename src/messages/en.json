@@ -530,6 +530,49 @@
       "button": "Open My work",
       "ignore": "You get this email on working days when something of yours is due today or overdue."
     },
+    "teamProblem": {
+      "subject": "Problem reported: “{title}”",
+      "heading": "A student reported a problem",
+      "body": "A problem was reported on “{title}”: {kind}.",
+      "next": "Open the project to read the report and choose what happens next. Konnected answers within 2 working days.",
+      "pool": "Nobody on the team owns this company, so the whole team gets this email. Take it from the shared pool if it is yours.",
+      "kinds": {
+        "more_time": "the student needs more time",
+        "cannot_finish": "the student cannot finish"
+      },
+      "button": "Open the project",
+      "ignore": "You get this email because you are on the Konnected team."
+    },
+    "payments": {
+      "invoiceSent": {
+        "subject": "Invoice sent for “{title}”",
+        "heading": "Your invoice is on its way",
+        "body": "Konnected has sent the invoice for “{title}”: {price} excluding VAT, {total} including 25 % VAT.",
+        "bodyNoAmount": "Konnected has sent the invoice for “{title}”.",
+        "due": "Payment terms are 14 days: please pay by {date}.",
+        "next": "You find the invoice and its status under Payments.",
+        "button": "Open your invoices",
+        "ignore": "If you do not know this project, write to the Konnected team."
+      },
+      "invoicePaid": {
+        "subject": "Payment received for “{title}”",
+        "heading": "Thank you, we have your payment",
+        "body": "Konnected has received your payment of {total} for “{title}”.",
+        "bodyNoAmount": "Konnected has received your payment for “{title}”.",
+        "next": "You find the invoice and its status under Payments.",
+        "button": "Open your invoices",
+        "ignore": "If you do not know this project, write to the Konnected team."
+      },
+      "studentPaid": {
+        "subject": "You have been paid for “{title}”",
+        "heading": "Your pay is on its way",
+        "body": "Konnected has paid you {amount} for “{title}” in this month’s pay run.",
+        "bodyNoAmount": "Konnected has paid you for “{title}” in this month’s pay run.",
+        "next": "It can take a few days before it shows in your bank account. You find the details under Payments.",
+        "button": "Open your payments",
+        "ignore": "If you did not work on this project, write to the Konnected team."
+      }
+    },
     "decisionReminder": {
       "subject": "Decision due {date}: {title}",
       "heading": "Hi {name}",
@@ -2947,7 +2990,7 @@
     "endConfirm": "End the match with {student}?",
     "end1": "{student} leaves the project and gets an email.",
     "end2": "Files {student} uploaded stay with Konnected. Nothing is released to {company}.",
-    "end3": "The project takes applications again, and you pick a new student in Matching.",
+    "end3": "The project takes applications again, and you pick a new student in Matching. Earlier applicants who were not selected are back in the pool; {student} and anyone who withdrew are not.",
     "closesLabel": "Applications close",
     "endButton": "End match and reopen",
     "closeNoDelivery": "Close without delivery",
@@ -3013,6 +3056,13 @@
       "reassigned": "Owner changed from {from} to {to}",
       "unassigned": "Owner removed",
       "nobody": "nobody",
+      "price": "Price changed from {from} to {to}",
+      "priceSet": "Price set to {to}",
+      "priceCleared": "Price removed",
+      "studentPay": "Student pay changed from {from} to {to}",
+      "studentPaySet": "Student pay set to {to}",
+      "studentPayCleared": "Student pay removed",
+      "applicationsBack": "{count, plural, one {One earlier applicant is} other {# earlier applicants are}} back in Matching",
       "kickoffRecorded": "Kick-off recorded",
       "kickoffChanged": "Kick-off changed"
     },
@@ -3023,6 +3073,38 @@
       "reopened": "Applications reopened. The company gets an email.",
       "changesSent": "Sent to {company}.",
       "handled": "Report marked as handled."
+    },
+    "pay": {
+      "title": "Price and student pay",
+      "price": "Price (excl. VAT)",
+      "total": "Company pays (incl. 25 % VAT)",
+      "studentPay": "Student pay",
+      "change": "Change price or pay",
+      "priceLabel": "Price (NOK, excl. VAT)",
+      "priceHint": "Whole kroner. The company sees the price on its project and invoices.",
+      "studentPayLabel": "Student pay (NOK, optional)",
+      "studentPayHint": "Whole kroner, at most the price. Students see it on the project. The company never sees it. Leave it empty to show only “Paid”.",
+      "logHint": "The change goes to the activity log with the old and new amounts and your name. Nobody gets an email.",
+      "signedTitle": "A signed agreement keeps the old amount",
+      "signedCompany": "The company signed its agreement before this change. The signed agreement keeps the amount it was signed with: Konnected does not make a new one automatically. Reopening applications later needs a new company agreement with the new price.",
+      "signedStudent": "{student} signed the student agreement before this change. It is not made again.",
+      "confirm": "I understand that the signed agreement keeps the old amount.",
+      "invoiceSent": "The invoice was sent on {date} with the old price. The payment log keeps that price: correct the invoice by hand.",
+      "invoiceOpen": "The payment log takes the new price, since no invoice has been sent.",
+      "save": "Save price and pay",
+      "saving": "Saving…",
+      "saved": "Price and pay saved.",
+      "errors": {
+        "forbidden": "Only the Konnected team can change the price.",
+        "not_found": "The project was not found. Load the page again.",
+        "not_open": "The price can change only on a paid project that is published, matched, running or delivered.",
+        "price_invalid": "Type the price in whole kroner.",
+        "student_pay_invalid": "Student pay must be whole kroner and at most the price.",
+        "same": "Nothing changed.",
+        "changed": "Someone changed the price meanwhile. Load the page again.",
+        "confirm": "Tick the box to confirm that the signed agreement keeps the old amount.",
+        "generic": "Something went wrong. Try again."
+      }
     }
   },
   "TeamToday": {

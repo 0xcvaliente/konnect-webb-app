@@ -12,6 +12,8 @@ import {
 } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { lockRow } from '@/lib/db/locks'
+import { PAYMENT_NOTICES, sendPaymentEmails } from '@/lib/email/paymentEmails'
+import type { PaymentEmailKind } from '@/lib/email/templates'
 import { isValidPrice } from '@/lib/money'
 import {
   datesProblem,
@@ -30,6 +32,16 @@ export type PaymentContext = {
    * changed since, so one member's save never silently undoes another's (savePayment).
    */
   paymentVersion?: string
+  /**
+   * The notices a save makes due (a date recorded on a row that had none), by match id. Set by the
+   * beforeChange hook from the row read under its lock, sent by the afterChange hook, once.
+   */
+  paymentNotices?: Record<number, PaymentEmailKind[]>
+  /**
+   * Set by the Projects hook when a new price follows onto the row. Checked again under the lock:
+   * an invoice sent meanwhile keeps the price it was sent with.
+   */
+  feeFollowsProject?: boolean
 }
 
 /** An APIError with a code the team's screen maps to its own message. */
@@ -95,6 +107,9 @@ export const Payments: CollectionConfig = {
             throw fail('not_open', 'Someone saved this row meanwhile. Load it again.', 409)
           }
           originalDoc = fresh
+          if ((context as PaymentContext | undefined)?.feeFollowsProject && fresh.invoiceSentAt) {
+            delete data.projectFee
+          }
         }
 
         if (operation === 'create') {
@@ -161,6 +176,36 @@ export const Payments: CollectionConfig = {
           todayInOslo(),
         )
         if (problem) throw fail(problem, `The payment dates are not possible (${problem})`)
+
+        // Payment notices (lib/email/paymentEmails.ts): a date recorded on a row that had none.
+        // Compared with the row as read under the lock, so two saves at once, or saving the row
+        // again, never send a notice twice. Changing a recorded date sends nothing.
+        const due: PaymentEmailKind[] = []
+        for (const { field, kind } of PAYMENT_NOTICES) {
+          if (storedToDay(originalDoc?.[field]) || !pick(field)) continue
+          // A date cleared and recorded again is not a new transition: the activity log shows
+          // whether this row had the date before (Payments log every date change).
+          if (operation === 'update') {
+            const before = await req.payload.count({
+              collection: 'activity-logs',
+              where: {
+                and: [
+                  { targetCollection: { equals: 'payments' } },
+                  { targetId: { equals: String(originalDoc!.id) } },
+                  { field: { equals: field } },
+                  { toStatus: { exists: true } },
+                  { toStatus: { not_equals: '' } },
+                ],
+              },
+              overrideAccess: true,
+              req,
+            })
+            if (before.totalDocs > 0) continue
+          }
+          due.push(kind)
+        }
+        const ctx = req.context as PaymentContext
+        ctx.paymentNotices = { ...(ctx.paymentNotices ?? {}), [matchId]: due }
         return data
       },
     ],
@@ -168,6 +213,15 @@ export const Payments: CollectionConfig = {
       logActivityAfterChange({
         alsoLog: ['invoiceSentAt', 'invoicePaidAt', 'studentPaidAt', 'projectFee', 'invoiceNumber'],
       }),
+      async ({ doc, req }) => {
+        const ctx = req.context as PaymentContext
+        const matchId = relationId(doc.match as Rel)
+        const due = matchId ? ctx.paymentNotices?.[matchId] : undefined
+        if (!matchId || !due?.length) return doc
+        delete ctx.paymentNotices![matchId]
+        await sendPaymentEmails(req, doc, due)
+        return doc
+      },
     ],
     afterDelete: [logActivityAfterDelete()],
   },

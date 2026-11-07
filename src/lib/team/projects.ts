@@ -15,11 +15,13 @@ import {
   type ReopenReason,
 } from '@/lib/problems/fields'
 import { ACTIVE_MATCH } from '@/lib/problems/rules'
+import { parsePrice } from '@/lib/money'
 import { dayToStored, parseDay, storedToDay, todayInOslo } from '@/lib/projects/fields'
 import type { ProjectStatus } from '@/lib/transitions'
 import type { Match, ProblemReport, Project, StudentProfile } from '@/payload-types'
 
 import { type ActivityRow, activityOf, type SessionUser } from './approvals'
+import { PARTY_SIGNED, PAY_EDITABLE, type PayChangeError, type PayChangeState } from './payChange'
 
 /**
  * The team's project page and the problem paths (Kanban cards "Problem reports: more time, match
@@ -87,7 +89,77 @@ export type TeamProject = {
   ownerId: number | null
   /** The company's owner, whom the project follows unless the team moved it. */
   companyOwnerId: number | null
+  /** The price and the student's pay, for a paid project; null for an unpaid one. */
+  pay: TeamPay | null
   activity: ActivityRow[]
+}
+
+export type TeamPay = {
+  /** The fixed price excluding VAT, and what the student is paid (whole kroner), or null. */
+  fee: number | null
+  studentPay: number | null
+  /** The team may change both here now (a paid project, published or later, not closed). */
+  editable: boolean
+  /** The company signed the project's company agreement (Konnected may still have to sign). */
+  companySigned: boolean
+  /** The student signed the current match's student agreement. */
+  studentSigned: boolean
+  /** The current match has a payment log row. */
+  paymentRow: boolean
+  /** The day the invoice of the current match was sent (`YYYY-MM-DD`), or null. */
+  invoiceSent: string | null
+}
+
+/**
+ * The project's price and pay with what a change touches: agreements the company or the student
+ * signed (they keep the old amount), and the current match's payment log row. Read as the team
+ * member.
+ */
+async function payOf(
+  payload: Payload,
+  actor: SessionUser,
+  project: Project,
+  matchId: number | null,
+): Promise<TeamPay | null> {
+  if (project.paidOrUnpaid !== 'paid') return null
+  const [agreements, payments] = await Promise.all([
+    payload.find({
+      collection: 'agreements',
+      where: {
+        and: [
+          { project: { equals: project.id } },
+          { status: { in: [...PARTY_SIGNED] } },
+          matchId
+            ? { or: [{ kind: { equals: 'company' } }, { match: { equals: matchId } }] }
+            : { kind: { equals: 'company' } },
+        ],
+      },
+      depth: 0,
+      pagination: false,
+      select: { kind: true },
+      ...asActor(actor),
+    }),
+    matchId
+      ? payload.find({
+          collection: 'payments',
+          where: { match: { equals: matchId } },
+          depth: 0,
+          limit: 1,
+          select: { invoiceSentAt: true },
+          ...asActor(actor),
+        })
+      : Promise.resolve(null),
+  ])
+  const row = payments?.docs[0]
+  return {
+    fee: project.fee ?? null,
+    studentPay: project.studentPay ?? null,
+    editable: (PAY_EDITABLE as readonly string[]).includes(project.status),
+    companySigned: agreements.docs.some((a) => a.kind === 'company'),
+    studentSigned: agreements.docs.some((a) => a.kind === 'student'),
+    paymentRow: Boolean(row),
+    invoiceSent: day(row?.invoiceSentAt),
+  }
 }
 
 const toMatch = (m: Match, names: Map<number, string>): TeamMatch => ({
@@ -206,6 +278,7 @@ export async function loadTeamProject(
     reopenReason: (project.reopenReason as ReopenReason | null | undefined) ?? null,
     ownerId: relationId(project.owner as number) ?? relationId(project.takenBy as number) ?? null,
     companyOwnerId: await companyOwnerOf(payload, actor, relationId(project.company as number)),
+    pay: await payOf(payload, actor, project, match?.id ?? null),
     activity,
   }
 }
@@ -597,4 +670,89 @@ async function saveProject(
     return refused(payload, error)
   }
   return ok()
+}
+
+// ---------- Price and student pay after publishing (owner answer 42) ----------
+
+const payFail = (error: PayChangeError): PayChangeState => ({
+  status: 'error',
+  error,
+  doneAt: Date.now(),
+})
+
+/** A typed amount: empty is null, anything else must be whole kroner. */
+const amountOf = (form: FormData, key: string): number | null | undefined => {
+  const typed = text(form, key)
+  return typed ? parsePrice(typed) : null
+}
+
+/** What the form loaded (`wasFee`, `wasPay`): empty is null. */
+const wasOf = (form: FormData, key: string): number | null => {
+  const typed = text(form, key)
+  return typed && /^\d+$/.test(typed) ? Number(typed) : null
+}
+
+/**
+ * Change a published (or later) paid project's price and what the student is paid, as the team
+ * member. A new price after the company signed its agreement, or a new pay after the student signed
+ * theirs, needs the team's confirmation (`confirm` = `1`) that the signed agreement keeps the old
+ * amount: Konnected does not make agreements again automatically. Refused when the amounts changed since the form loaded.
+ *
+ * The Projects hook checks the rules again (only admins write either field; the pay is at most the
+ * price), logs each change with the old and new amount and who made it, and moves a new price onto
+ * the current match's payment log row while no invoice was sent.
+ */
+export async function changeProjectPay(
+  payload: Payload,
+  actor: SessionUser | null,
+  form: FormData,
+): Promise<PayChangeState> {
+  if (!actor || !isAdmin(actor)) return payFail('forbidden')
+  const fee = amountOf(form, 'price')
+  if (fee === undefined || fee === null) return payFail('price_invalid')
+  const studentPay = amountOf(form, 'studentPay')
+  if (studentPay === undefined || (studentPay !== null && studentPay > fee))
+    return payFail('student_pay_invalid')
+  const project = await projectOf(payload, actor, form)
+  if (!project) return payFail('not_found')
+  if (
+    project.paidOrUnpaid !== 'paid' ||
+    !(PAY_EDITABLE as readonly string[]).includes(project.status)
+  )
+    return payFail('not_open')
+  const nowFee = project.fee ?? null
+  const nowPay = project.studentPay ?? null
+  if (wasOf(form, 'wasFee') !== nowFee || wasOf(form, 'wasPay') !== nowPay)
+    return payFail('changed')
+  if (fee === nowFee && studentPay === nowPay) return payFail('same')
+  const match = await activeMatch(payload, actor, project.id)
+  const pay = await payOf(payload, actor, project, match?.id ?? null)
+  // A new price after the company signed, or a new pay after the student signed: the team
+  // confirms that the signed agreement keeps the old amount (it is not made again).
+  const signedOld =
+    (fee !== nowFee && pay?.companySigned) || (studentPay !== nowPay && pay?.studentSigned)
+  if (signedOld && text(form, 'confirm') !== '1') return payFail('confirm')
+  try {
+    await payload.update({
+      collection: 'projects',
+      id: project.id,
+      data: { fee, studentPay },
+      ...asActor(actor),
+    })
+  } catch (error) {
+    const status =
+      typeof error === 'object' && error !== null && 'status' in error
+        ? Number((error as { status: unknown }).status)
+        : undefined
+    if (status === 404) return payFail('not_found')
+    if (status === 403) return payFail('forbidden')
+    if (status === 400) return payFail('not_open')
+    if (status === 409) return payFail('changed')
+    payload.logger.error({
+      msg: 'Team price change failed',
+      reason: error instanceof Error ? error.name : 'unknown',
+    })
+    return payFail('generic')
+  }
+  return { status: 'done', doneAt: Date.now() }
 }

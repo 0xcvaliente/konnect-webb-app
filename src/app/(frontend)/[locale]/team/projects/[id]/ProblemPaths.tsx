@@ -275,7 +275,7 @@ export function ProblemPaths({
           <ul className="grid list-disc gap-1 pl-5 text-[0.88rem] text-muted-foreground">
             <li>{t('end1', { student })}</li>
             <li>{t('end2', { student, company })}</li>
-            <li>{t('end3')}</li>
+            <li>{t('end3', { student })}</li>
           </ul>
           <DateField
             id={`${id}-ec`}

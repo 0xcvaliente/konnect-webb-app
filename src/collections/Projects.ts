@@ -35,7 +35,13 @@ import {
   REASON_MAX,
   REOPEN_REASONS,
 } from '@/lib/problems/fields'
-import { closeOpenApplications, endActiveMatch, problemError } from '@/lib/problems/rules'
+import {
+  activeMatchOf,
+  closeOpenApplications,
+  endActiveMatch,
+  problemError,
+  returnApplicantsToPool,
+} from '@/lib/problems/rules'
 import { lockRow } from '@/lib/db/locks'
 import {
   COMPANY_EDITABLE,
@@ -424,6 +430,49 @@ export const Projects: CollectionConfig = {
             })
           }
         }
+        // A new price reaches the payment log row of the current match while no invoice was
+        // sent, so the invoice uses it. An invoice already sent keeps its price (the team
+        // corrects it by hand). Written as the team member, through the Payments rules and log.
+        const fee = doc.fee ?? null
+        if (
+          operation === 'update' &&
+          isAdmin(req.user) &&
+          fee !== (previousDoc?.fee ?? null) &&
+          isValidPrice(fee)
+        ) {
+          const match = await activeMatchOf(req, doc.id)
+          const rows = match
+            ? await req.payload.find({
+                collection: 'payments',
+                where: {
+                  and: [{ match: { equals: match.id } }, { invoiceSentAt: { exists: false } }],
+                },
+                depth: 0,
+                pagination: false,
+                select: { projectFee: true },
+                overrideAccess: false,
+                req,
+              })
+            : { docs: [] }
+          // The Payments hook reads the row again under its lock and keeps the old price if the
+          // invoice was recorded as sent meanwhile.
+          const saved = req.context
+          req.context = { ...(req.context ?? {}), feeFollowsProject: true }
+          try {
+            for (const row of rows.docs) {
+              if (row.projectFee === fee) continue
+              await req.payload.update({
+                collection: 'payments',
+                id: row.id,
+                data: { projectFee: fee },
+                overrideAccess: false,
+                req,
+              })
+            }
+          } finally {
+            req.context = saved
+          }
+        }
         return doc
       },
       async ({ doc, previousDoc, operation, req }) => {
@@ -468,6 +517,10 @@ export const Projects: CollectionConfig = {
             doc.id,
             to === 'published' ? 'match_ended' : 'closed',
           )
+          // Match again: the earlier applicants who were not selected are back in the pool.
+          if (to === 'published') {
+            await returnApplicantsToPool(req, doc.id, relationId(ended?.student))
+          }
           if (ended) {
             await sendMatchEndedEmails(req, ended, doc, to === 'published' ? 'reopened' : 'closed')
           }

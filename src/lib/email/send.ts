@@ -40,6 +40,10 @@ export type EmailType =
   | 'project_closed_no_match'
   | 'applications_reopened'
   | 'team_morning'
+  | 'problem_reported_team'
+  | 'invoice_sent'
+  | 'invoice_paid'
+  | 'student_paid'
   | 'decision_reminder'
 
 /**

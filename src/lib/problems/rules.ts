@@ -1,6 +1,7 @@
 import { APIError, type PayloadRequest, type Where } from 'payload'
 
 import { relationId } from '@/access/roles'
+import { writeActivity } from '@/hooks/logActivity'
 import { VOIDABLE } from '@/lib/agreements/fields'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import type { Match, Project } from '@/payload-types'
@@ -28,6 +29,11 @@ export type ProblemContext = {
   endingMatch?: number
   /** How the open reports on the match are settled by this change. */
   resolution?: ProblemResolution
+  /**
+   * The project whose earlier applicants go back into the pool now ("match again"). The
+   * Applications hook refuses `not_selected` to `applied` without it.
+   */
+  returningToPool?: number
 }
 
 export const problemError = (code: ProblemError, message: string, status = 400): APIError =>
@@ -230,4 +236,58 @@ export async function closeOpenApplications(req: PayloadRequest, projectId: numb
       req,
     })
   }
+}
+
+/**
+ * "Match again" (owner answer 51): after the match ended and applications reopened, every earlier
+ * applicant who was not selected goes back into the pool (`applied`, the normal under-review
+ * state) for the new selection, as the team member, in the same transaction. Not the student who
+ * was replaced (their application is `match_ended`, and any other of theirs is skipped too), and
+ * never a student who withdrew (no re-applying after withdrawing). Selecting one of them later
+ * meets every selection rule again (a reviewed profile, at most 2 running projects).
+ *
+ * Writes one `review_change` row on the project (`field` `applicationsBack`, the count in
+ * `toStatus`); each application's own status change is logged by its hook. Returns the count.
+ */
+export async function returnApplicantsToPool(
+  req: PayloadRequest,
+  projectId: number,
+  replacedStudentId: number | undefined,
+): Promise<number> {
+  const earlier = await req.payload.find({
+    collection: 'applications',
+    where: {
+      and: [{ project: { equals: projectId } }, { status: { equals: 'not_selected' } }],
+    },
+    depth: 0,
+    pagination: false,
+    select: { student: true, status: true },
+    overrideAccess: false,
+    req,
+  })
+  const back = earlier.docs.filter((a) => relationId(a.student as Rel) !== replacedStudentId)
+  if (!back.length) return 0
+  const context = req.context as ProblemContext
+  req.context = { ...(req.context ?? {}), returningToPool: projectId }
+  try {
+    for (const application of back) {
+      await req.payload.update({
+        collection: 'applications',
+        id: application.id,
+        data: { status: 'applied' },
+        overrideAccess: false,
+        req,
+      })
+    }
+  } finally {
+    req.context = { ...(req.context ?? {}), returningToPool: context?.returningToPool }
+  }
+  await writeActivity(req, {
+    action: 'review_change',
+    targetCollection: 'projects',
+    targetId: String(projectId),
+    field: 'applicationsBack',
+    toStatus: String(back.length),
+  })
+  return back.length
 }

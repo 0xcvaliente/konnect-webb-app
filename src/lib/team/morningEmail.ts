@@ -1,17 +1,16 @@
 import type { Payload } from 'payload'
 
-import { isAdminEmail } from '@/access/adminEmails'
 import { appUrl } from '@/lib/auth/env'
 import { sendEmail } from '@/lib/email/send'
 import { type MorningLine, teamMorningEmail } from '@/lib/email/templates'
 import en from '@/messages/en.json'
 import no from '@/messages/no.json'
 import { isWorkingDay, osloDay } from '@/lib/workingDays'
-import type { User } from '@/payload-types'
 
 import type { SessionUser } from './approvals'
 import { MORNING_EMAIL_AT } from './memberFields'
 import { coveredBy, firstName, isAwayOn } from './members'
+import { activeTeamUsers } from './recipients'
 import { isDueToday, isOverdue, itemsOf, loadToday, poolItems, type WorkItem } from './today'
 
 /**
@@ -65,17 +64,10 @@ const pressing = (items: WorkItem[]) => items.filter((i) => isOverdue(i) || isDu
 export async function sendMorningEmails(payload: Payload, now: Date = new Date()): Promise<number> {
   if (!isMorningWindow(now)) return 0
   const today = osloDay(now)
-  // Bypass: a background job has no signed-in user. It reads the team's own user records (role,
-  // address, language) to know who is on the team, then reads each list as that team member.
-  const users = await payload.find({
-    collection: 'users',
-    where: { and: [{ role: { equals: 'admin' } }, { accountStatus: { not_equals: 'paused' } }] },
-    depth: 0,
-    pagination: false,
-    overrideAccess: true,
-  })
+  // A background job has no signed-in user. It reads who is on the team (recipients.ts, the same
+  // people the "problem reported" email goes to), then reads each list as that team member.
   let sent = 0
-  for (const user of (users.docs as User[]).filter((u) => isAdminEmail(u.email))) {
+  for (const user of await activeTeamUsers(payload)) {
     const actor = { ...user, collection: 'users' } as SessionUser
     const data = await loadToday(payload, actor, now)
     if (!data) continue
