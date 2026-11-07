@@ -530,6 +530,36 @@
           "primaryKey": false,
           "notNull": false
         },
+        "review_note": {
+          "name": "review_note",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_note_at": {
+          "name": "review_note_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_requested_at": {
+          "name": "review_requested_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_since_review_at": {
+          "name": "changed_since_review_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_snapshot": {
+          "name": "reviewed_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -581,6 +611,21 @@
           "columns": [
             {
               "expression": "review_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "student_profiles_changed_since_review_at_idx": {
+          "name": "student_profiles_changed_since_review_at_idx",
+          "columns": [
+            {
+              "expression": "changed_since_review_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -814,6 +859,36 @@
           "primaryKey": false,
           "notNull": false
         },
+        "note_to_company": {
+          "name": "note_to_company",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note_to_company_at": {
+          "name": "note_to_company_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "info_requested_at": {
+          "name": "info_requested_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_requested_at": {
+          "name": "review_requested_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resent_at": {
+          "name": "resent_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "approved_at": {
           "name": "approved_at",
           "type": "timestamp(3) with time zone",
@@ -1027,7 +1102,7 @@
           "name": "description",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "tasks": {
           "name": "tasks",
@@ -1041,20 +1116,46 @@
           "primaryKey": false,
           "notNull": false
         },
-        "workload": {
-          "name": "workload",
-          "type": "varchar",
+        "workload_hours": {
+          "name": "workload_hours",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "duration": {
-          "name": "duration",
-          "type": "varchar",
+        "duration_weeks": {
+          "name": "duration_weeks",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "work_mode": {
+          "name": "work_mode",
+          "type": "enum_projects_work_mode",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
         "location": {
           "name": "location",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paid_or_unpaid": {
+          "name": "paid_or_unpaid",
+          "type": "enum_projects_paid_or_unpaid",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unpaid_benefit": {
+          "name": "unpaid_benefit",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -1068,6 +1169,36 @@
         "deadline": {
           "name": "deadline",
           "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note_to_company": {
+          "name": "note_to_company",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note_to_company_at": {
+          "name": "note_to_company_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "workload": {
+          "name": "workload",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration": {
+          "name": "duration",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
@@ -6199,6 +6330,7 @@
       "schema": "public",
       "values": [
         "waiting",
+        "changes_requested",
         "reviewed"
       ]
     },
@@ -6222,6 +6354,23 @@
         "pending",
         "approved",
         "rejected"
+      ]
+    },
+    "public.enum_projects_work_mode": {
+      "name": "enum_projects_work_mode",
+      "schema": "public",
+      "values": [
+        "remote",
+        "on_site",
+        "hybrid"
+      ]
+    },
+    "public.enum_projects_paid_or_unpaid": {
+      "name": "enum_projects_paid_or_unpaid",
+      "schema": "public",
+      "values": [
+        "paid",
+        "unpaid"
       ]
     },
     "public.enum_projects_status": {
@@ -6331,7 +6480,10 @@
         "status_change",
         "delete",
         "sign_out_everywhere",
-        "sign_in_method_added"
+        "sign_in_method_added",
+        "review_change",
+        "info_requested",
+        "info_answered"
       ]
     },
     "public.enum_payload_jobs_log_task_slug": {

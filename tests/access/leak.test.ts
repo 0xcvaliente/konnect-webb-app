@@ -48,17 +48,19 @@ const FORBIDDEN = [
     .map(([, value]) => value),
   ...Object.values(SENTINEL.beta),
   'Sentinel-Agreement-Notes',
+  // Konnected's note to alpha about their profile (approval queue card).
+  'Sentinel-Review-Note-Alpha',
 ]
 
 const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   users:
     '{ Users(limit: 100) { docs { id email name role accountStatus lastSignInAt company { id } } } }',
   'student-profiles':
-    '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt privacy { shareName shareSchool shareContactEmail sharePhone } user { id email } } } }',
+    '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt reviewNote reviewNoteAt reviewRequestedAt changedSinceReviewAt reviewedSnapshot privacy { shareName shareSchool shareContactEmail sharePhone } user { id email } } } }',
   companies:
-    '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt user { id email } teamOwner { id email } logo { id url } } } }',
+    '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt noteToCompany noteToCompanyAt infoRequestedAt reviewRequestedAt resentAt user { id email } teamOwner { id email } logo { id url } } } }',
   projects:
-    '{ Projects(limit: 100) { docs { id title description status companyName company { id name } attachments { id originalName } } } }',
+    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit deadline fee noteToCompany noteToCompanyAt submittedAt status companyName company { id name } attachments { id originalName } } } }',
   applications:
     '{ Applications(limit: 100) { docs { id status note student { id name contactEmail user { id email } } project { id title } } } }',
   matches:
@@ -89,11 +91,45 @@ let world: World
 let companyCookie: string
 let adminCookie: string
 
+/** Konnected's note to company A on its matched project. Only the team and company A read it. */
+const NOTE_TO_COMPANY = 'Leak-Check-Note-To-Company-A'
+
 beforeAll(async () => {
   await resetDatabase()
   world = await createWorld()
   companyCookie = await login(world.companyA.user.email)
   adminCookie = await sessionFor(world.admin.id)
+  await world.payload.update({
+    collection: 'projects',
+    id: world.projectOpen.id,
+    data: { noteToCompany: NOTE_TO_COMPANY, fee: 43_210 },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  // The approval queue: Konnected asks alpha to change their profile (a note about a student),
+  // and reviews beta, who then edits the profile (the team's copy and change marker hold beta's
+  // personal data).
+  await world.payload.update({
+    collection: 'student-profiles',
+    id: world.alpha.profile.id,
+    data: { reviewStatus: 'changes_requested', reviewNote: 'Sentinel-Review-Note-Alpha' },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  await world.payload.update({
+    collection: 'student-profiles',
+    id: world.beta.profile.id,
+    data: { reviewStatus: 'reviewed' },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  await world.payload.update({
+    collection: 'student-profiles',
+    id: world.beta.profile.id,
+    data: { pitch: `${SENTINEL.beta.pitch} edited` },
+    user: asUser(world.beta.user),
+    overrideAccess: false,
+  })
 })
 
 /** Run one query through the Local API. A denied collection throws, which counts as no data. */
@@ -155,6 +191,32 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       // Not the unreleased deliverable, not another company's project.
       expect(all).not.toContain('Not released yet')
       expect(all).not.toContain('Project B draft')
+    })
+  },
+)
+
+describe.each(['local', 'rest', 'graphql'] as const)(
+  "the project form's team-only fields (%s)",
+  (transport) => {
+    const sweep = async (as: 'company' | 'student') => {
+      const user = as === 'company' ? world.companyA.user : world.beta.user
+      if (transport === 'local') return localAll(user, 'projects')
+      const cookie = as === 'company' ? companyCookie : await login(world.beta.user.email)
+      if (transport === 'rest') return (await rest.get('projects?depth=5&limit=100', cookie)).text
+      return (await graphql(GRAPHQL_QUERIES.projects, cookie)).text
+    }
+
+    it('the owning company reads the price and Konnected\u2019s note (positive control)', async () => {
+      const all = await sweep('company')
+      expect(all).toContain(NOTE_TO_COMPANY)
+      expect(all).toContain('43210')
+    })
+
+    it('a student reads the published project but never the price or the note', async () => {
+      const all = await sweep('student')
+      expect(all).toContain('Project A open')
+      expect(all).not.toContain(NOTE_TO_COMPANY)
+      expect(all).not.toContain('43210')
     })
   },
 )
@@ -291,6 +353,9 @@ describe('company cannot reach student collections directly', () => {
       expect(all, transport).toContain(SENTINEL.beta.programme)
       expect(all, transport).toContain(SENTINEL.alpha.interest)
       expect(all, transport).toContain(SENTINEL.beta.projectType)
+      // The approval queue's review note, and beta's reviewed copy (its old pitch).
+      expect(all, transport).toContain('Sentinel-Review-Note-Alpha')
+      expect(all, transport).toContain('reviewedSnapshot')
     }
   })
 })

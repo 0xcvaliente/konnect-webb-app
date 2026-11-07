@@ -76,17 +76,23 @@ export default buildConfig({
   },
   email: emailAdapter(),
   // Background jobs: the nightly clean-up of unused files, and the agreement work (making the
-  // PDF with Gotenberg, the agreement emails). Once an hour the app queues any job that is due and
-  // runs the maintenance queue; every 5 seconds it runs the agreements queue (one long-running
-  // server, see instrumentation.ts). A separate worker can take the agreements queue over later.
+  // PDF with Gotenberg, the agreement emails). In development the app itself queues any job that
+  // is due once an hour and runs the maintenance queue, and runs the agreements queue every 5
+  // seconds (see instrumentation.ts). In production (docker-compose.prod.yml) RUN_JOBS_IN_APP=false
+  // turns that off, because two app containers run side by side during a deploy; the single
+  // `worker` container runs `payload jobs:run --cron ... --all-queues --handle-schedules` instead,
+  // which covers both queues.
   // Only admins may queue, run or cancel jobs through the API; the jobs collection itself stays
   // closed (Payload's default).
   jobs: {
     tasks: [removeUnusedFilesTask, generateAgreementTask, sendAgreementEmailTask],
-    autoRun: [
-      { cron: '0 * * * *', queue: MAINTENANCE_QUEUE },
-      { cron: '*/5 * * * * *', queue: AGREEMENTS_QUEUE, disableScheduling: true },
-    ],
+    autoRun:
+      process.env.RUN_JOBS_IN_APP === 'false'
+        ? []
+        : [
+            { cron: '0 * * * *', queue: MAINTENANCE_QUEUE },
+            { cron: '*/5 * * * * *', queue: AGREEMENTS_QUEUE, disableScheduling: true },
+          ],
     deleteJobOnComplete: true,
     access: {
       cancel: ({ req }) => isAdmin(req.user),

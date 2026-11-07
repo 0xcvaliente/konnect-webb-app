@@ -255,6 +255,89 @@
       "body": "Svarene du ga for den andre kontotypen ble fjernet. Neste gang du logger inn, stiller Konnected spørsmålene for den nye kontotypen.",
       "button": "Åpne Konnected",
       "ignore": "Hvis du ikke ba om dette, skriv til Konnected-teamet."
+    },
+    "projectSubmitted": {
+      "subject": "Konnected har mottatt prosjektet ditt",
+      "heading": "Prosjektet ditt er hos Konnected",
+      "body": "Takk. Konnected har mottatt «{title}» og vurderer det nå.",
+      "review": "Vi vurderer prosjekter i løpet av noen få virkedager. Konnected kan godkjenne det, be deg om endringer eller forklare hvorfor det ikke kan gå videre. Studentene ser ingenting før Konnected publiserer det.",
+      "next": "Du får en e-post når vurderingen er ferdig. Du kan ikke endre prosjektet mens det vurderes.",
+      "button": "Se prosjektet ditt",
+      "ignore": "Hvis du ikke sendte inn dette prosjektet, skriv til Konnected-teamet."
+    },
+    "companyApproved": {
+      "subject": "Bedriften din er godkjent på Konnected",
+      "heading": "Bedriften din er godkjent",
+      "body": "Konnected har godkjent {name}. Nå kan du sende inn det første prosjektet.",
+      "next": "Konnected vurderer hvert prosjekt før studentene ser det.",
+      "button": "Send inn et prosjekt",
+      "ignore": "Hvis du ikke registrerte denne bedriften, skriv til Konnected-teamet."
+    },
+    "companyRejected": {
+      "subject": "Konnected kunne ikke godkjenne {name}",
+      "heading": "Konnected kunne ikke godkjenne bedriften din",
+      "body": "Konnected har sett på {name} og kunne ikke godkjenne den. Begrunnelsen:",
+      "resend": "Hvis noe kan rettes, retter du opplysningene i bedriftsprofilen og sender dem på nytt. Du kan gjøre dette én gang.",
+      "final": "Hvis du mener dette er feil, skriv til Konnected-teamet.",
+      "button": "Åpne bedriftsprofilen",
+      "ignore": "Hvis du ikke registrerte denne bedriften, skriv til Konnected-teamet."
+    },
+    "companyInfo": {
+      "subject": "Konnected trenger flere opplysninger om {name}",
+      "heading": "Konnected trenger flere opplysninger",
+      "body": "Konnected vurderer {name} og trenger litt mer fra deg:",
+      "resend": "Rett opplysningene i bedriftsprofilen og lagre dem. Bedriften er til vurdering til da.",
+      "button": "Åpne bedriftsprofilen",
+      "ignore": "Hvis du ikke registrerte denne bedriften, skriv til Konnected-teamet."
+    },
+    "projectChanges": {
+      "subject": "Konnected ber om endringer i prosjektet ditt",
+      "heading": "Endringer ønsket",
+      "body": "Konnected har vurdert «{title}» og ber deg endre noen ting:",
+      "next": "Endre prosjektet og send det på nytt. Det går tilbake til Konnected for vurdering.",
+      "button": "Endre prosjektet",
+      "ignore": "Hvis du ikke sendte inn dette prosjektet, skriv til Konnected-teamet."
+    },
+    "projectRejected": {
+      "subject": "Konnected kunne ikke godkjenne prosjektet ditt",
+      "heading": "Prosjektet ditt ble ikke godkjent",
+      "body": "Konnected har vurdert «{title}» og kan ikke ta det på seg. Begrunnelsen:",
+      "next": "Du er velkommen til å sende inn et nytt prosjekt som passer bedre.",
+      "button": "Se prosjektet ditt",
+      "ignore": "Hvis du ikke sendte inn dette prosjektet, skriv til Konnected-teamet."
+    },
+    "projectApproved": {
+      "subject": "Konnected har godkjent prosjektet ditt",
+      "heading": "Prosjektet ditt er godkjent",
+      "body": "Konnected har godkjent «{title}».",
+      "price": "Fastprisen er {price} eksklusiv mva. ({total} inkludert 25 % mva.). Betalingsfristen er 14 dager.",
+      "next": "Konnected publiserer det for studentene nå. Du får en e-post når det er publisert.",
+      "button": "Se prosjektet ditt",
+      "ignore": "Hvis du ikke sendte inn dette prosjektet, skriv til Konnected-teamet."
+    },
+    "projectPublished": {
+      "subject": "Prosjektet ditt er publisert på Konnected",
+      "heading": "Prosjektet ditt er publisert",
+      "body": "Studentene kan nå søke på «{title}».",
+      "next": "Konnected velger én student manuelt etter søknadsfristen og forteller deg hvem det er.",
+      "button": "Se prosjektet ditt",
+      "ignore": "Hvis du ikke sendte inn dette prosjektet, skriv til Konnected-teamet."
+    },
+    "profileReviewed": {
+      "subject": "Konnected har gått gjennom profilen din",
+      "heading": "Profilen din er gjennomgått",
+      "body": "Konnected har gått gjennom profilen din.",
+      "next": "Nå kan Konnected velge deg til et prosjekt. Hold profilen din oppdatert.",
+      "button": "Se profilen din",
+      "ignore": "Hvis du ikke har en Konnected-profil, skriv til Konnected-teamet."
+    },
+    "profileChanges": {
+      "subject": "Konnected ber deg oppdatere profilen din",
+      "heading": "Oppdater profilen din",
+      "body": "Konnected har sett på profilen din og ber deg endre noen ting:",
+      "next": "Oppdater profilen og lagre den. Den går tilbake til Konnected for gjennomgang. Du kan fortsatt se på prosjekter og søke i mellomtiden.",
+      "button": "Oppdater profilen",
+      "ignore": "Hvis du ikke har en Konnected-profil, skriv til Konnected-teamet."
     }
   },
   "DesignGuide": {
@@ -399,9 +482,9 @@
     "project_description": "Prosjektbeskrivelse",
     "project_tasks": "Oppgaver",
     "project_deliverable": "Forventet leveranse",
-    "project_workload": "Arbeidsmengde",
-    "project_timeframe": "Tidsramme",
-    "project_deadline": "Frist",
+    "project_workload": "Arbeidsmengde i timer",
+    "project_timeframe": "Tidsramme i uker",
+    "project_deadline": "Søknadsfrist",
     "project_payment": "Betalt eller ulønnet",
     "company_name": "Bedriftens navn",
     "company_orgNumber": "Organisasjonsnummer",
@@ -755,7 +838,10 @@
       "fix": "Noen svar må sjekkes. Se feltene som er merket nedenfor.",
       "generic": "Noe gikk galt, og ingenting ble lagret. Prøv igjen.",
       "forbidden": "Økten din er utløpt. Logg inn på nytt."
-    }
+    },
+    "changesTitle": "Konnected ba om endringer",
+    "changesBody": "Oppdater profilen og lagre den: den går tilbake til Konnected for gjennomgang. Du kan fortsatt se på prosjekter og søke, men Konnected kan ikke velge deg før profilen er gjennomgått.",
+    "waitingBy": "Konnected går gjennom profilen din innen {date}. Du kan fortsatt se på prosjekter og søke i mellomtiden."
   },
   "CompanyFields": {
     "name": "Bedriftsnavn",
@@ -862,13 +948,25 @@
     "next2Title": "Konnected godkjenner bedriften",
     "next2Body": "Som regel innen noen få arbeidsdager. Statusen endres på denne siden.",
     "next3Title": "Du sender inn det første prosjektet",
-    "next3Body": "Beskriv arbeidet. Konnected går gjennom hvert prosjekt før studentene ser det.",
+    "next3Body": "Beskriv arbeidet. Du kan starte et utkast nå; Konnected vurderer hvert prosjekt før studentene ser det.",
     "editTitle": "Må du endre noe?",
     "editBody": "Du kan endre opplysningene om bedriften mens Konnected går gjennom dem.",
     "edit": "Endre opplysningene",
     "view": "Se bedriftsprofilen",
-    "lockedNote": "Prosjekter og betalinger åpner når Konnected har godkjent bedriften.",
-    "registeredOn": "Registrert {date}"
+    "lockedNote": "Du kan allerede skrive utkast til prosjekter. Du sender dem til vurdering, og betalinger åpner, når Konnected har godkjent bedriften din.",
+    "registeredOn": "Registrert {date}",
+    "startDraft": "Start et utkast",
+    "submitProject": "Send inn et prosjekt",
+    "myProjects": "Mine prosjekter",
+    "ledeInfo": "Konnected trenger litt mer fra deg før bedriften din kan godkjennes.",
+    "infoTitle": "Konnected trenger flere opplysninger",
+    "infoBodyProfile": "Rett opplysningene nedenfor og lagre dem. Bedriften er til vurdering til da, og går tilbake til Konnected når du lagrer.",
+    "infoBodyStatus": "Rett opplysningene i bedriftsprofilen og lagre dem. Bedriften er til vurdering til da.",
+    "resentBody": "Du sendte rettede opplysninger {date}. Konnected vurderer dem på nytt, som regel innen noen få arbeidsdager.",
+    "rejectedReason": "Begrunnelsen Konnected ga:",
+    "rejectedResendProfile": "Hvis noe kan rettes, retter du opplysningene nedenfor og sender dem på nytt. Du kan gjøre dette én gang.",
+    "rejectedResendStatus": "Hvis noe kan rettes, retter du opplysningene i bedriftsprofilen og sender dem på nytt. Du kan gjøre dette én gang.",
+    "correct": "Rett og send på nytt"
   },
   "CompanySteps": {
     "label": "Hvor bedriften din står",
@@ -883,7 +981,9 @@
     "rejected": "Ikke godkjent",
     "rejectedBody": "Se merknaden over.",
     "done": "Ferdig",
-    "current": "Nåværende steg"
+    "current": "Nåværende steg",
+    "moreInfo": "Flere opplysninger",
+    "moreInfoBody": "Rett opplysningene og lagre dem."
   },
   "CompanyProfile": {
     "title": "Bedriftsprofil",
@@ -893,14 +993,20 @@
     "saving": "Lagrer…",
     "saved": "Bedriften er lagret.",
     "statusTitle": "Status",
-    "submitAfterApproval": "Send inn prosjekt (etter godkjenning)",
     "readOnly": "Bedriften kan ikke lenger endres her. Skriv til Konnected-teamet hvis noe er feil.",
     "errors": {
       "fix": "Noen svar må sjekkes. Se feltene som er merket nedenfor.",
       "generic": "Noe gikk galt, og ingenting ble lagret. Prøv igjen.",
       "forbidden": "Økten din er utløpt. Logg inn på nytt.",
       "notEditable": "Bedriften kan ikke lenger endres her. Skriv til Konnected-teamet."
-    }
+    },
+    "startDraft": "Start et utkast",
+    "startDraftHint": "Du kan sende det til vurdering når Konnected har godkjent bedriften din.",
+    "submitProject": "Send inn et prosjekt",
+    "resend": "Rett og send på nytt",
+    "resent": "Sendt til Konnected for ny vurdering.",
+    "answer": "Lagre og send til Konnected",
+    "answered": "Lagret. Konnected vurderer bedriften din på nytt."
   },
   "SignInMethods": {
     "google": "Google",
@@ -931,7 +1037,7 @@
   },
   "TeamHome": {
     "title": "I dag",
-    "lede": "Teamets daglige arbeid. Køene for godkjenninger, matching og betalinger kommer hit etter hvert.",
+    "lede": "Teamets daglige arbeid. Hver kø åpner på den eldste saken. Matching, leveranser og betalinger kommer hit etter hvert.",
     "twoStepTitle": "Ha totrinnsbekreftelse på for Google-kontoen din",
     "twoStepBody": "Teamkontoer logger inn bare med Google, så Google-kontoen din beskytter alle opplysninger om bedrifter og studenter. Konnected kan ikke se om totrinnsbekreftelse er på: sjekk det i Google-kontoen din.",
     "twoStepLink": "Åpne sikkerhetsinnstillingene i Google",
@@ -940,7 +1046,15 @@
     "accountsLink": "Åpne kontoer",
     "panelTitle": "Adminpanel for innhold",
     "panelBody": "Payloads eget adminpanel ligger fortsatt på /admin, som reserve for teamet.",
-    "panelLink": "Åpne adminpanelet"
+    "panelLink": "Åpne adminpanelet",
+    "queuesTitle": "Køer",
+    "queue": {
+      "companies": "Bedrifter til godkjenning",
+      "projects": "Prosjekter til vurdering eller publisering",
+      "students": "Studentprofiler til gjennomgang"
+    },
+    "oldest": "Eldst: {name}, {waited}",
+    "queueEmpty": "Ingenting venter her."
   },
   "TeamAccounts": {
     "title": "Kontoer",
@@ -1062,6 +1176,570 @@
       "reasonRequired": "Skriv en begrunnelse.",
       "reasonTooLong": "Bruk høyst {max} tegn.",
       "generic": "Noe gikk galt. Prøv igjen."
+    }
+  },
+  "Attachments": {
+    "listLabel": "Vedlagte filer",
+    "download": "Last ned",
+    "remove": "Fjern",
+    "dropTitle": "Legg ved filer til beskrivelsen",
+    "choose": "Velg filer",
+    "hint": "PDF, Word, Excel, PowerPoint eller bilder (PNG, JPG). Opptil {max} filer, 20 MB hver. {count} av {max} lagt til.",
+    "whoSees": "Konnected ser disse under vurderingen. Bare studenten Konnected velger får dem. Søkerne får dem aldri.",
+    "uploading": "Laster opp …",
+    "errors": {
+      "type": "Bruk en PDF-, Word- (.docx), Excel- (.xlsx), PowerPoint- (.pptx), PNG- eller JPG-fil. Eldre .doc-, .xls- og .ppt-filer godtas ikke.",
+      "size": "Filen er større enn 20 MB. Prøv en mindre fil.",
+      "tooMany": "Du har flere opplastede filer som ikke er på et prosjekt ennå. Fjern noen, eller send inn et prosjekt, og prøv igjen.",
+      "full": "Et prosjekt kan ha høyst {max} filer. Fjern en for å legge til en ny.",
+      "generic": "Filen kunne ikke lastes opp. Prøv igjen."
+    }
+  },
+  "ProjectFields": {
+    "title": "Prosjekttittel",
+    "titleHint": "Kort og konkret.",
+    "description": "Hva skal gjøres?",
+    "descriptionHint": "Bakgrunnen og problemet som skal løses. Studentene leser dette først.",
+    "tasks": "Hovedoppgaver",
+    "tasksOptional": "Hovedoppgaver (valgfritt)",
+    "tasksHint": "Én oppgave per linje.",
+    "desiredSkills": "Ønskede ferdigheter",
+    "desiredSkillsHint": "Skill med komma, for eksempel: Tekstforfatting, E-postmarkedsføring.",
+    "workloadHours": "Arbeidsmengde i timer",
+    "workloadHint": "Hele prosjektet. De fleste studenter bruker 5 til 10 timer i uken.",
+    "durationWeeks": "Tidsramme",
+    "chooseDuration": "Velg en tidsramme",
+    "weeks": "{count, plural, one {# uke} other {# uker}}",
+    "hours": "{count, plural, one {# time} other {# timer}}",
+    "startDate": "Tidligste oppstart",
+    "startDateHint": "Etter at søknadsfristen er ute. Konnected avtaler nøyaktig dato med studenten.",
+    "deadline": "Søknadsfrist",
+    "deadlineHint": "Konnected kan endre denne når prosjektet vurderes.",
+    "workMode": "Hvor gjøres arbeidet?",
+    "chooseWorkMode": "Velg ett",
+    "workModeOption": {
+      "remote": "Digitalt",
+      "on_site": "På stedet",
+      "hybrid": "Digitalt eller på stedet"
+    },
+    "location": "Hvor?",
+    "locationHint": "Stedet eller adressen.",
+    "deliverable": "Forventet leveranse",
+    "deliverableHint": "Hva du får tilbake til slutt, og i hvilket format.",
+    "paidOrUnpaid": "Er prosjektet betalt?",
+    "payOption": {
+      "paid": "Betalt",
+      "unpaid": "Ubetalt"
+    },
+    "payBody": {
+      "paid": "Studenten får betalt gjennom Konnected. Konnected setter en fast pris når prosjektet vurderes, og du ser den før noe publiseres.",
+      "unpaid": "Studenten får ikke betalt. Studentene ser dette før de søker."
+    },
+    "unpaidBenefit": "Hva får studenten ut av det?",
+    "unpaidBenefitShort": "Hva studenten får",
+    "unpaidBenefitHint": "Konnected leser dette når det avgjør om et ubetalt prosjekt kan gå videre.",
+    "unpaidBenefitPlaceholder": "For eksempel en referanse, eller arbeid å vise fram i en portefølje",
+    "payNote": "Du velger betalt eller ubetalt. Konnected tar den endelige avgjørelsen om prosjektet går videre.",
+    "attachmentsOptional": "Vedlegg (valgfritt)",
+    "attachments": "Vedlegg",
+    "download": "Last ned",
+    "payment": "Betaling",
+    "notFilled": "Ikke fylt ut ennå",
+    "errors": {
+      "required": "Fyll ut dette før du sender inn prosjektet.",
+      "requiredOne": "Velg ett før du sender inn prosjektet.",
+      "tooLong": "Bruk høyst {max} tegn.",
+      "tooManySkills": "List opp høyst {max} ferdigheter.",
+      "tooManyFiles": "Et prosjekt kan ha høyst 10 filer.",
+      "past": "Velg i dag eller en senere dag.",
+      "beforeDeadline": "Velg en dag etter søknadsfristen.",
+      "hoursInvalid": "Bruk et helt antall timer fra {min} til {max}.",
+      "dateInvalid": "Bruk en gyldig dato.",
+      "invalid": "Dette svaret er ikke gyldig. Sjekk det og prøv igjen."
+    }
+  },
+  "ProjectForm": {
+    "newTitle": "Send inn et prosjekt",
+    "editTitle": "Rediger utkastet",
+    "changesPageTitle": "Endre og send inn igjen",
+    "lede": "Beskriv arbeidet og hva du forventer å få tilbake. Konnected vurderer det før noen student ser det.",
+    "rejectedTitle": "Bedriften din kan ikke sende inn prosjekter",
+    "rejectedBody": "Konnected kunne ikke godkjenne bedriften din. Se statussiden din for hva du kan gjøre videre.",
+    "toStatus": "Gå til statussiden",
+    "changesTitle": "Konnected ber om endringer",
+    "changesBody": "Konnected ba om endringer. Se over prosjektet og send det til vurdering igjen.",
+    "pendingTitle": "Du kan skrive utkastet nå",
+    "pendingBody": "Konnected sjekker fortsatt bedriften din. Utkastet lagres mens du skriver, og du kan sende det til vurdering når bedriften er godkjent.",
+    "send": "Send til vurdering",
+    "saveDraft": "Lagre utkast",
+    "preview": "Forhåndsvis",
+    "sendLocked": "Du kan sende når Konnected har godkjent bedriften din.",
+    "draftSaved": "Utkastet er lagret.",
+    "autosave": {
+      "saving": "Lagrer utkastet …",
+      "saved": "Utkastet ble lagret kl. {time}. Bare du kan se det.",
+      "needsTitle": "Legg til en tittel, så lagres utkastet av seg selv.",
+      "error": "Utkastet kunne ikke lagres. Sjekk feltene som er merket, eller prøv igjen.",
+      "idle": "Utkastet lagres mens du skriver. Bare du kan se det.",
+      "new": "Utkastet lagres mens du skriver, så snart det har en tittel."
+    },
+    "errors": {
+      "fix": "Noen svar må ses over før prosjektet kan sendes. Se feltene som er merket nedenfor.",
+      "forbidden": "Økten din er avsluttet. Logg inn på nytt.",
+      "not_editable": "Dette prosjektet kan ikke endres her lenger. Konnected har det nå.",
+      "not_approved": "Utkastet er lagret. Du kan sende det til vurdering når Konnected har godkjent bedriften din.",
+      "not_found": "Prosjektet ble ikke funnet.",
+      "generic": "Noe gikk galt, og ingenting ble sendt. Prøv igjen."
+    },
+    "nextTitle": "Hva skjer nå",
+    "next1Title": "Konnected vurderer",
+    "next1Body": "Konnected sjekker arbeidet og valget ditt om betalt eller ubetalt, og tar den endelige avgjørelsen. Det kan be om endringer.",
+    "next2Title": "Studenter kan søke",
+    "next2Body": "Når prosjektet er publisert.",
+    "next3Title": "Konnected velger en student",
+    "next3Body": "For hånd, blant søknadene.",
+    "next4Title": "Du får resultatet",
+    "next4Body": "Konnected frigir leveransen til deg.",
+    "reviewPromise": "Vi vurderer prosjekter i løpet av noen få virkedager.",
+    "close": "Lukk",
+    "previewTitle": "Forhåndsvisning",
+    "previewLede": "Slik ser studentene prosjektet når Konnected har publisert det.",
+    "previewFiles": "Studentene ser ikke vedleggene. Bare studenten Konnected velger får dem.",
+    "untitled": "Prosjekt uten tittel",
+    "confirmTitle": "Sende prosjektet til vurdering?",
+    "confirmBody": "Konnected vurderer det i løpet av noen få virkedager. Du kan ikke endre det mens det vurderes; Konnected sier fra hvis noe må endres.",
+    "confirmCancel": "Fortsett å redigere",
+    "confirmSend": "Send til vurdering",
+    "sending": "Sender …"
+  },
+  "ProjectStatus": {
+    "pill": {
+      "draft": "Utkast",
+      "submitted": "Sendt inn",
+      "changes_requested": "Endringer ønsket",
+      "rejected": "Avslått",
+      "approved": "Godkjent",
+      "published": "Publisert",
+      "matched": "Student valgt",
+      "in_progress": "Pågår",
+      "delivered": "Levert",
+      "closed": "Avsluttet"
+    },
+    "line": {
+      "draft": "Bare du kan se dette utkastet.",
+      "submitted": "Konnected vurderer det.",
+      "changes_requested": "Konnected ba om endringer.",
+      "rejected": "Konnected godkjente det ikke.",
+      "approved": "Godkjent. Konnected gjør det klart for studentene.",
+      "published": "Studenter kan søke. Konnected velger én.",
+      "matched": "Konnected har valgt en student.",
+      "in_progress": "Studenten jobber.",
+      "delivered": "Levert. Konnected sjekker arbeidet.",
+      "closed": "Ferdig."
+    },
+    "stage": {
+      "draft": "Utkast",
+      "review": "Til vurdering",
+      "published": "Publisert",
+      "matched": "Student valgt",
+      "in_progress": "Pågår",
+      "delivered": "Levert",
+      "closed": "Avsluttet"
+    },
+    "stageOf": "Steg {n} av {total}: {stage}",
+    "offTrack": "Avslåtte prosjekter går ikke videre. Du kan sende inn et nytt prosjekt.",
+    "history": {
+      "created": "Utkast opprettet",
+      "submitted": "Sendt til vurdering",
+      "changes_requested": "Konnected ba om endringer",
+      "rejected": "Konnected godkjente det ikke",
+      "approved": "Godkjent av Konnected",
+      "published": "Publisert",
+      "matched": "Student valgt",
+      "in_progress": "Arbeidet startet",
+      "delivered": "Levert",
+      "closed": "Avsluttet"
+    },
+    "historyBody": {
+      "created": "Bare du kan se det."
+    },
+    "upcoming": {
+      "send": {
+        "title": "Send til vurdering",
+        "body": "Konnected vurderer hvert prosjekt før studentene ser det."
+      },
+      "published": {
+        "title": "Publisert",
+        "body": "Studenter kan søke."
+      },
+      "review": {
+        "title": "Konnected vurderer",
+        "body": "Vi vurderer prosjekter i løpet av noen få virkedager. Konnected kan godkjenne prosjektet, be om endringer eller avslå det."
+      },
+      "resubmit": {
+        "title": "Send det igjen",
+        "body": "Endre prosjektet og send det til vurdering igjen."
+      },
+      "publish": {
+        "title": "Konnected publiserer det",
+        "body": "Da kan studenter søke."
+      },
+      "select": {
+        "title": "Konnected velger en student",
+        "body": "For hånd, blant søknadene."
+      },
+      "work": {
+        "title": "Arbeidet starter",
+        "body": "Konnected avtaler omfang og frist med studenten."
+      },
+      "deliver": {
+        "title": "Endelig leveranse",
+        "body": "Konnected sjekker arbeidet før det frigis til deg."
+      },
+      "release": {
+        "title": "Konnected sjekker og frigir",
+        "body": "Du ser resultatet først når det er frigitt."
+      }
+    },
+    "now": "Nå",
+    "stepDone": "ferdig",
+    "stepCurrent": "gjeldende steg"
+  },
+  "CompanyProjects": {
+    "title": "Mine prosjekter",
+    "lede": "Her følger du statusen. Konnected tar seg av studentene.",
+    "submit": "Send inn et prosjekt",
+    "emptyTitle": "Ingen prosjekter ennå",
+    "emptyBody": "Beskriv arbeidet du trenger. Konnected vurderer det før noen student ser det.",
+    "emptyAction": "Send inn ditt første prosjekt",
+    "listLabel": "Prosjektene dine",
+    "updated": "Oppdatert {date}.",
+    "asks": "Konnected spør:",
+    "asksFallback": "Se over prosjektet og send det til vurdering igjen.",
+    "finish": "Gjør ferdig utkastet",
+    "resubmit": "Endre og send inn igjen"
+  },
+  "CompanyProject": {
+    "back": "Tilbake til mine prosjekter",
+    "sentTitle": "Sendt til Konnected for vurdering",
+    "sentBody": "Vi vurderer prosjekter i løpet av noen få virkedager. Vi har sendt deg en bekreftelse på e-post, og du får en ny når vurderingen er ferdig.",
+    "banner": {
+      "draft": {
+        "title": "Bare du kan se dette utkastet",
+        "body": "Konnected ser et prosjekt først når du sender det til vurdering.",
+        "pending": "Konnected ser et prosjekt først når du sender det til vurdering. Du kan sende det når Konnected har godkjent bedriften din."
+      },
+      "submitted": {
+        "title": "Konnected vurderer dette prosjektet",
+        "body": "Vi vurderer prosjekter i løpet av noen få virkedager. Du får en e-post når det er ferdig. Du kan ikke endre prosjektet mens det vurderes."
+      },
+      "changes_requested": {
+        "title": "Konnected ber om endringer",
+        "body": "Les beskjeden fra Konnected, endre prosjektet og send det igjen."
+      },
+      "rejected": {
+        "title": "Konnected godkjente ikke dette prosjektet",
+        "body": "Les beskjeden fra Konnected. Du kan sende inn et nytt prosjekt."
+      },
+      "approved": {
+        "title": "Godkjent av Konnected",
+        "body": "Konnected gjør prosjektet klart for studentene. Du får en e-post når det er publisert."
+      },
+      "published": {
+        "title": "Studenter kan søke",
+        "body": "Konnected vurderer søknadene og velger én student. Du ser studenten når Konnected har valgt."
+      },
+      "matched": {
+        "title": "Konnected har valgt en student",
+        "body": "Konnected avtaler omfang og frist med studenten, og holder deg oppdatert."
+      },
+      "in_progress": {
+        "title": "Studenten jobber",
+        "body": "Konnected sjekker arbeidet før det frigis til deg."
+      },
+      "delivered": {
+        "title": "Levert",
+        "body": "Konnected sjekker arbeidet før det frigis til deg."
+      },
+      "closed": {
+        "title": "Ferdig",
+        "body": "Dette prosjektet er avsluttet."
+      }
+    },
+    "latestTitle": "Siste fra Konnected",
+    "latestEmpty": "Ingenting ennå. Når Konnected har noe å fortelle deg om dette prosjektet, finner du det her.",
+    "latestFrom": "Konnected-teamet",
+    "historyTitle": "Historikk",
+    "askedTitle": "Det du ba om",
+    "progressTitle": "Framdrift",
+    "actionsTitle": "Dette kan du gjøre",
+    "finish": "Gjør ferdig utkastet",
+    "resubmit": "Endre og send inn igjen",
+    "newProject": "Send inn et nytt prosjekt",
+    "nothing": "Ingenting akkurat nå. Konnected har neste steg.",
+    "pendingHint": "Du kan sende det til vurdering når Konnected har godkjent bedriften din.",
+    "priceTitle": "Pris",
+    "priceExVat": "Fastpris eks. mva.",
+    "vat": "Mva. {rate} %",
+    "total": "Totalt",
+    "priceNote": "Satt av Konnected ved vurderingen. Konnected sender fakturaen; betalingsfristen er {days} dager."
+  },
+  "TeamApprovals": {
+    "title": "Godkjenninger",
+    "lede": "Ingenting når studentene før Konnected har godkjent bedriften og prosjektet. Hver studentprofil gjennomgås før matching.",
+    "back": "Tilbake til i dag",
+    "tabsLabel": "Godkjenningskøer",
+    "tabs": {
+      "companies": "Bedrifter",
+      "projects": "Prosjekter",
+      "students": "Studenter"
+    },
+    "whoLabel": "Hvem sine saker som vises",
+    "mine": "Mine",
+    "everyone": "Alle",
+    "pool": "Felles",
+    "owner": "Ansvarlig: {name}",
+    "waited": "{count, plural, =0 {venter siden i dag} one {venter i # dag} other {venter i # dager}}",
+    "due": {
+      "late": "{count, plural, one {# dag for sent} other {# dager for sent}}",
+      "today": "Frist i dag",
+      "left": "{count, plural, one {# dag igjen} other {# dager igjen}}"
+    },
+    "section": {
+      "companiesReview": "Til godkjenning",
+      "companiesWaiting": "Venter på bedriften",
+      "projectsReview": "Til vurdering",
+      "projectsPublish": "Godkjent, klar til publisering",
+      "projectsWaiting": "Venter på bedriften",
+      "studentsReview": "Til gjennomgang",
+      "studentsChanged": "Endret siden gjennomgangen",
+      "studentsWaiting": "Venter på studenten"
+    },
+    "emptyMine": "Ingenting her er ditt akkurat nå.",
+    "empty": {
+      "companies": "Ingen bedrifter venter på godkjenning.",
+      "projects": "Ingen prosjekter venter på vurdering.",
+      "students": "Ingen studentprofiler venter på gjennomgang."
+    },
+    "emptyTitle": "Køen er tom",
+    "emptyBody": {
+      "companies": "Ingen flere bedrifter venter på teamet. Nye havner her når de registrerer seg.",
+      "projects": "Ingen flere prosjekter venter på teamet. Nye havner her når en bedrift sender inn et.",
+      "students": "Ingen flere studentprofiler venter på teamet. Nye havner her når en student er ferdig med introduksjonen."
+    },
+    "checkedHere": "Hver avgjørelse sjekkes på nytt på serveren, skrives i aktivitetsloggen og sendes til bedriften eller studenten på e-post.",
+    "activityTitle": "Aktivitet",
+    "activityEmpty": "Ingenting registrert ennå.",
+    "system": "Konnected (automatisk)",
+    "checksTitle": "Sjekkpunkter",
+    "cancel": "Avbryt",
+    "reviewStatus": {
+      "waiting": "Venter på gjennomgang",
+      "changes_requested": "Endringer ønsket",
+      "reviewed": "Gjennomgått"
+    },
+    "activity": {
+      "create": "Opprettet",
+      "delete": "Slettet",
+      "infoRequested": "Ba om flere opplysninger",
+      "infoAnswered": "Bedriften lagret rettede opplysninger",
+      "price": "Pris satt til {price} kr eks. mva.",
+      "priceCleared": "Pris fjernet",
+      "pay": "Bestemt: {choice}",
+      "reviewedAgain": "Gjennomgått på nytt etter endringer",
+      "status": "{from} til {to}",
+      "statusTo": "Nå {to}",
+      "other": "Endret"
+    },
+    "errors": {
+      "forbidden": "Økten din er avsluttet, eller dette er ikke en teamkonto. Logg inn på nytt.",
+      "not_found": "Denne saken finnes ikke lenger.",
+      "not_allowed": "Denne avgjørelsen gjelder ikke lenger. Noen kan ha bestemt allerede. Last inn siden på nytt.",
+      "note_required": "Skriv en melding først. Bedriften eller studenten får den på e-post.",
+      "note_too_long": "Meldingen er for lang. Hold den under {max} tegn.",
+      "pay_choice": "Velg betalt eller ubetalt.",
+      "price_required": "Sett fastprisen for et betalt prosjekt.",
+      "price_invalid": "Skriv prisen i hele kroner, for eksempel 6500.",
+      "company_not_approved": "Konnected har ikke godkjent bedriften bak dette prosjektet. Godkjenn bedriften først.",
+      "duplicate_org": "En annen godkjent bedrift har allerede dette organisasjonsnummeret. Én bedriftskonto per organisasjonsnummer.",
+      "agreement_unsigned": "Bedriftsavtalen for dette prosjektet er ikke signert ennå. Lag den under Avtaler; når bedriften og Konnected har signert, kan du publisere.",
+      "agreement_changed": "Den signerte bedriftsavtalen passer ikke lenger med prosjektet (pris, omfang eller bedrift er endret). Lag en ny avtale under Avtaler først.",
+      "generic": "Noe gikk galt, og ingenting ble lagret. Prøv igjen."
+    },
+    "company": {
+      "registered": "Registrert {date}",
+      "missing": "Ikke fylt ut",
+      "contact": "Kontakt",
+      "sameNumberTitle": "En annen bedrift har dette organisasjonsnummeret",
+      "sameNumberBody": "Også registrert: {names}. Én bedriftskonto per organisasjonsnummer.",
+      "waitingTitle": "Venter på bedriften siden {date}",
+      "waitingBody": "Den er fortsatt til vurdering og kommer tilbake i køen når bedriften lagrer opplysningene.",
+      "resentTitle": "Sendt på nytt etter avslag, {date}",
+      "resentNote": "Begrunnelsen Konnected ga:",
+      "decided": {
+        "approved": "Godkjent. Bedriften kan sende prosjekter til vurdering.",
+        "rejected": "Ikke godkjent."
+      },
+      "check1": "Organisasjonsnummeret finnes i Brønnøysundregistrene",
+      "check2": "Nettsiden tilhører bedriften",
+      "check3": "Kontaktpersonen jobber i bedriften",
+      "checkHint": "Kryss av for alle sjekkpunktene først.",
+      "approve": "Godkjenn bedriften",
+      "approvedToast": "{name} er godkjent og får en e-post.",
+      "askInfo": "Be om flere opplysninger",
+      "infoLabel": "Hva skal bedriften legge til eller rette?",
+      "infoHint": "Bedriften får dette på e-post og ser det på profilen sin. Den er fortsatt til vurdering.",
+      "infoSubmit": "Send til bedriften",
+      "infoToast": "Sendt til {name}. Den kommer tilbake hit når de svarer.",
+      "templates": {
+        "orgNumber": {
+          "label": "Organisasjonsnummer",
+          "text": "Vi fant ikke organisasjonsnummeret i Brønnøysundregistrene. Sjekk det."
+        },
+        "website": {
+          "label": "Nettside",
+          "text": "Legg til en nettside eller en side som viser bedriften."
+        },
+        "contact": {
+          "label": "Kontaktperson",
+          "text": "Bekreft at kontaktpersonen jobber i bedriften."
+        }
+      },
+      "reject": "Avslå",
+      "rejectLabel": "Begrunnelse for avslag",
+      "rejectHint": "Bedriften får begrunnelsen på e-post og kan rette opplysningene og sende dem én gang til. Konnected lagrer den i aktivitetsloggen.",
+      "rejectSubmit": "Bekreft avslag",
+      "rejectedToast": "{name} er avslått og får begrunnelsen på e-post."
+    },
+    "project": {
+      "sent": "sendt {date}",
+      "company": "Bedrift",
+      "payment": "Betaling",
+      "payNone": "Ikke valgt",
+      "priceSet": "Fastpris",
+      "priceLine": "{price} eks. mva., {vat} mva. ({rate} %), {total} totalt",
+      "waitingTitle": "Venter på {name} siden {date}",
+      "waitingBody": "Prosjektet kommer tilbake i køen når bedriften sender det på nytt.",
+      "rejectedTitle": "Ikke godkjent",
+      "unpaidBanner": "Ubetalt prosjekt. Vurder om arbeidet er rimelig å gjøre uten betaling. Hvis ikke, be bedriften gjøre det betalt eller mindre.",
+      "companyNotApproved": "Bedriften har status {status}. Godkjenn bedriften først.",
+      "check1": "Leveransen er tydelig",
+      "check2": "Arbeidsmengden passer tidsrammen",
+      "check3": "Et kort oppdrag, ikke en jobb",
+      "check4": "Betalt eller ubetalt passer arbeidet",
+      "checkHint": "Kryss av for alle sjekkpunktene først.",
+      "payTitle": "Betalt eller ubetalt (Konnected bestemmer)",
+      "pay": {
+        "paid": "Betalt",
+        "unpaid": "Ubetalt"
+      },
+      "payHint": "Bedriften valgte: {choice}.",
+      "payHintNone": "Bedriften valgte ikke.",
+      "priceLabel": "Fastpris for bedriften (NOK, eks. mva.)",
+      "priceHint": "Hele kroner. Konnected setter den nå; bedriften ser den på prosjektet og i avtalen. Betalingsfrist 14 dager.",
+      "priceExVat": "Pris eks. mva.",
+      "vat": "Mva. {rate} %",
+      "total": "Totalt",
+      "unpaidNote": "Et ubetalt prosjekt har ingen pris og ingen betalingsrader.",
+      "approve": "Godkjenn prosjektet",
+      "approvedToast": "{title} er godkjent. Publiser det når det er klart for studentene.",
+      "changes": "Be om endringer",
+      "changesLabel": "Hva skal bedriften endre?",
+      "changesHint": "Trykk på en grunn for å legge den til, og rediger teksten. Bedriften får dette på e-post.",
+      "changesSubmit": "Send til bedriften",
+      "changesToast": "Sendt til bedriften. {title} kommer tilbake hit når de sender det på nytt.",
+      "templates": {
+        "deliverable": {
+          "label": "Uklar leveranse",
+          "text": "Beskriv nøyaktig hva dere vil ha tilbake, og i hvilket format."
+        },
+        "workload": {
+          "label": "For mye arbeid",
+          "text": "Arbeidsmengden ser for stor ut for tidsrammen."
+        },
+        "language": {
+          "label": "Språk",
+          "text": "Si hvilket språk arbeidet skal være på."
+        },
+        "job": {
+          "label": "Ligner en jobb",
+          "text": "Dette ligner en jobb, ikke et kort oppdrag."
+        },
+        "paid": {
+          "label": "Bør være betalt",
+          "text": "Dette er for mye arbeid til å gjøres uten betaling. Gjør prosjektet betalt, eller gjør det mindre."
+        }
+      },
+      "reject": "Avslå",
+      "rejectLabel": "Begrunnelse for avslag",
+      "rejectHint": "Bedriften får begrunnelsen på e-post.",
+      "rejectSubmit": "Bekreft avslag",
+      "rejectedToast": "{title} er avslått. Bedriften får begrunnelsen på e-post.",
+      "publishTitle": "Klar til publisering",
+      "publishBody": "Studentene ser prosjektet og kan søke når det er publisert. Bedriften får en e-post."
+    },
+    "publish": {
+      "button": "Publiser prosjektet",
+      "confirmTitle": "Publisere {title}?",
+      "confirmBody": "Studentene kan søke fra nå. Konnected velger én student manuelt etter søknadsfristen.",
+      "confirm": "Publiser",
+      "cancel": "Avbryt",
+      "toast": "{title} er publisert. Studentene kan søke fra nå."
+    },
+    "profile": {
+      "signedUp": "Registrert {date}",
+      "missing": "Ikke fylt ut",
+      "empty": "Tomt",
+      "email": "Innloggings-e-post",
+      "applications": "Søknader",
+      "cv": "CV",
+      "cvFile": "En CV-fil",
+      "sharing": "Deles etter utvelgelse",
+      "sharesNothing": "Ingenting",
+      "changedPill": "Endret siden gjennomgang",
+      "waitingTitle": "Endringer ønsket {date}",
+      "waitingBody": "Profilen kommer tilbake i køen når studenten lagrer den.",
+      "reviewedOn": "Gjennomgått {date}",
+      "changesTitle": "Hva som er endret siden gjennomgangen {date}",
+      "before": "Før:",
+      "after": "Nå:",
+      "openCv": "Åpne CV",
+      "noCvTitle": "Ingen CV ennå",
+      "noCvBody": "Be studenten laste opp en før du markerer profilen som gjennomgått.",
+      "sharedTitle": "Deles med en bedrift bare etter utvelgelse",
+      "shared": "(deles)",
+      "notShared": "(deles ikke)",
+      "noAutoCheck": "Det finnes ingen automatisk sjekk av studenter. Konnected går gjennom hver profil manuelt før matching.",
+      "check1": "Studier og skole er fylt ut",
+      "check2": "CV er lastet opp og lesbar",
+      "check3": "Delingsvalgene er satt",
+      "checkHint": "Kryss av for alle sjekkpunktene først.",
+      "review": "Marker som gjennomgått",
+      "reviewAgain": "Marker som gjennomgått på nytt",
+      "reviewedToast": "Profilen til {name} er gjennomgått. Konnected kan nå velge studenten til et prosjekt.",
+      "ask": "Be om endringer",
+      "askLabel": "Hva skal studenten endre?",
+      "askHint": "Studenten får dette på e-post og ser det på profilen sin.",
+      "askSubmit": "Send til studenten",
+      "askToast": "Sendt til {name}. Profilen kommer tilbake hit når den er oppdatert.",
+      "templates": {
+        "cv": {
+          "label": "Last opp CV",
+          "text": "Last opp CV-en din som PDF."
+        },
+        "year": {
+          "label": "Studieår",
+          "text": "Legg til hvilket studieår du går."
+        },
+        "interests": {
+          "label": "Interesser",
+          "text": "Velg minst én interesse."
+        },
+        "pitch": {
+          "label": "Presentasjon",
+          "text": "Skriv noen setninger om hva du er god til."
+        }
+      }
     }
   }
 }

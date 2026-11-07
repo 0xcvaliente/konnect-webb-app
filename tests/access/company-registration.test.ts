@@ -13,6 +13,7 @@ import {
   graphql,
   login,
   PASSWORD,
+  readyFields,
   resetDatabase,
   rest,
   sessionFor,
@@ -645,10 +646,19 @@ describe('changing a company', () => {
     )
   })
 
-  it('a company that was not approved cannot change anything', async () => {
+  it('a rejected company corrects and sends once; after that it cannot change anything', async () => {
     const { user, company } = await registered()
     await approve(company.id, 'rejected')
     const me = await fresh(user)
+    // Its one correction (owner decision) goes back to Konnected for review.
+    expect(await saveCompany(w.payload, session(me), registrationForm())).toMatchObject({
+      status: 'done',
+    })
+    const resent = await w.payload.findByID({ collection: 'companies', id: company.id })
+    expect(resent.status).toBe('pending')
+    expect(resent.resentAt).toBeTruthy()
+    // Rejected again: no second correction.
+    await approve(company.id, 'rejected')
     expect(await saveCompany(w.payload, session(me), registrationForm())).toEqual({
       status: 'error',
       error: 'not_editable',
@@ -832,23 +842,22 @@ describe('changing a company', () => {
   })
 })
 
-describe('a pending company can do nothing else yet', () => {
-  it('no project and no brief file until Konnected approves it', async () => {
+describe('a pending company writes drafts, but sends nothing until Konnected approves it', () => {
+  it('drafts and brief files now, sending for review only after approval', async () => {
     const { user, company } = await registered()
     const me = await fresh(user)
     const cookie = await login(user.email)
-    await expect(
-      w.payload.create({
-        collection: 'projects',
-        data: { title: 'Early', description: 'd', company: company.id, status: 'draft' },
-        ...as(me),
-      }),
-    ).rejects.toThrow()
-    expect((await rest.post('projects', { title: 'Early', description: 'd' }, cookie)).status).toBe(
-      403,
-    )
+    const local = await w.payload.create({
+      collection: 'projects',
+      data: { title: 'Early', company: company.id, status: 'draft' },
+      ...as(me),
+    })
+    expect(local.status).toBe('draft')
+    const viaRest = await rest.post('projects', { ...readyFields(), title: 'Early REST' }, cookie)
+    expect(viaRest.status).toBe(201)
+    const id = (viaRest.json.doc as { id: number }).id
     const brief = { data: makePdf('brief.pdf'), name: 'brief.pdf', type: 'application/pdf' }
-    expect((await rest.upload('brief-files', brief, {}, cookie)).status).toBe(403)
+    expect((await rest.upload('brief-files', brief, {}, cookie)).status).toBe(201)
     // Its own logo is part of the profile, so it can upload one.
     expect(
       (
@@ -860,12 +869,13 @@ describe('a pending company can do nothing else yet', () => {
         )
       ).status,
     ).toBe(201)
+    // Sending for review waits for approval, through every way in.
+    expect((await rest.patch(`projects/${id}`, { status: 'submitted' }, cookie)).status).toBe(403)
+    expect((await w.payload.findByID({ collection: 'projects', id })).status).toBe('draft')
 
     await approve(company.id)
-    expect((await rest.post('projects', { title: 'Now', description: 'd' }, cookie)).status).toBe(
-      201,
-    )
-    expect((await rest.upload('brief-files', brief, {}, cookie)).status).toBe(201)
+    expect((await rest.patch(`projects/${id}`, { status: 'submitted' }, cookie)).status).toBe(200)
+    expect((await w.payload.findByID({ collection: 'projects', id })).status).toBe('submitted')
   })
 })
 
@@ -962,7 +972,12 @@ describe('company logos', () => {
     await approve(company.id)
     let project = await w.payload.create({
       collection: 'projects',
-      data: { title: 'Logo project', description: 'd', fee: 1000, status: 'draft' } as never,
+      data: {
+        title: 'Logo project',
+        description: 'd',
+        status: 'draft',
+        paidOrUnpaid: 'unpaid',
+      } as never,
       ...as(await fresh(user)),
     })
     expect(project.companyLogo).toMatchObject({ id: logo.id })
@@ -977,7 +992,8 @@ describe('company logos', () => {
       project = await w.payload.update({
         collection: 'projects',
         id: project.id,
-        data: { status },
+        // Konnected decides paid with a price: the test company template fills in the price.
+        data: status === 'approved' ? { status, paidOrUnpaid: 'paid', fee: 1000 } : { status },
         ...as(w.admin),
       })
     }

@@ -105,6 +105,27 @@ async function studentGate(req: PayloadRequest, project: Project): Promise<Gate>
   return fits ? 'open' : 'changed'
 }
 
+/**
+ * Which gate refused, in the error's data, so a screen (the team's approval queue) can say what is
+ * missing without reading the message. Carries no personal data.
+ */
+export type AgreementGateRefusal =
+  'company_unsigned' | 'company_changed' | 'student_unsigned' | 'student_changed'
+
+export const agreementGateOf = (error: unknown): AgreementGateRefusal | undefined => {
+  const data = (error as { data?: { agreementGate?: unknown } } | null)?.data
+  const gate = data?.agreementGate
+  return gate === 'company_unsigned' ||
+    gate === 'company_changed' ||
+    gate === 'student_unsigned' ||
+    gate === 'student_changed'
+    ? gate
+    : undefined
+}
+
+const refuse = (message: string, gate: AgreementGateRefusal) =>
+  new APIError(message, 409, { agreementGate: gate })
+
 const CHANGED =
   'no longer matches (another company or student, or a new price, scope or dates). Make a new agreement first.'
 
@@ -118,13 +139,13 @@ export async function assertCompanyAgreementSigned(
 ): Promise<void> {
   const gate = project?.id ? await companyGate(req, project) : 'unsigned'
   if (gate === 'unsigned') {
-    throw new APIError(
+    throw refuse(
       'Project: the company agreement must be signed by the company and Konnected before publishing',
-      409,
+      'company_unsigned',
     )
   }
   if (gate === 'changed') {
-    throw new APIError(`Project: the signed company agreement ${CHANGED}`, 409)
+    throw refuse(`Project: the signed company agreement ${CHANGED}`, 'company_changed')
   }
 }
 
@@ -135,12 +156,12 @@ export async function assertStudentAgreementSigned(
 ): Promise<void> {
   const gate = project?.id ? await studentGate(req, project) : 'unsigned'
   if (gate === 'unsigned') {
-    throw new APIError(
+    throw refuse(
       'Project: the student agreement must be signed by the student and Konnected before the work starts',
-      409,
+      'student_unsigned',
     )
   }
   if (gate === 'changed') {
-    throw new APIError(`Project: the signed student agreement ${CHANGED}`, 409)
+    throw refuse(`Project: the signed student agreement ${CHANGED}`, 'student_changed')
   }
 }

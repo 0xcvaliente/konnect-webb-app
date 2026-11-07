@@ -1,10 +1,10 @@
-import { CircleCheckIcon, ClockIcon, PencilIcon } from 'lucide-react'
+import { PencilIcon } from 'lucide-react'
 import { hasLocale } from 'next-intl'
 import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 
-import { Banner } from '@/components/app/Banner'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
+import { CompanyReviewBanner } from '@/components/app/CompanyReviewBanner'
 import { CompanySteps } from '@/components/app/CompanySteps'
 import { SiteShell } from '@/components/app/SiteShell'
 import { Badge } from '@/components/ui/badge'
@@ -16,9 +16,10 @@ import { companyShellProps, STATUS_TONE } from '@/lib/companies/display'
 import { requireOwnCompany } from '@/lib/companies/session'
 
 // The company's status page, the start of the company area. While Konnected reviews the company
-// it is the "waiting for approval" page: what happens next, and a way to edit the details.
-// Nothing else of the company area opens until approval (the menu shows it locked, and the
-// project and file collections refuse a company that is not approved).
+// it is the "waiting for approval" page: what happens next, and a way to edit the details. A
+// pending company may already write draft projects (owner decision); sending one for review and
+// payments wait for approval (the menu shows payments locked, and the project collection refuses
+// a send from a company that is not approved).
 export const dynamic = 'force-dynamic'
 
 export default async function CompanyStatusPage({
@@ -43,7 +44,9 @@ export default async function CompanyStatusPage({
 
   const lede =
     status === 'pending'
-      ? t('ledePending')
+      ? company.infoRequestedAt
+        ? t('ledeInfo')
+        : t('ledePending')
       : status === 'approved'
         ? t('ledeApproved')
         : t('ledeRejected')
@@ -63,29 +66,13 @@ export default async function CompanyStatusPage({
           </h2>
           <Badge tone={STATUS_TONE[status]}>{f(`status.${status}`)}</Badge>
         </div>
-        {status === 'pending' && (
-          <Banner tone="warn" icon={ClockIcon}>
-            <p className="font-semibold">{t('pendingTitle')}</p>
-            <p className="text-[0.88rem] text-muted-foreground">{t('pendingBody')}</p>
-          </Banner>
-        )}
-        {status === 'approved' && (
-          <Banner tone="ok" icon={CircleCheckIcon}>
-            <p className="font-semibold">{t('approvedTitle')}</p>
-            {approvedOn && (
-              <p className="text-[0.88rem] text-muted-foreground">
-                {t('approvedBody', { date: approvedOn })}
-              </p>
-            )}
-          </Banner>
-        )}
-        {status === 'rejected' && (
-          <Banner tone="bad">
-            <p className="font-semibold">{t('rejectedTitle')}</p>
-            <p className="text-[0.88rem] text-muted-foreground">{t('rejectedBody')}</p>
-          </Banner>
-        )}
-        <CompanySteps status={status} approvedOn={approvedOn} row />
+        <CompanyReviewBanner company={company} where="status" />
+        <CompanySteps
+          status={status}
+          approvedOn={approvedOn}
+          infoRequested={Boolean(company.infoRequestedAt)}
+          row
+        />
       </Card>
 
       {status === 'pending' ? (
@@ -124,14 +111,33 @@ export default async function CompanyStatusPage({
                 {t('edit')}
               </Link>
             </Button>
+            <Button asChild variant="secondary" className="w-full whitespace-normal">
+              <Link href="/company/projects/new">{t('startDraft')}</Link>
+            </Button>
             <p className="text-[0.85rem] text-muted-foreground">{t('lockedNote')}</p>
           </Card>
         </div>
       ) : (
         <div className="flex flex-wrap gap-3">
-          <Button asChild variant="secondary">
-            <Link href="/company/profile">{t('view')}</Link>
-          </Button>
+          {status === 'approved' && (
+            <>
+              <Button asChild>
+                <Link href="/company/projects/new">{t('submitProject')}</Link>
+              </Button>
+              <Button asChild variant="normal">
+                <Link href="/company/projects">{t('myProjects')}</Link>
+              </Button>
+            </>
+          )}
+          {status === 'rejected' && !company.resentAt ? (
+            <Button asChild>
+              <Link href="/company/profile">{t('correct')}</Link>
+            </Button>
+          ) : (
+            <Button asChild variant="secondary">
+              <Link href="/company/profile">{t('view')}</Link>
+            </Button>
+          )}
         </div>
       )}
     </SiteShell>

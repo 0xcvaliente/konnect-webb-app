@@ -66,17 +66,57 @@ export const SENTINEL = {
 }
 
 /**
+ * A made-up organisation number with a valid check digit, different for each name (one company
+ * account per organisation number: the team cannot approve two companies with the same one).
+ * Starts with 91, so it never equals the numbers the registration tests type in.
+ */
+export const orgNumberFor = (name: string): string => {
+  let hash = 0
+  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) % 1_000_000
+  for (let n = hash; ; n = (n + 1) % 1_000_000) {
+    const base = `91${String(n).padStart(6, '0')}`
+    const weights = [3, 2, 7, 6, 5, 4, 3, 2]
+    const rest = weights.reduce((sum, w, i) => sum + w * Number(base[i]), 0) % 11
+    const check = rest === 0 ? 0 : 11 - rest
+    if (check !== 10) return `${base}${check}`
+  }
+}
+
+/**
  * Everything the company onboarding asks for, for a company called `name`. The organisation
  * number is made up but has a valid check digit.
  */
 export const companyDetails = (name: string) => ({
   name,
-  orgNumber: '999123457',
+  orgNumber: orgNumberFor(name),
   contactName: `${name} contact`,
   contactRole: 'Founder',
   website: 'https://company.example',
   sector: 'software' as const,
   description: `${name} description`,
+})
+
+/** A day `days` from today, stored the way the project form stores days (noon UTC). */
+export const dayFromNow = (days: number): string => {
+  const date = new Date()
+  date.setUTCDate(date.getUTCDate() + days)
+  return `${date.toISOString().slice(0, 10)}T12:00:00.000Z`
+}
+
+/**
+ * Everything a company must fill in before it can send a project for review: applications close
+ * in a week, the work starts a week later.
+ */
+export const readyFields = () => ({
+  description: 'What needs to be done',
+  deliverable: 'A short report',
+  desiredSkills: ['Research'],
+  workloadHours: 20,
+  durationWeeks: 2,
+  workMode: 'remote' as const,
+  paidOrUnpaid: 'paid' as const,
+  deadline: dayFromNow(7),
+  startDate: dayFromNow(14),
 })
 
 /** A user document shaped for the Local API `user` option. */
@@ -200,6 +240,7 @@ export async function createWorld() {
     let project = await payload.create({
       collection: 'projects',
       data: {
+        ...readyFields(),
         company: company.company.id,
         title,
         description: `${title} description`,

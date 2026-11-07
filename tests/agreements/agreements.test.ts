@@ -20,6 +20,8 @@ import {
   createWorld,
   graphql,
   login,
+  orgNumberFor,
+  readyFields,
   resetDatabase,
   rest,
   SENTINEL,
@@ -52,11 +54,22 @@ const find = async (kind: 'company' | 'student', projectId: number) => {
   return res.docs[0] as Agreement
 }
 
-/** A fresh project for company A, moved to `approved` (ready for its company agreement). */
+/**
+ * A fresh project for company A, moved to `approved` (ready for its company agreement). Paid with
+ * the price given; without a price Konnected decided unpaid.
+ */
 const approvedProject = async (title = 'Fresh project', fee: number | null = 2000) => {
   const project = await w.payload.create({
     collection: 'projects',
-    data: { company: w.companyA.company.id, title, description: 'd', fee, status: 'draft' },
+    data: {
+      ...readyFields(),
+      company: w.companyA.company.id,
+      title,
+      description: 'd',
+      paidOrUnpaid: fee === null ? 'unpaid' : 'paid',
+      fee,
+      status: 'draft',
+    },
     overrideAccess: true,
   })
   for (const status of ['submitted', 'approved'] as const) {
@@ -477,7 +490,7 @@ describe('making the PDF', () => {
     const text = gotenberg().lastText
     expect(text).toContain('Filled project')
     expect(text).toContain('Company A')
-    expect(text).toContain('999123457')
+    expect(text).toContain(orgNumberFor('Company A'))
     expect(text).toContain(a.reference)
     // 6 500 + 25 % VAT, Norwegian format.
     expect(text.replace(/\s/g, ' ')).toMatch(/8 125,00 kr/)

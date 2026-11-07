@@ -14,33 +14,42 @@ type Step = { state: 'done' | 'current' | 'todo'; title: string; body: string }
 export async function CompanySteps({
   status,
   approvedOn,
+  infoRequested = false,
   row = false,
 }: {
   status: CompanyStatusKey
   /** The approval date, already formatted. */
   approvedOn?: string
+  /** Konnected asked for more information (the company is still pending). */
+  infoRequested?: boolean
   row?: boolean
 }) {
   const t = await getTranslations('CompanySteps')
   const steps: Step[] =
-    status === 'rejected'
+    status === 'pending' && infoRequested
       ? [
           { state: 'done', title: t('review'), body: t('reviewDone') },
-          { state: 'current', title: t('rejected'), body: t('rejectedBody') },
+          { state: 'current', title: t('moreInfo'), body: t('moreInfoBody') },
+          { state: 'todo', title: t('approved'), body: t('approvedBody') },
         ]
-      : [
-          {
-            state: status === 'pending' ? 'current' : 'done',
-            title: t('review'),
-            body: status === 'pending' ? t('reviewCurrent') : t('reviewDone'),
-          },
-          {
-            state: status === 'approved' ? 'current' : 'todo',
-            title: t('approved'),
-            body: approvedOn ?? t('approvedBody'),
-          },
-          { state: 'todo', title: t('active'), body: t('activeBody') },
-        ]
+      : status === 'rejected'
+        ? [
+            { state: 'done', title: t('review'), body: t('reviewDone') },
+            { state: 'current', title: t('rejected'), body: t('rejectedBody') },
+          ]
+        : [
+            {
+              state: status === 'pending' ? 'current' : 'done',
+              title: t('review'),
+              body: status === 'pending' ? t('reviewCurrent') : t('reviewDone'),
+            },
+            {
+              state: status === 'approved' ? 'current' : 'todo',
+              title: t('approved'),
+              body: approvedOn ?? t('approvedBody'),
+            },
+            { state: 'todo', title: t('active'), body: t('activeBody') },
+          ]
 
   return (
     <ol aria-label={t('label')} className={cn('grid gap-1', row && 'sm:grid-cols-3 sm:gap-4')}>

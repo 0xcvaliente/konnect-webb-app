@@ -42,6 +42,22 @@ const text = (value: string | null | undefined) => {
   return trimmed || null
 }
 
+/** A count in both languages, like the other two-language values: "2 weeks / 2 uker". */
+const count = (
+  value: number | null | undefined,
+  en: [one: string, other: string],
+  no: [one: string, other: string],
+) =>
+  typeof value === 'number' && value > 0
+    ? `${value} ${value === 1 ? en[0] : en[1]} / ${value} ${value === 1 ? no[0] : no[1]}`
+    : null
+
+/** Konnected's paid or unpaid decision. Older projects without one: a price means paid. */
+const payment = (project: Project, fee: number | null) => {
+  const paid = project.paidOrUnpaid ? project.paidOrUnpaid === 'paid' : fee !== null
+  return paid ? 'Paid / Betalt' : 'Unpaid / Ulønnet'
+}
+
 /** All values for the kind. A field without a value is null (the team sees which ones). */
 export function agreementValues(
   source: AgreementSource,
@@ -58,11 +74,13 @@ export function agreementValues(
     'project.description': text(project.description),
     'project.tasks': text(project.tasks),
     'project.deliverable': text(project.deliverable),
-    'project.workload': text(project.workload),
-    'project.timeframe': text(project.duration),
+    // The project form's numbers; the old free-text fields for projects made before it.
+    'project.workload':
+      count(project.workloadHours, ['hour', 'hours'], ['time', 'timer']) ?? text(project.workload),
+    'project.timeframe':
+      count(project.durationWeeks, ['week', 'weeks'], ['uke', 'uker']) ?? text(project.duration),
     'project.deadline': day(project.deadline),
-    // Until projects carry their own paid or unpaid choice: a project with a price is paid.
-    'project.payment': fee === null ? 'Unpaid / Ulønnet' : 'Paid / Betalt',
+    'project.payment': payment(project, fee),
     'company.name': text(company.name),
     'company.orgNumber': text(company.orgNumber),
     'company.contactName': text(company.contactName),

@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 
+import { type PostgresAdapter, sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
 import { isAdminEmail } from '@/access/adminEmails'
@@ -141,7 +142,12 @@ export async function requestMagicLink(
     })
 
     const user = await findByEmail(payload, email)
-    if (isAdminEmail(email) || user?.role === 'admin') {
+    const team = isAdminEmail(email) || user?.role === 'admin'
+    // 32 random bytes. Only the SHA-256 is stored; the token itself is only in the email.
+    const token = team ? null : randomBytes(32).toString('base64url')
+    await replaceMagicLinks(payload, email, token ? hashToken(token) : null, now)
+
+    if (!token) {
       await sendSignInEmail(payload, {
         to: email,
         email: teamEmail(locale, 'link'),
@@ -150,27 +156,6 @@ export async function requestMagicLink(
       })
       return { ok: true }
     }
-
-    // Only the newest link works (owner decision): links sent earlier for this address and not
-    // used yet stop working now.
-    await payload.delete({
-      collection: 'magic-links',
-      where: { and: [{ email: { equals: email } }, { usedAt: { exists: false } }] },
-      overrideAccess: true,
-    })
-
-    // 32 random bytes. Only the SHA-256 is stored; the token itself is only in the email.
-    const token = randomBytes(32).toString('base64url')
-    // Bypass: links are made only by this server code; the API cannot create them.
-    await payload.create({
-      collection: 'magic-links',
-      data: {
-        tokenHash: hashToken(token),
-        email,
-        expiresAt: new Date(now + MAGIC_LINK_TTL_MS).toISOString(),
-      },
-      overrideAccess: true,
-    })
     await sendSignInEmail(payload, {
       to: email,
       email: magicLinkEmail(locale, `${appUrl()}/${locale}/magic/${token}`),
@@ -179,6 +164,62 @@ export async function requestMagicLink(
     })
     return { ok: true }
   })
+}
+
+/**
+ * Only the newest link works (owner decision 6 Nov 2026). In one transaction: take a lock for
+ * this address, mark every unused link for it expired, then store the new one (none for a team
+ * address, whose email has no link). The lock makes two requests for the same address at the
+ * same moment run one after the other, so the second one expires the first one's link and
+ * exactly one link stays valid. The lock is released when the transaction ends.
+ */
+async function replaceMagicLinks(
+  payload: Payload,
+  email: string,
+  tokenHash: string | null,
+  now: number,
+): Promise<void> {
+  const transactionID = await payload.db.beginTransaction()
+  if (!transactionID) throw new Error('Sign-in links need a database transaction')
+  const req = { transactionID }
+  try {
+    const db = (payload.db as unknown as PostgresAdapter).sessions[String(transactionID)]!.db
+    await db.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`magic-link:${email}`}, 0))`,
+    )
+    const nowIso = new Date(now).toISOString()
+    // Bypass: links are server-side only; nobody is signed in while asking for one.
+    await payload.db.updateMany({
+      collection: 'magic-links',
+      where: {
+        and: [
+          { email: { equals: email } },
+          { usedAt: { exists: false } },
+          { expiresAt: { greater_than: nowIso } },
+        ],
+      },
+      data: { expiresAt: nowIso },
+      returning: false,
+      req,
+    })
+    if (tokenHash) {
+      // Bypass: links are made only by this server code; the API cannot create them.
+      await payload.create({
+        collection: 'magic-links',
+        data: {
+          tokenHash,
+          email,
+          expiresAt: new Date(now + MAGIC_LINK_TTL_MS).toISOString(),
+        },
+        overrideAccess: true,
+        req,
+      })
+    }
+    await payload.db.commitTransaction(transactionID)
+  } catch (error) {
+    await payload.db.rollbackTransaction(transactionID)
+    throw error
+  }
 }
 
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/

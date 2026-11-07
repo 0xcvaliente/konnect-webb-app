@@ -8,7 +8,7 @@ export type AccountFilter = (typeof ACCOUNT_FILTERS)[number]
 
 export const PAGE_SIZE = 25
 
-/** The longest pause reason the team can write. Matches `activity-logs.note`. */
+/** The longest pause reason the team can write. Fits in `activity-logs.note`. */
 export const REASON_MAX = 500
 
 export type AccountError =

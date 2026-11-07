@@ -14,9 +14,19 @@ export type EmailType =
   | 'account_paused'
   | 'account_reactivated'
   | 'role_changed'
+  | 'project_submitted'
+  | 'project_changes_requested'
+  | 'project_rejected'
+  | 'project_approved'
+  | 'project_published'
+  | 'company_approved'
+  | 'company_rejected'
+  | 'company_info_requested'
+  | 'profile_reviewed'
+  | 'profile_changes_requested'
 
 /**
- * Send a sign-in email after the answer has gone back to the browser, so the answer takes the
+ * Send an email after the answer has gone back to the browser, so the answer takes the
  * same time whether an email was sent or not, and a slow or failing mail server never fails the
  * user's action. Outside a Next.js request (tests, scripts) it sends straight away.
  *
@@ -53,3 +63,6 @@ export async function sendSignInEmail(
     await send()
   }
 }
+
+/** The same sending for emails that are not about signing in (project notices). */
+export const sendEmail = sendSignInEmail

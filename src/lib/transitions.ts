@@ -2,7 +2,7 @@ import { APIError, type PayloadRequest } from 'payload'
 
 import type { Role } from '@/access/roles'
 import type { Project } from '@/payload-types'
-import { assertCompanyAgreementSigned, assertStudentAgreementSigned } from '@/lib/agreements/gates'
+import { assertStudentAgreementSigned } from '@/lib/agreements/gates'
 
 /** from -> to -> roles allowed to make that move. Anything not listed is rejected. */
 export type TransitionMap<S extends string> = Partial<Record<S, Partial<Record<S, Role[]>>>>
@@ -36,11 +36,14 @@ export const PROJECT_TRANSITIONS: TransitionMap<ProjectStatus> = {
 }
 
 /**
- * Project moves that also need a signed agreement (konnected-agreements): `approved` to
- * `published` needs the company agreement, `matched` to `in_progress` the student agreement, each
- * signed by the party and by Konnected, and still matching the project. Call after
- * assertTransition, for every role, with the project as it will be saved (the stored project with
- * this request's changes), so a price changed in the same request is checked too.
+ * Project moves that also need a signed agreement (konnected-agreements). `matched` to
+ * `in_progress` needs the student agreement, signed by the student and by Konnected, and still
+ * matching the project and match. Call after assertTransition, for every role, with the project
+ * as it will be saved (the stored project with this request's changes).
+ *
+ * The other gate, the company agreement before `approved` to `published`, is part of the one
+ * publishing rule, assertCanPublish (lib/projects/publish.ts), which the Projects hook runs for
+ * every way of publishing, the team's approval queue included.
  */
 export async function assertProjectGates(
   req: PayloadRequest,
@@ -48,16 +51,32 @@ export async function assertProjectGates(
   to: ProjectStatus,
   project: Project | undefined,
 ): Promise<void> {
-  if (from === 'approved' && to === 'published') await assertCompanyAgreementSigned(req, project)
   if (from === 'matched' && to === 'in_progress') await assertStudentAgreementSigned(req, project)
 }
 
 export type CompanyStatus = 'pending' | 'approved' | 'rejected'
 
+/**
+ * A rejected company may correct its details and send them again once (owner decision): the
+ * Companies hook moves it back to `pending` on its own save, and only while `resentAt` is empty.
+ */
 export const COMPANY_TRANSITIONS: TransitionMap<CompanyStatus> = {
   pending: { approved: ['admin'], rejected: ['admin'] },
-  rejected: { pending: ['admin'] },
+  rejected: { pending: ['admin', 'company'] },
   approved: { rejected: ['admin'] },
+}
+
+/**
+ * Konnected's review of a student profile. Only the team decides. When the team asked for
+ * changes, the student's own edit sends the profile back to `waiting` (the StudentProfiles hook
+ * makes that move; the student never sends a status).
+ */
+export type ProfileReviewStatus = 'waiting' | 'changes_requested' | 'reviewed'
+
+export const PROFILE_REVIEW_TRANSITIONS: TransitionMap<ProfileReviewStatus> = {
+  waiting: { reviewed: ['admin'], changes_requested: ['admin'] },
+  changes_requested: { waiting: ['student', 'admin'], reviewed: ['admin'] },
+  reviewed: { changes_requested: ['admin'], waiting: ['admin'] },
 }
 
 export type ApplicationStatus =

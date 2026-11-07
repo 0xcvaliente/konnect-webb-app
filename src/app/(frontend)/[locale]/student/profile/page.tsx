@@ -1,5 +1,5 @@
 import config from '@payload-config'
-import { CircleCheckIcon, ClockIcon } from 'lucide-react'
+import { CircleCheckIcon, ClockIcon, MessageSquareTextIcon } from 'lucide-react'
 import { hasLocale } from 'next-intl'
 import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server'
 import { headers } from 'next/headers'
@@ -12,8 +12,9 @@ import { SiteShell } from '@/components/app/SiteShell'
 import { accountMenuUser } from '@/lib/account'
 import { redirect } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
-import { SHARE_KEYS, type ShareKey } from '@/lib/students/fields'
+import { PROFILE_REVIEW_DAYS, SHARE_KEYS, type ShareKey } from '@/lib/students/fields'
 import { findOwnProfile, type SessionUser } from '@/lib/students/profile'
+import { promiseState } from '@/lib/workingDays'
 import type { Cv } from '@/payload-types'
 
 import { ProfileForms, type ProfileValues } from './ProfileForms'
@@ -67,6 +68,16 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   ) as Record<ShareKey, boolean>
 
   const reviewed = profile.reviewStatus === 'reviewed' && profile.reviewedAt
+  // The promise: a review within 2 working days of sending the profile.
+  const requested = profile.reviewRequestedAt ?? profile.createdAt
+  const dueDay = requested ? promiseState(new Date(requested), PROFILE_REVIEW_DAYS).dueDay : null
+  const due = dueDay
+    ? format.dateTime(new Date(`${dueDay}T12:00:00.000Z`), {
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'Europe/Oslo',
+      })
+    : null
 
   return (
     <SiteShell
@@ -81,14 +92,29 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
           <p className="font-semibold">{t('reviewedTitle')}</p>
           <p className="text-[0.88rem] text-muted-foreground">
             {t('reviewedBody', {
-              date: format.dateTime(new Date(profile.reviewedAt!), { dateStyle: 'long' }),
+              date: format.dateTime(new Date(profile.reviewedAt!), {
+                dateStyle: 'long',
+                timeZone: 'Europe/Oslo',
+              }),
             })}
           </p>
+        </Banner>
+      ) : profile.reviewStatus === 'changes_requested' ? (
+        <Banner tone="warn" icon={MessageSquareTextIcon} role="status">
+          <p className="font-semibold">{t('changesTitle')}</p>
+          {profile.reviewNote && (
+            <blockquote className="my-1 border-l-[3px] border-[color-mix(in_srgb,var(--tone)_45%,transparent)] py-0.5 pl-3 text-[0.92rem] [overflow-wrap:anywhere] whitespace-pre-line">
+              {profile.reviewNote}
+            </blockquote>
+          )}
+          <p className="text-[0.88rem] text-muted-foreground">{t('changesBody')}</p>
         </Banner>
       ) : (
         <Banner tone="warn" icon={ClockIcon}>
           <p className="font-semibold">{t('waitingTitle')}</p>
-          <p className="text-[0.88rem] text-muted-foreground">{t('waitingBody')}</p>
+          <p className="text-[0.88rem] text-muted-foreground">
+            {due ? t('waitingBy', { date: due }) : t('waitingBody')}
+          </p>
         </Banner>
       )}
       <ProfileForms values={values} cv={cv} privacy={privacy} />

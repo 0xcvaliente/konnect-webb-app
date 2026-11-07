@@ -2,7 +2,7 @@ import en from '@/messages/en.json'
 import no from '@/messages/no.json'
 
 /**
- * Sign-in emails in English and Norwegian. Every string comes from the message files
+ * Emails in English and Norwegian. Every string comes from the message files
  * (`Email.*`), so both languages stay complete (a test checks that the two files have the same
  * keys). Each email has a subject, an HTML body and a plain-text body. No tracking pixels, no
  * images, no link rewriting. Links are built from APP_URL by the caller.
@@ -221,5 +221,160 @@ export function roleChangedEmail(
     action: { label: m.button, href },
     ignore: m.ignore,
     footer: MESSAGES[locale].common.accountFooter,
+  })
+}
+
+// ---------- Project notices: sent to the company's own address ----------
+
+/**
+ * "We received your project": the company sent a project for review. Says what happens next and
+ * links to the project page. The title is the company's own text; nothing about any student.
+ */
+export function projectSubmittedEmail(
+  locale: EmailLocale,
+  title: string,
+  href: string,
+): RenderedEmail {
+  const m = MESSAGES[locale].projectSubmitted
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs: [m.body.replace('{title}', title), m.review, m.next],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: MESSAGES[locale].common.accountFooter,
+  })
+}
+
+// ---------- Review decisions: sent to the company's or the student's own address ----------
+
+/** The team's note as paragraphs (blank lines and line breaks start a new one). */
+const noteParagraphs = (note: string | null | undefined): string[] =>
+  (note ?? '')
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+/** A price in whole kroner and the total with VAT, in the email's language. */
+const formatKroner = (locale: EmailLocale, amount: number): string =>
+  `${new Intl.NumberFormat(locale === 'no' ? 'nb-NO' : 'en-GB', {
+    maximumFractionDigits: 2,
+  }).format(amount)} kr`
+
+export type CompanyReviewKind = 'approved' | 'rejected' | 'info_requested'
+
+/**
+ * Konnected's decision on a company: approved, rejected (with the reason, and whether the company
+ * may correct its details and send them once more), or more information asked (with the note).
+ */
+export function companyReviewEmail(
+  locale: EmailLocale,
+  kind: CompanyReviewKind,
+  {
+    name,
+    note,
+    canResend,
+    href,
+  }: { name: string; note?: string | null; canResend?: boolean; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  if (kind === 'approved') {
+    const m = all.companyApproved
+    return render({
+      locale,
+      subject: m.subject,
+      heading: m.heading,
+      paragraphs: [m.body.replace('{name}', name), m.next],
+      action: { label: m.button, href },
+      ignore: m.ignore,
+      footer: all.common.accountFooter,
+    })
+  }
+  const m = kind === 'rejected' ? all.companyRejected : all.companyInfo
+  const after =
+    kind === 'rejected'
+      ? canResend
+        ? all.companyRejected.resend
+        : all.companyRejected.final
+      : all.companyInfo.resend
+  return render({
+    locale,
+    subject: m.subject.replace('{name}', name),
+    heading: m.heading,
+    paragraphs: [m.body.replace('{name}', name), ...noteParagraphs(note), after],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+export type ProjectReviewKind = 'changes_requested' | 'rejected' | 'approved' | 'published'
+
+/**
+ * Konnected's decision on a project: changes asked or rejected (with the note), approved (with
+ * the fixed price for a paid project), or published. The title is the company's own text.
+ */
+export function projectReviewEmail(
+  locale: EmailLocale,
+  kind: ProjectReviewKind,
+  {
+    title,
+    note,
+    price,
+    href,
+  }: {
+    title: string
+    note?: string | null
+    price?: { price: number; total: number } | null
+    href: string
+  },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = {
+    changes_requested: all.projectChanges,
+    rejected: all.projectRejected,
+    approved: all.projectApproved,
+    published: all.projectPublished,
+  }[kind]
+  const paragraphs = [m.body.replace('{title}', title)]
+  if (kind === 'changes_requested' || kind === 'rejected') paragraphs.push(...noteParagraphs(note))
+  if (kind === 'approved' && price) {
+    paragraphs.push(
+      all.projectApproved.price
+        .replace('{price}', formatKroner(locale, price.price))
+        .replace('{total}', formatKroner(locale, price.total)),
+    )
+  }
+  paragraphs.push(m.next)
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs,
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+export type ProfileReviewKind = 'reviewed' | 'changes_requested'
+
+/** Konnected reviewed the student's profile, or asks for changes (with the note). */
+export function profileReviewEmail(
+  locale: EmailLocale,
+  kind: ProfileReviewKind,
+  { note, href }: { note?: string | null; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = kind === 'reviewed' ? all.profileReviewed : all.profileChanges
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs: [m.body, ...(kind === 'changes_requested' ? noteParagraphs(note) : []), m.next],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
   })
 }

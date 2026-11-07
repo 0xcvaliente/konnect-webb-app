@@ -8,6 +8,7 @@ import { Card, CardTitle } from '@/components/ui/card'
 import { routing } from '@/i18n/routing'
 import { accountMenuUser } from '@/lib/account'
 import { type ActivityItem, loadAccount } from '@/lib/team/accounts'
+import { teamCounts } from '@/lib/team/counts'
 import { requireTeam } from '@/lib/team/session'
 
 import { PauseCard, RoleCard, SignOutEverywhere } from './AccountActions'
@@ -98,6 +99,7 @@ export default async function TeamUserPage({
 
   return (
     <TeamShell
+      counts={await teamCounts(payload, actor)}
       current="users"
       user={accountMenuUser(actor, tRole('admin'))}
       crumb={{ href: '/team/users', label: t('back') }}

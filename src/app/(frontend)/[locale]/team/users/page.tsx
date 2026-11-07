@@ -14,6 +14,7 @@ import { routing } from '@/i18n/routing'
 import { accountMenuUser } from '@/lib/account'
 import { isAccountFilter, listAccounts } from '@/lib/team/accounts'
 import { ACCOUNT_FILTERS, type AccountFilter } from '@/lib/team/fields'
+import { teamCounts } from '@/lib/team/counts'
 import { requireTeam } from '@/lib/team/session'
 import { cn } from '@/lib/utils'
 
@@ -60,6 +61,7 @@ export default async function TeamUsersPage({
 
   return (
     <TeamShell
+      counts={await teamCounts(payload, user)}
       current="users"
       user={accountMenuUser(user, tRole('admin'))}
       title={t('title')}

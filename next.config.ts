@@ -32,6 +32,9 @@ const nextConfig: NextConfig = {
   // CLAUDE.md is the agent instruction file. Stop `next dev` from generating AGENTS.md.
   agentRules: false,
   poweredByHeader: false,
+  // Production runs from Docker: a self-contained server.js with only the files it needs. The
+  // Dockerfile adds public/ and .next/static, which standalone output leaves out.
+  output: 'standalone',
   async redirects() {
     return LEGACY_TEAM_REDIRECTS
   },

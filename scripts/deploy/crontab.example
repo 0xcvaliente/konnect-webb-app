@@ -1,0 +1,21 @@
+# Backups on the server. Install for the deploy user with `crontab -e` and adjust the folder.
+# Times are server time; set the server to Europe/Oslo (timedatectl set-timezone Europe/Oslo).
+# Each script logs to stderr; cron mails or journald keep it. Monitoring: see docs/production.md.
+#
+# m   h  dom mon dow  command
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Database: WAL is archived continuously by PostgreSQL itself (archive_timeout=60). On top:
+# a full backup every Sunday night and a differential one on the other nights.
+30  2  *   *   0    /opt/konnected/scripts/deploy/backup-db.sh full
+30  2  *   *   1-6  /opt/konnected/scripts/deploy/backup-db.sh diff
+
+# Uploads: a restic snapshot every 5 minutes, old snapshots removed nightly (14 days).
+*/5 *  *   *   *    /opt/konnected/scripts/deploy/backup-media.sh backup
+45  3  *   *   *    /opt/konnected/scripts/deploy/backup-media.sh prune
+
+# Restore test on the first Monday of the month (also run it by hand after any backup change).
+# Cron ORs day-of-month and day-of-week, so the Monday check is in the command. "%" must be
+# escaped in a crontab.
+0   5  1-7 *   *    [ "$(date +\%u)" = 1 ] && /opt/konnected/scripts/deploy/restore-test.sh
