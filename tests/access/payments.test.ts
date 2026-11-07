@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { dueDay, paymentStatus } from '@/lib/payments/fields'
+import { dueDay, paymentStatus, studentPayoutStatus } from '@/lib/payments/fields'
 import { listCompanyInvoices, listStudentPayments } from '@/lib/payments/views'
 import { dayToStored, todayInOslo } from '@/lib/projects/fields'
 import type { SessionUser } from '@/lib/students/profile'
@@ -194,7 +194,7 @@ describe('who reads what', () => {
       depth: 0,
       ...as(w.companyA.user),
     })
-    for (const key of ['notes', 'studentPay', 'konnectedShare', 'studentPaidAt'])
+    for (const key of ['notes', 'studentPay', 'konnectedShare', 'studentPaidAt', 'studentPayout'])
       expect(local, key).not.toHaveProperty(key)
   })
 
@@ -203,9 +203,11 @@ describe('who reads what', () => {
     for (const value of [INVOICE, NOTES, '12000']) expect(all).not.toContain(value)
   })
 
-  it('the student reads only whether they were paid: no price, no invoice, no notes', async () => {
+  it('the student reads where their pay stands and their own pay: no price, no invoice, no notes', async () => {
     const all = await sweep(w.beta.user)
-    for (const value of [INVOICE, NOTES, '12000', '8765', '3235']) expect(all).not.toContain(value)
+    // Their own pay is theirs to read (Kanban card "Student payments page (status only)").
+    expect(all).toContain('8765')
+    for (const value of [INVOICE, NOTES, '12000', '3235']) expect(all).not.toContain(value)
     const local = await w.payload.findByID({
       collection: 'payments',
       id: row.id,
@@ -213,7 +215,16 @@ describe('who reads what', () => {
       ...as(w.beta.user),
     })
     expect(local).toHaveProperty('studentPaidAt')
-    for (const key of ['projectFee', 'invoiceNumber', 'invoiceSentAt', 'invoicePaidAt', 'notes'])
+    expect(local.studentPayout).toBe('waiting_company')
+    expect(local.studentPay).toBe(8_765)
+    for (const key of [
+      'projectFee',
+      'invoiceNumber',
+      'invoiceSentAt',
+      'invoicePaidAt',
+      'notes',
+      'konnectedShare',
+    ])
       expect(local, key).not.toHaveProperty(key)
   })
 
@@ -483,17 +494,27 @@ describe('the log, the company summary and the student status', () => {
         id: row.id,
         title: 'Paid project',
         companyName: 'Company A',
+        status: 'waiting_company',
         paidOn: null,
+        pay: null,
         applicationId: paid.application.id,
       },
     ])
+    // The company paid: the student is in the next pay run (without learning the company's date).
+    await save({ invoiceNumber: INVOICE, invoiceSent: day(-3), invoicePaid: day(-2) })
+    const next = (await listStudentPayments(w.payload, session(w.beta.user)))![0]!
+    expect(next).toMatchObject({ status: 'next_pay_run', paidOn: null })
+    expect(JSON.stringify(next)).not.toContain(day(-2))
     await save({
       invoiceNumber: INVOICE,
       invoiceSent: day(-3),
       invoicePaid: day(-2),
       studentPaid: day(-1),
     })
-    expect((await listStudentPayments(w.payload, session(w.beta.user)))![0]!.paidOn).toBe(day(-1))
+    expect((await listStudentPayments(w.payload, session(w.beta.user)))![0]).toMatchObject({
+      status: 'paid',
+      paidOn: day(-1),
+    })
     expect(
       (await listStudentPayments(w.payload, session(w.alpha.user)))!.map((p) => p.id),
     ).not.toContain(row.id)
@@ -502,6 +523,16 @@ describe('the log, the company summary and the student status', () => {
 })
 
 describe('the rules, without a database', () => {
+  it('the student status follows the dates', () => {
+    expect(studentPayoutStatus({ invoicePaid: null, studentPaid: null })).toBe('waiting_company')
+    expect(studentPayoutStatus({ invoicePaid: '2026-11-02', studentPaid: null })).toBe(
+      'next_pay_run',
+    )
+    expect(studentPayoutStatus({ invoicePaid: '2026-11-02', studentPaid: '2026-11-20' })).toBe(
+      'paid',
+    )
+  })
+
   it('status and due day', () => {
     const t = '2026-11-20'
     expect(dueDay('2026-11-01')).toBe('2026-11-15')

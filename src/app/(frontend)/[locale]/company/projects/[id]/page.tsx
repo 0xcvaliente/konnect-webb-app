@@ -13,10 +13,12 @@ import { getPayload } from 'payload'
 
 import { Banner } from '@/components/app/Banner'
 import { CompanyWork } from '@/components/app/deliverables/CompanyWork'
+import { FeedbackCard } from '@/components/app/feedback/FeedbackCard'
 import { CompanyKickoffCard } from '@/components/app/kickoff/KickoffCard'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { ProjectDetails } from '@/components/app/ProjectDetails'
 import { ProjectTimeline, ProjectTrack } from '@/components/app/ProjectProgress'
+import { AskCard } from '@/components/app/questions/AskCard'
 import { SelectedStudent } from '@/components/app/SelectedStudent'
 import { SiteShell } from '@/components/app/SiteShell'
 import { Badge } from '@/components/ui/badge'
@@ -26,12 +28,14 @@ import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { companyShellProps } from '@/lib/companies/display'
 import { loadCompanyWork } from '@/lib/deliverables/student'
+import { feedbackStatus } from '@/lib/feedback/feedback'
 import { loadCompanyKickoff } from '@/lib/kickoff/views'
 import { PAYMENT_TERMS_DAYS, priceBreakdown, VAT_RATE } from '@/lib/money'
 import { requireOwnCompany } from '@/lib/companies/session'
 import { isEditable, PROJECT_STATUS_TONE } from '@/lib/projects/display'
 import { findOwnProject, findSelectedStudent, projectHistory } from '@/lib/projects/project'
 import { projectToView } from '@/lib/projects/view'
+import { loadAskerQuestions } from '@/lib/questions/asker'
 import { storedToDay } from '@/lib/projects/fields'
 
 // The company's project page ("Final pass" mockup, company project page): where the project
@@ -77,7 +81,7 @@ export default async function CompanyProjectPage({
     project.status === 'matched' ||
     project.status === 'in_progress' ||
     project.status === 'delivered'
-  const [history, student, work, current, kickoff] = await Promise.all([
+  const [history, student, work, current, kickoff, questions, feedback] = await Promise.all([
     projectHistory(payload, project.id),
     // Only the selected student's shared copy, once Konnected has selected one; never any other
     // applicant (a company cannot read applications at all).
@@ -97,6 +101,10 @@ export default async function CompanyProjectPage({
     }),
     // The kick-off of the match that runs now (the company reads nothing of an ended one).
     kickoffShown ? loadCompanyKickoff(payload, user, project.id) : null,
+    // Ask Konnected: the company's questions on this project, and what Konnected asked it.
+    loadAskerQuestions(payload, user, project.id),
+    // "How did it go?": once the project closed after delivery.
+    project.status === 'closed' ? feedbackStatus(payload, user, project.id) : ('none' as const),
   ])
   const match = current.docs[0]
   const dueDay = storedToDay(match?.endDate)
@@ -233,6 +241,12 @@ export default async function CompanyProjectPage({
             </Banner>
           )}
 
+          {feedback !== 'none' && (
+            <FeedbackCard
+              href={`/company/projects/${project.id}/feedback`}
+              sent={feedback === 'sent'}
+            />
+          )}
           {work && <CompanyWork work={work} />}
           {student && <SelectedStudent student={student} />}
           {kickoffShown && (
@@ -343,6 +357,14 @@ export default async function CompanyProjectPage({
               <p className="text-[0.85rem] text-muted-foreground">{t('pendingHint')}</p>
             )}
           </Card>
+          {questions && (
+            <AskCard
+              as="company"
+              targetId={project.id}
+              company={project.companyName ?? company.name}
+              questions={questions}
+            />
+          )}
         </aside>
       </div>
     </SiteShell>

@@ -33,6 +33,8 @@ import { requireTeam } from '@/lib/team/session'
 
 import { KickoffFacts } from '@/components/app/kickoff/KickoffCard'
 import { loadTeamKickoff, noteHistory } from '@/lib/kickoff/team'
+import { listProjectFeedback } from '@/lib/feedback/feedback'
+import { listProjectQuestions } from '@/lib/questions/team'
 
 import { KickoffForm, NoteForm, StartWorkButton } from './KickoffForms'
 import { ProblemPaths } from './ProblemPaths'
@@ -104,12 +106,17 @@ export default async function TeamProjectPage({
   const tn = await getTranslations('TeamNote')
   // The kick-off of the running match (matched, in progress or delivered), and every note
   // Konnected wrote to the company (the project shows the company only the latest).
-  const [kick, notes] = await Promise.all([
+  const [kick, notes, feedback, questions] = await Promise.all([
     match && ['matched', 'in_progress', 'delivered'].includes(project.status)
       ? loadTeamKickoff(payload, user, project)
       : null,
     noteHistory(payload, user, project.id),
+    // Feedback after the project (team only) and the Ask Konnected questions on it.
+    listProjectFeedback(payload, user, project.id),
+    listProjectQuestions(payload, user, project.id),
   ])
+  const tf = await getTranslations('TeamFeedback')
+  const tq = await getTranslations('TeamQuestions')
   const running =
     Boolean(match) && (project.status === 'matched' || project.status === 'in_progress')
   const student = match?.studentName || report?.studentName || ''
@@ -400,6 +407,56 @@ export default async function TeamProjectPage({
             </Card>
           )}
 
+          {(project.status === 'closed' || feedback.length > 0) && (
+            <Card className="gap-4">
+              <div className="grid gap-1">
+                <CardTitle>{tf('title')}</CardTitle>
+                <p className="text-[0.85rem] text-muted-foreground">{tf('private')}</p>
+              </div>
+              {feedback.length === 0 ? (
+                <p className="text-muted-foreground">{tf('empty')}</p>
+              ) : (
+                <ul className="grid">
+                  {feedback.map((f) => (
+                    <li
+                      key={f.id}
+                      className="grid gap-1.5 border-b border-line py-3 first:pt-0 last:border-b-0 last:pb-0"
+                    >
+                      <p className="flex flex-wrap items-center gap-2">
+                        <b className="font-semibold [overflow-wrap:anywhere]">
+                          {f.side === 'student'
+                            ? tf('fromStudent', { name: student || tf('student') })
+                            : tf('fromCompany', { name: project.companyName ?? '' })}
+                        </b>
+                        <Badge tone={f.rating >= 4 ? 'ok' : f.rating === 3 ? 'info' : 'warn'}>
+                          {tf('rating', { rating: f.rating })}
+                        </Badge>
+                        <span className="text-[0.82rem] text-muted-foreground">
+                          {at(f.createdAt)}
+                        </span>
+                      </p>
+                      {f.wentWell && (
+                        <p className="text-[0.92rem] [overflow-wrap:anywhere] whitespace-pre-line">
+                          <span className="font-medium">{tf('wentWell')}: </span>
+                          {f.wentWell}
+                        </p>
+                      )}
+                      {f.couldBeBetter && (
+                        <p className="text-[0.92rem] [overflow-wrap:anywhere] whitespace-pre-line">
+                          <span className="font-medium">{tf('better')}: </span>
+                          {f.couldBeBetter}
+                        </p>
+                      )}
+                      <p className="text-[0.85rem] text-muted-foreground">
+                        {f.again ? tf(`again.${f.side}`) : tf(`notAgain.${f.side}`)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+
           <ActivityCard rows={rows} describe={describe} />
         </div>
 
@@ -498,6 +555,32 @@ export default async function TeamProjectPage({
               </ul>
             ) : (
               <p className="text-[0.9rem] text-muted-foreground">{t('reportsEmpty')}</p>
+            )}
+          </Card>
+
+          <Card className="gap-3">
+            <CardTitle>{tq('projectTitle')}</CardTitle>
+            {questions.length ? (
+              <ul className="grid">
+                {questions.map((q) => (
+                  <li key={q.id} className="border-b border-line last:border-b-0">
+                    <Link
+                      href={`/team/questions?item=${q.id}#item`}
+                      prefetch={false}
+                      className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-[0.9rem]"
+                    >
+                      <span>
+                        {tq('projectRow', { side: tq(`side.${q.side}`), date: at(q.createdAt) })}
+                      </span>
+                      <Badge tone={q.status === 'open' ? 'warn' : 'ok'}>
+                        {q.status === 'open' ? tq('openPill') : tq('answeredPill')}
+                      </Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[0.9rem] text-muted-foreground">{tq('projectEmpty')}</p>
             )}
           </Card>
         </aside>

@@ -7,7 +7,9 @@ import type { ReactNode } from 'react'
 import { WithdrawForm } from '@/components/app/applications/WithdrawForm'
 import { StudentWork } from '@/components/app/deliverables/StudentWork'
 import { StudentKickoffCard } from '@/components/app/kickoff/KickoffCard'
+import { FeedbackCard } from '@/components/app/feedback/FeedbackCard'
 import { ProblemCard } from '@/components/app/problems/ProblemCard'
+import { AskCard } from '@/components/app/questions/AskCard'
 import { Banner } from '@/components/app/Banner'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { SiteShell } from '@/components/app/SiteShell'
@@ -19,8 +21,10 @@ import { routing } from '@/i18n/routing'
 import { APPLICATION_STATUS_TONE, canWithdraw } from '@/lib/applications/fields'
 import { findOwnApplication, type OwnApplication, ownSharedItems } from '@/lib/applications/student'
 import { loadStudentWork } from '@/lib/deliverables/student'
+import { feedbackStatus } from '@/lib/feedback/feedback'
 import { loadStudentKickoff } from '@/lib/kickoff/views'
 import { loadStudentProblem } from '@/lib/problems/student'
+import { loadAskerQuestions } from '@/lib/questions/asker'
 import { requireStudent } from '@/lib/students/session'
 import { cn } from '@/lib/utils'
 
@@ -288,6 +292,15 @@ export default async function StudentApplicationPage({
     application?.status === 'selected'
       ? await loadStudentKickoff(payload, user, application.projectId)
       : null
+  // Ask Konnected: the student's questions about this application, and what Konnected asked them.
+  const questions = application
+    ? await loadAskerQuestions(payload, user, application.projectId)
+    : null
+  // "How did it go?": once the project closed after the student's delivery.
+  const feedback =
+    application?.status === 'selected'
+      ? await feedbackStatus(payload, user, application.projectId)
+      : 'none'
   const tp = await getTranslations('StudentProblem')
   const workStage: WorkStage = !work
     ? 'none'
@@ -360,6 +373,12 @@ export default async function StudentApplicationPage({
                 </div>
               </Banner>
             </Card>
+          )}
+          {feedback !== 'none' && (
+            <FeedbackCard
+              href={`/student/applications/${a.id}/feedback`}
+              sent={feedback === 'sent'}
+            />
           )}
           {kickoff && (
             <StudentKickoffCard
@@ -459,6 +478,9 @@ export default async function StudentApplicationPage({
               </p>
             )}
           </Card>
+          {questions && (
+            <AskCard as="student" targetId={a.id} company={a.companyName} questions={questions} />
+          )}
           {canWithdraw(a.status) && (
             <Card className="gap-3">
               <div className="grid gap-1">

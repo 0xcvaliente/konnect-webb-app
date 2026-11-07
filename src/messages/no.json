@@ -539,6 +539,43 @@
       "next": "Velg en student under Matching, eller velg hva som skjer videre hvis ingen passer. Hver student får en e-post når du avgjør.",
       "button": "Åpne Matching",
       "ignore": "Du får denne e-posten virkedagen før en avgjørelse har frist på et prosjekt du er ansvarlig for."
+    },
+    "questions": {
+      "answer": {
+        "subject": "Svar på spørsmålet ditt om «{title}»",
+        "heading": "Konnected har svart på spørsmålet ditt",
+        "asked": "Du spurte:",
+        "answered": "{name} i Konnected svarte:",
+        "answeredTeam": "Konnected svarte:",
+        "next": "Spørsmålet og svaret ligger også i appen, sammen med prosjektet.",
+        "button": "Åpne i appen",
+        "ignore": "Du får denne e-posten fordi du stilte Konnected et spørsmål i appen."
+      },
+      "relay": {
+        "subject": "Konnected har et spørsmål om «{title}»",
+        "heading": "Et spørsmål fra Konnected",
+        "body": "Konnected trenger svaret ditt om «{title}»:",
+        "next": "Svar i appen. Bare Konnected leser svaret ditt, og sender videre det som trengs.",
+        "button": "Svar i appen",
+        "ignore": "Du får denne e-posten fordi du er med i dette prosjektet gjennom Konnected."
+      }
+    },
+    "questionReminder": {
+      "subject": "Svarfrist {date}: {title}",
+      "heading": "Hei {name}",
+      "body": "Et spørsmål om «{title}» ({company}) venter på svar. Konnected har lovet svar innen {date}.",
+      "next": "Svar under Spørsmål, eller send det videre til den andre parten hvis du trenger deres svar først.",
+      "button": "Åpne Spørsmål",
+      "ignore": "Du får denne e-posten virkedagen før et svar har frist på et prosjekt du er ansvarlig for."
+    },
+    "feedback": {
+      "subject": "Hvordan gikk «{title}»?",
+      "heading": "Hvordan gikk det?",
+      "bodyStudent": "«{title}» for {company} er avsluttet. Takk for innsatsen. Konnected vil gjerne høre hvordan det gikk. Det tar to minutter.",
+      "bodyCompany": "«{title}» er avsluttet. Takk for at dere jobbet med Konnected. Vi vil gjerne høre hvordan det gikk. Det tar to minutter.",
+      "private": "Bare Konnected-teamet leser svarene dine. Den andre parten ser dem ikke.",
+      "button": "Gi tilbakemelding",
+      "ignore": "Du får denne e-posten én gang, når et prosjekt du var med i avsluttes."
     }
   },
   "DesignGuide": {
@@ -1261,7 +1298,8 @@
       "payments": "Betalinger som trenger teamet",
       "problems": "Rapporterte problemer",
       "noMatch": "Prosjekter uten match",
-      "kickoff": "Oppstarter å registrere"
+      "kickoff": "Oppstarter å registrere",
+      "questions": "Spørsmål å svare på"
     },
     "oldest": "Eldst: {name}, {waited}",
     "queueEmpty": "Ingenting venter her.",
@@ -1283,7 +1321,8 @@
     "noMatchTitle": "Prosjekter uten match",
     "noMatchEmpty": "Alle prosjekter med utløpt søknadsfrist har en student.",
     "noMatchSub": "{company}, frist {date}, {count, plural, =0 {ingen søknader venter} one {# søknad venter} other {# søknader venter}}",
-    "firstKickoff": "Først: {name}, matchet"
+    "firstKickoff": "Først: {name}, matchet",
+    "firstQuestion": "Eldst: {name}, {waited}"
   },
   "TeamAccounts": {
     "title": "Kontoer",
@@ -2753,19 +2792,26 @@
   },
   "StudentPayments": {
     "title": "Betalinger",
-    "lede": "Konnected betaler deg etter at arbeidet ditt er frigitt. Denne siden viser bare status.",
+    "lede": "Hvor betalingen din står for hvert betalte prosjekt. Konnected betaler deg etter at bedriften har betalt. Siden viser bare status.",
     "emptyTitle": "Ingen betalinger ennå",
     "emptyBody": "Når Konnected velger deg til et betalt prosjekt, vises det her.",
     "toProjects": "Finn et prosjekt",
     "listTitle": "Betalingene dine",
     "paidOn": "Betalt {date}",
-    "waiting": "Betales i den månedlige lønnskjøringen etter at bedriften har betalt.",
     "status": {
       "paid": "Betalt",
-      "waiting": "Ikke betalt ennå"
+      "waiting_company": "Venter på bedriften",
+      "next_pay_run": "I neste lønnskjøring"
     },
     "detailsTitle": "Utbetaling",
-    "detailsBody": "Det er ingenting å fylle ut her. Konnected sier fra hvis vi trenger noe mer for å betale deg."
+    "detailsBody": "Det er ingenting å fylle ut her. Konnected sier fra hvis vi trenger noe mer for å betale deg.",
+    "theCompany": "bedriften",
+    "pay": "Betalingen din: {amount}",
+    "line": {
+      "waiting_company": "Konnected betaler deg i den månedlige lønnskjøringen etter at {company} har betalt.",
+      "next_pay_run": "{company} har betalt. Konnected betaler deg i neste månedlige lønnskjøring.",
+      "paid": "Betalt."
+    }
   },
   "Problems": {
     "errors": {
@@ -3076,7 +3122,8 @@
       "noMatch": "Prosjekt uten match",
       "payment": "Betaling som trenger teamet",
       "workDue": "Arbeid med frist",
-      "kickoff": "Oppstart å registrere"
+      "kickoff": "Oppstart å registrere",
+      "question": "Spørsmål å svare på"
     },
     "itemSub": "{kind}, {detail}",
     "due": {
@@ -3259,5 +3306,213 @@
     "history": "Notater skrevet",
     "shown": "vises nå",
     "cleared": "Notat fjernet"
+  },
+  "AskKonnected": {
+    "title": "Spør Konnected",
+    "bodyStudent": "Spørsmål om dette prosjektet går til Konnected-teamet, ikke til {company}. Du får svaret på e-post, og det blir liggende her.",
+    "bodyCompany": "Spørsmål om dette prosjektet går til Konnected-teamet. Du får svaret på e-post, og det blir liggende her.",
+    "askedTitle": "Spørsmålene dine",
+    "askedOn": "Du spurte {date}",
+    "waiting": "Konnected svarer innen {date}.",
+    "answered": "{name} svarte {date}",
+    "answeredTeam": "Konnected svarte {date}",
+    "label": "Spørsmålet ditt",
+    "hint": "Konnected svarer innen 2 virkedager. Bare du og Konnected-teamet leser det.",
+    "send": "Send spørsmål",
+    "sent": "Sendt til Konnected. Du får svaret på e-post.",
+    "limit": "Du har 3 åpne spørsmål på dette prosjektet. Konnected svarer på dem først, så kan du spørre mer.",
+    "relaysTitle": "Konnected spør deg",
+    "relayFrom": "Fra Konnected, {date}",
+    "relayLabel": "Svaret ditt",
+    "relayHint": "Bare Konnected leser svaret ditt, og sender videre det som trengs.",
+    "relaySend": "Send svar",
+    "relaySent": "Sendt til Konnected.",
+    "relayAnswered": "Du svarte {date}",
+    "errors": {
+      "forbidden": "Du kan ikke gjøre det her.",
+      "not_found": "Det er ikke ditt. Last inn siden på nytt.",
+      "not_open": "Dette er allerede besvart. Last inn siden på nytt.",
+      "text_required": "Skriv noe først.",
+      "too_long": "Det er for langt. Gjør det kortere.",
+      "too_many": "Du har 3 åpne spørsmål på dette prosjektet. Vent på svarene fra Konnected først.",
+      "no_recipient": "Det er ingen å spørre ennå.",
+      "generic": "Det gikk ikke. Prøv igjen."
+    }
+  },
+  "TeamQuestions": {
+    "title": "Spørsmål",
+    "lede": "Spørsmål fra studenter og bedrifter om prosjektene deres. Konnected svarer innen 2 virkedager. Hvert svar sendes på e-post og lagres med prosjektet.",
+    "back": "Tilbake til i dag",
+    "whoLabel": "Hvem sine spørsmål som vises",
+    "mine": "Mine",
+    "everyone": "Alle",
+    "queueTitle": "Venter på svar",
+    "queueEmpty": "Ingen spørsmål venter på svar.",
+    "queueEmptyMine": "Ingen åpne spørsmål på prosjektene dine. Se under Alle.",
+    "itemSub": "{side}, {title}, {waited}",
+    "side": {
+      "student": "Student",
+      "company": "Bedrift"
+    },
+    "asked": "{side}, {title}. Spurt {date}.",
+    "team": "Konnected",
+    "answeredPill": "Besvart",
+    "openPill": "Åpent",
+    "answeredOn": "{name} svarte {date}",
+    "answerLabel": "Svaret ditt",
+    "answerHint": {
+      "student": "Sendes på e-post til {asker} og lagres på søknadssiden. Bare de og teamet ser det.",
+      "company": "Sendes på e-post til {asker} og lagres på prosjektsiden. Bare de og teamet ser det."
+    },
+    "savedLabel": "Start fra et lagret svar",
+    "savedNone": "Velg et lagret svar",
+    "savedHint": "Fyller inn svaret. Tilpass det før du sender.",
+    "send": "Send svar",
+    "sent": "Svar sendt til {asker}.",
+    "openProject": "Åpne prosjektet",
+    "next": "Neste spørsmål",
+    "emptyTitle": "Ingenting å svare på",
+    "emptyBody": "Når en student eller en bedrift spør Konnected om noe, vises det her.",
+    "relayTitle": {
+      "student": "Spør studenten",
+      "company": "Spør bedriften"
+    },
+    "relayBody": "Når du trenger svar fra den andre parten først, send spørsmålet videre med dine egne ord. De får en e-post og svarer én gang i appen; bare teamet leser svaret.",
+    "relayTo": {
+      "student": "Spør studenten",
+      "company": "Spør bedriften"
+    },
+    "relayLabel": "Spørsmål å sende videre",
+    "relayHint": {
+      "student": "Studenten ser bare denne teksten. Utelat bedriftens interne detaljer.",
+      "company": "Bedriften ser bare denne teksten. Utelat studentens navn, kontaktinformasjon og annet om studenten."
+    },
+    "relaySend": "Send videre",
+    "relaySent": "Sendt videre. De får en e-post.",
+    "relayNone": "Ingen student er valgt ennå, så det er ingen å spørre.",
+    "relayedOn": "Sendt videre {date}",
+    "relayAnswered": {
+      "student": "Studenten svarte {date}",
+      "company": "Bedriften svarte {date}"
+    },
+    "relayWaiting": "Ikke besvart ennå.",
+    "cancel": "Avbryt",
+    "answeredTitle": "Besvart denne uken",
+    "answeredEmpty": "Ingenting besvart de siste 7 dagene.",
+    "answeredBy": "{name}, {date}",
+    "savedTitle": "Lagrede svar",
+    "savedBody": "Svar på spørsmål som kommer igjen. Velg ett når du svarer, og tilpass det.",
+    "savedEmpty": "Ingen lagrede svar ennå.",
+    "savedNew": "Lagre et nytt svar",
+    "savedTitleLabel": "Tittel",
+    "savedTitleHint": "Kort, så du finner det igjen. For eksempel: Egne verktøy.",
+    "savedBodyLabel": "Svar",
+    "savedAdd": "Lagre svar",
+    "savedAdded": "Lagret.",
+    "savedRemove": "Fjern",
+    "savedRemoved": "Fjernet.",
+    "projectTitle": "Spørsmål",
+    "projectEmpty": "Ingen spørsmål på dette prosjektet.",
+    "projectRow": "{side}, {date}",
+    "errors": {
+      "forbidden": "Bare Konnected-teamet kan gjøre det.",
+      "not_found": "Spørsmålet finnes ikke lenger. Last inn siden på nytt.",
+      "not_open": "Noen har allerede svart. Last inn siden på nytt.",
+      "text_required": "Skriv noe først.",
+      "too_long": "Det er for langt. Gjør det kortere.",
+      "too_many": "For mange åpne spørsmål.",
+      "no_recipient": "Det er ingen hos den andre parten å spørre ennå.",
+      "generic": "Det gikk ikke. Prøv igjen."
+    }
+  },
+  "Feedback": {
+    "title": "Hvordan gikk det?",
+    "ledeStudent": "{title}, for {company}. Bare Konnected leser svarene dine.",
+    "ledeCompany": "{title}. Bare Konnected leser svarene dine.",
+    "backStudent": "Tilbake til søknaden min",
+    "backCompany": "Tilbake til prosjektet",
+    "overall": "Totalt",
+    "ratingLabel": "{n} av 5",
+    "ratingHint": "1 er dårlig, 5 er veldig bra.",
+    "wentWell": "Hva gikk bra?",
+    "better": "Hva kunne vært bedre?",
+    "betterHintStudent": "For eksempel oppdragsbeskrivelsen, tidsrammen eller hvordan Konnected holdt kontakten.",
+    "betterHintCompany": "For eksempel oppdragsbeskrivelsen, arbeidet eller hvordan Konnected holdt dere oppdatert.",
+    "againStudent": "Jeg vil gjerne ha et lignende prosjekt igjen",
+    "againCompany": "Vi vil gjerne sende inn et nytt prosjekt",
+    "send": "Send til Konnected",
+    "sentToast": "Takk. Konnected har fått tilbakemeldingen din.",
+    "sentTitle": "Takk",
+    "sentBody": "Konnected har fått svarene dine. Bare teamet leser dem.",
+    "notOpenTitle": "Tilbakemeldingen åpner når prosjektet avsluttes",
+    "notOpenBody": "Konnected ber om tilbakemelding når arbeidet er levert og prosjektet er avsluttet.",
+    "whyTitle": "Hvorfor Konnected spør",
+    "whyStudent": "Konnected bruker svarene dine til å forbedre oppdragsbeskrivelser og matching. Bedriften ser dem ikke.",
+    "whyCompany": "Konnected bruker svarene dine til å forbedre matching og oppfølging. Studenten ser dem ikke.",
+    "ratingsLater": "Vurderinger på profiler kommer etter lansering.",
+    "cardTitle": "Hvordan gikk det?",
+    "cardBody": "To minutter. Bare Konnected leser det.",
+    "cardButton": "Gi tilbakemelding",
+    "cardSent": "Takk. Konnected har fått tilbakemeldingen din.",
+    "errors": {
+      "forbidden": "Du kan ikke gi tilbakemelding her.",
+      "not_found": "Dette prosjektet er ikke ditt.",
+      "not_open": "Tilbakemeldingen åpner når prosjektet avsluttes etter levering.",
+      "already_sent": "Du har allerede sendt tilbakemelding. Takk.",
+      "rating_required": "Velg et tall fra 1 til 5.",
+      "too_long": "Et svar er for langt. Gjør det kortere.",
+      "generic": "Det gikk ikke. Prøv igjen."
+    }
+  },
+  "TeamFeedback": {
+    "title": "Tilbakemelding",
+    "private": "Bare Konnected-teamet ser tilbakemeldinger.",
+    "empty": "Ingen tilbakemelding ennå. Studenten og bedriften ble spurt da prosjektet ble avsluttet.",
+    "fromStudent": "{name}, student",
+    "fromCompany": "{name}",
+    "student": "Studenten",
+    "rating": "{rating} av 5",
+    "wentWell": "Gikk bra",
+    "better": "Kunne vært bedre",
+    "again": {
+      "student": "Vil gjerne ha et lignende prosjekt igjen",
+      "company": "Vil gjerne sende inn et nytt prosjekt"
+    },
+    "notAgain": {
+      "student": "Ba ikke om et lignende prosjekt igjen",
+      "company": "Sa ikke at de vil sende inn et nytt prosjekt"
+    }
+  },
+  "Billing": {
+    "title": "Fakturering",
+    "body": "Hvor Konnected sender fakturaer for betalte prosjekter. Konnected legger til {vat} % mva., og dere betaler innen {days} dager.",
+    "invoiceEmail": "E-post for faktura",
+    "invoiceEmailHint": "La feltet stå tomt for å bruke kontaktpersonens e-post.",
+    "reference": "Referanse eller bestillingsnummer",
+    "referenceHint": "Vises på hver faktura.",
+    "ehf": "Vi tar imot e-faktura (EHF)",
+    "ehfTeam": "Tar imot e-faktura (EHF)",
+    "ehfHint": "Konnected sender fakturaer med EHF når dette er krysset av.",
+    "ehfLabel": "E-faktura (EHF)",
+    "save": "Lagre fakturering",
+    "saved": "Faktureringsopplysningene er lagret.",
+    "cancel": "Avbryt",
+    "edit": "Endre fakturering",
+    "locked": "Dere kan legge inn faktureringsopplysninger når Konnected har godkjent bedriften.",
+    "teamTitle": "Fakturering for {company}",
+    "noEmail": "Ingen faktura-e-post: bruk kontaktpersonen",
+    "refShort": "ref. {ref}",
+    "ehfShort": "EHF",
+    "invoiceTo": "Faktura til: {to}",
+    "yes": "Ja",
+    "no": "Nei",
+    "errors": {
+      "invalid": "Bruk en e-postadresse, for eksempel faktura@bedrift.no.",
+      "too_long": "Bruk høyst {max} tegn.",
+      "forbidden": "Du kan ikke endre disse opplysningene.",
+      "not_found": "Bedriften finnes ikke lenger. Last inn siden på nytt.",
+      "not_editable": "Faktureringsopplysningene kan ikke endres nå.",
+      "generic": "Det gikk ikke. Prøv igjen."
+    }
   }
 }

@@ -9,13 +9,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
+import { STUDENT_PAYOUT_TONE } from '@/lib/payments/fields'
 import { listStudentPayments } from '@/lib/payments/views'
 import { requireStudent } from '@/lib/students/session'
 
-// The student's Payments page ("Final pass" mockup, student Payments): status only. For each paid
-// project Konnected selected the student for: paid on a day, or paid in the monthly pay run after
-// the company has paid. No amounts, nothing about the company's invoice, and nothing about tax or
-// payroll (how students are paid is still open). Read as the student with access control on.
+// The student's Payments page ("Final pass" mockup, student Payments; Kanban card "Student
+// payments page (status only)"): for each paid project Konnected selected the student for, where
+// their pay stands: waiting for the company to pay Konnected, in the next monthly pay run, or paid
+// on a day. The only amount is the student's own pay, if Konnected set it; nothing about the
+// company's invoice or price, and nothing about tax or payroll (how students are paid is still
+// open). Read as the student with access control on.
 export const dynamic = 'force-dynamic'
 
 export default async function StudentPaymentsPage({
@@ -76,13 +79,25 @@ export default async function StudentPaymentsPage({
                       </p>
                     )}
                     <p className="text-[0.88rem] text-muted-foreground">
-                      {p.paidOn ? t('paidOn', { date: day(p.paidOn) }) : t('waiting')}
+                      {p.status === 'paid' && p.paidOn
+                        ? t('paidOn', { date: day(p.paidOn) })
+                        : t(`line.${p.status}`, { company: p.companyName ?? t('theCompany') })}
                     </p>
+                    {p.pay !== null && (
+                      <p className="text-[0.88rem] tabular-nums">
+                        {t('pay', {
+                          amount: format.number(p.pay, {
+                            style: 'currency',
+                            currency: 'NOK',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2,
+                          }),
+                        })}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <Badge tone={p.paidOn ? 'ok' : 'warn'}>
-                      {p.paidOn ? t('status.paid') : t('status.waiting')}
-                    </Badge>
+                    <Badge tone={STUDENT_PAYOUT_TONE[p.status]}>{t(`status.${p.status}`)}</Badge>
                   </div>
                 </li>
               ))}

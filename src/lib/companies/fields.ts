@@ -109,3 +109,35 @@ export type CompanyFormState = {
 }
 
 export const IDLE: CompanyFormState = { status: 'idle' }
+
+/**
+ * Billing details on the company profile (Kanban card "Billing details for invoices", mockup
+ * "Company profile", Billing): where Konnected sends invoices, the reference the company wants on
+ * every invoice, and whether it takes e-invoices (EHF). The company and the team edit them; the
+ * team sees them in the payment log. Konnected sends invoices by hand in the pilot.
+ */
+export const BILLING_FIELDS = ['invoiceEmail', 'invoiceReference', 'ehfInvoice'] as const
+export type BillingField = (typeof BILLING_FIELDS)[number]
+
+export const BILLING_LIMITS = { invoiceEmail: 254, invoiceReference: 80 } as const
+
+/** A plain email address check (one @, a dot in the domain, no spaces). */
+export const isEmailAddress = (value: string): boolean =>
+  value.length <= BILLING_LIMITS.invoiceEmail && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)
+
+export type BillingValues = {
+  invoiceEmail: string
+  invoiceReference: string
+  ehfInvoice: boolean
+}
+
+export type BillingFieldProblem = 'invalid' | 'too_long'
+
+export type BillingFormState = {
+  status: 'idle' | 'done' | 'error'
+  error?: 'forbidden' | 'not_found' | 'not_editable' | 'generic'
+  fields?: Partial<Record<'invoiceEmail' | 'invoiceReference', BillingFieldProblem>>
+  savedAt?: number
+}
+
+export const BILLING_IDLE: BillingFormState = { status: 'idle' }

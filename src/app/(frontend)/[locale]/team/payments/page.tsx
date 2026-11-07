@@ -4,6 +4,7 @@ import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/serve
 import { notFound } from 'next/navigation'
 
 import { Banner } from '@/components/app/Banner'
+import { TeamBilling } from '@/components/app/BillingForm'
 import { TeamShell } from '@/components/app/TeamShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -63,6 +64,7 @@ export default async function TeamPaymentsPage({
   const rowId = /^\d{1,10}$/.test(search.row ?? '') ? Number(search.row) : null
 
   const t = await getTranslations('TeamPayments')
+  const tb = await getTranslations('Billing')
   const tRole = await getTranslations('Roles')
   const [log, counts, everything] = await Promise.all([
     listPaymentLog(payload, user, { filter, mine }),
@@ -105,6 +107,19 @@ export default async function TeamPaymentsPage({
         return t('line.settled')
     }
   }
+  // Where the invoice goes: the company's billing details (the contact when none are given).
+  const billingLine = (row: PaymentRow) =>
+    row.billing
+      ? [
+          row.billing.invoiceEmail ?? tb('noEmail'),
+          row.billing.invoiceReference
+            ? tb('refShort', { ref: row.billing.invoiceReference })
+            : null,
+          row.billing.ehf ? tb('ehfShort') : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : null
   const filters: { key: PaymentFilter; count: number }[] = [
     { key: 'action', count: log?.action ?? 0 },
     { key: 'all', count: log?.total ?? 0 },
@@ -203,6 +218,38 @@ export default async function TeamPaymentsPage({
               <p className="text-[0.88rem]">{t('noPrice')}</p>
             </Banner>
           )}
+          {editing.companyId && editing.billing && (
+            <section
+              aria-labelledby="billing-title"
+              className="grid gap-3 border-t border-line pt-4"
+            >
+              <h3 id="billing-title" className="text-[0.95rem] font-semibold">
+                {tb('teamTitle', { company: editing.companyName ?? '' })}
+              </h3>
+              <TeamBilling
+                companyId={editing.companyId}
+                values={{
+                  invoiceEmail: editing.billing.invoiceEmail ?? '',
+                  invoiceReference: editing.billing.invoiceReference ?? '',
+                  ehfInvoice: editing.billing.ehf,
+                }}
+                summary={
+                  <dl className="grid grid-cols-[minmax(0,1fr)] gap-x-4 gap-y-0.5 text-[0.92rem] sm:grid-cols-[max-content_minmax(0,1fr)] sm:gap-y-1.5 [&_dd]:mb-1.5 sm:[&_dd]:mb-0">
+                    <dt className="text-muted-foreground">{tb('invoiceEmail')}</dt>
+                    <dd className="[overflow-wrap:anywhere]">
+                      {editing.billing.invoiceEmail ?? tb('noEmail')}
+                    </dd>
+                    <dt className="text-muted-foreground">{tb('reference')}</dt>
+                    <dd className="[overflow-wrap:anywhere]">
+                      {editing.billing.invoiceReference ?? t('none')}
+                    </dd>
+                    <dt className="text-muted-foreground">{tb('ehfLabel')}</dt>
+                    <dd>{editing.billing.ehf ? tb('yes') : tb('no')}</dd>
+                  </dl>
+                }
+              />
+            </section>
+          )}
           <PaymentForm
             // A new version (someone saved the row) loads the form again with what is stored.
             key={`${editing.id}-${editing.version}`}
@@ -242,6 +289,11 @@ export default async function TeamPaymentsPage({
                     <small className="block text-[0.82rem] [overflow-wrap:anywhere] text-muted-foreground">
                       {t('who', { company: row.companyName ?? '', student: row.studentName })}
                     </small>
+                    {billingLine(row) && (
+                      <small className="block text-[0.82rem] [overflow-wrap:anywhere] text-muted-foreground">
+                        {tb('invoiceTo', { to: billingLine(row)! })}
+                      </small>
+                    )}
                   </div>
                   <Badge tone={PAYMENT_STATUS_TONE[row.status]}>{t(`status.${row.status}`)}</Badge>
                 </div>
@@ -332,6 +384,11 @@ export default async function TeamPaymentsPage({
                       <small className="block text-[0.82rem] [overflow-wrap:anywhere] text-muted-foreground">
                         {t('who', { company: row.companyName ?? '', student: row.studentName })}
                       </small>
+                      {billingLine(row) && (
+                        <small className="block max-w-[36ch] text-[0.8rem] [overflow-wrap:anywhere] text-muted-foreground">
+                          {tb('invoiceTo', { to: billingLine(row)! })}
+                        </small>
+                      )}
                       <span className="mt-1.5 flex flex-wrap items-center gap-2">
                         <OwnerChip owner={row.owner} />
                         {row.notes && (

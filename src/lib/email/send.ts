@@ -41,6 +41,10 @@ export type EmailType =
   | 'applications_reopened'
   | 'team_morning'
   | 'decision_reminder'
+  | 'question_answered'
+  | 'question_relayed'
+  | 'question_reminder'
+  | 'feedback_request'
 
 /**
  * Send an email after the answer has gone back to the browser, so the answer takes the

@@ -28,6 +28,7 @@ import {
 } from '@/hooks/logActivity'
 import { isOnTeam, refuseTakenOnPoolTake } from '@/access/team'
 import { sendMatchEndedEmails, sendNoMatchEmail } from '@/lib/email/problemEmails'
+import { sendFeedbackRequests } from '@/lib/email/feedbackEmails'
 import { sendProjectReviewEmail, sendProjectSubmittedEmail } from '@/lib/email/projectEmails'
 import {
   CLOSE_OUTCOMES,
@@ -493,6 +494,9 @@ export const Projects: CollectionConfig = {
             toStatus: storedToDay(doc.deadline) ?? undefined,
           })
           await sendNoMatchEmail(req, doc, 'reopened')
+        } else if (from === 'delivered' && to === 'closed') {
+          // Closed after delivery: the student and the company are asked for feedback, once.
+          await sendFeedbackRequests(req, doc)
         }
         return doc
       },

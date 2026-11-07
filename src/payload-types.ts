@@ -84,6 +84,9 @@ export interface Config {
     'agreement-pdfs': AgreementPdf;
     payments: Payment;
     'problem-reports': ProblemReport;
+    questions: Question;
+    'saved-answers': SavedAnswer;
+    feedback: Feedback;
     'team-members': TeamMember;
     'activity-logs': ActivityLog;
     'magic-links': MagicLink;
@@ -112,6 +115,9 @@ export interface Config {
     'agreement-pdfs': AgreementPdfsSelect<false> | AgreementPdfsSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'problem-reports': ProblemReportsSelect<false> | ProblemReportsSelect<true>;
+    questions: QuestionsSelect<false> | QuestionsSelect<true>;
+    'saved-answers': SavedAnswersSelect<false> | SavedAnswersSelect<true>;
+    feedback: FeedbackSelect<false> | FeedbackSelect<true>;
     'team-members': TeamMembersSelect<false> | TeamMembersSelect<true>;
     'activity-logs': ActivityLogsSelect<false> | ActivityLogsSelect<true>;
     'magic-links': MagicLinksSelect<false> | MagicLinksSelect<true>;
@@ -144,6 +150,7 @@ export interface Config {
       acceptDueDeliverables: TaskAcceptDueDeliverables;
       teamMorningEmail: TaskTeamMorningEmail;
       decisionReminder: TaskDecisionReminder;
+      questionReminder: TaskQuestionReminder;
       inline: {
         input: unknown;
         output: unknown;
@@ -234,6 +241,9 @@ export interface Company {
   reviewRequestedAt?: string | null;
   resentAt?: string | null;
   approvedAt?: string | null;
+  invoiceEmail?: string | null;
+  invoiceReference?: string | null;
+  ehfInvoice?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -636,6 +646,7 @@ export interface Payment {
   invoiceSentAt?: string | null;
   invoicePaidAt?: string | null;
   studentPaidAt?: string | null;
+  studentPayout?: ('waiting_company' | 'next_pay_run' | 'paid') | null;
   notes?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -654,6 +665,57 @@ export interface ProblemReport {
   status: 'open' | 'resolved';
   resolution?: ('date_moved' | 'match_ended' | 'closed' | 'no_change') | null;
   resolvedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "questions".
+ */
+export interface Question {
+  id: number;
+  kind: 'ask' | 'relay';
+  project?: (number | null) | Project;
+  application?: (number | null) | Application;
+  side?: ('student' | 'company') | null;
+  askedBy?: (number | null) | User;
+  recipient?: (number | null) | User;
+  relayOf?: (number | null) | Question;
+  body: string;
+  status: 'open' | 'answered';
+  answer?: string | null;
+  answeredBy?: (number | null) | User;
+  answeredByName?: string | null;
+  answeredAt?: string | null;
+  reminderSentAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "saved-answers".
+ */
+export interface SavedAnswer {
+  id: number;
+  title: string;
+  body: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "feedback".
+ */
+export interface Feedback {
+  id: number;
+  project: number | Project;
+  match?: (number | null) | Match;
+  side?: ('student' | 'company') | null;
+  author?: (number | null) | User;
+  rating: number;
+  wentWell?: string | null;
+  couldBeBetter?: string | null;
+  again?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -787,7 +849,8 @@ export interface PayloadJob {
           | 'sendAgreementEmail'
           | 'acceptDueDeliverables'
           | 'teamMorningEmail'
-          | 'decisionReminder';
+          | 'decisionReminder'
+          | 'questionReminder';
         taskID: string;
         input?:
           | {
@@ -829,6 +892,7 @@ export interface PayloadJob {
         | 'acceptDueDeliverables'
         | 'teamMorningEmail'
         | 'decisionReminder'
+        | 'questionReminder'
       )
     | null;
   queue?: string | null;
@@ -920,6 +984,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'problem-reports';
         value: number | ProblemReport;
+      } | null)
+    | ({
+        relationTo: 'questions';
+        value: number | Question;
+      } | null)
+    | ({
+        relationTo: 'saved-answers';
+        value: number | SavedAnswer;
+      } | null)
+    | ({
+        relationTo: 'feedback';
+        value: number | Feedback;
       } | null)
     | ({
         relationTo: 'team-members';
@@ -1078,6 +1154,9 @@ export interface CompaniesSelect<T extends boolean = true> {
   reviewRequestedAt?: T;
   resentAt?: T;
   approvedAt?: T;
+  invoiceEmail?: T;
+  invoiceReference?: T;
+  ehfInvoice?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1396,6 +1475,7 @@ export interface PaymentsSelect<T extends boolean = true> {
   invoiceSentAt?: T;
   invoicePaidAt?: T;
   studentPaidAt?: T;
+  studentPayout?: T;
   notes?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1413,6 +1493,54 @@ export interface ProblemReportsSelect<T extends boolean = true> {
   status?: T;
   resolution?: T;
   resolvedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "questions_select".
+ */
+export interface QuestionsSelect<T extends boolean = true> {
+  kind?: T;
+  project?: T;
+  application?: T;
+  side?: T;
+  askedBy?: T;
+  recipient?: T;
+  relayOf?: T;
+  body?: T;
+  status?: T;
+  answer?: T;
+  answeredBy?: T;
+  answeredByName?: T;
+  answeredAt?: T;
+  reminderSentAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "saved-answers_select".
+ */
+export interface SavedAnswersSelect<T extends boolean = true> {
+  title?: T;
+  body?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "feedback_select".
+ */
+export interface FeedbackSelect<T extends boolean = true> {
+  project?: T;
+  match?: T;
+  side?: T;
+  author?: T;
+  rating?: T;
+  wentWell?: T;
+  couldBeBetter?: T;
+  again?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1630,6 +1758,16 @@ export interface TaskTeamMorningEmail {
  * via the `definition` "TaskDecisionReminder".
  */
 export interface TaskDecisionReminder {
+  input?: unknown;
+  output: {
+    sent: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskQuestionReminder".
+ */
+export interface TaskQuestionReminder {
   input?: unknown;
   output: {
     sent: number;

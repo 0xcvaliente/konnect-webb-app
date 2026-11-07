@@ -26,7 +26,10 @@ import {
 } from '@/hooks/logActivity'
 import { sendCompanyReviewEmail } from '@/lib/email/companyEmails'
 import {
+  BILLING_FIELDS,
+  BILLING_LIMITS,
   COMPANY_STATUSES,
+  isEmailAddress,
   isValidOrgNumber,
   LIMITS,
   normalizeOrgNumber,
@@ -198,6 +201,19 @@ export const Companies: CollectionConfig = {
           if (isCompany(req.user)) data.user = req.user!.id
         } else {
           const from = originalDoc?.status as CompanyStatus
+          // A save that changes only the billing details is not an answer to Konnected's review:
+          // it leaves the review state alone (no resend, no answer to a request for information).
+          const changed = Object.keys(data).filter(
+            (key) =>
+              JSON.stringify(relationId(data[key]) ?? data[key] ?? null) !==
+              JSON.stringify(relationId(originalDoc?.[key]) ?? originalDoc?.[key] ?? null),
+          )
+          const billingOnly =
+            changed.length > 0 &&
+            changed.every((key) => (BILLING_FIELDS as readonly string[]).includes(key))
+          if (!admin && billingOnly && from === 'rejected') {
+            throw new APIError('Company: billing details wait until Konnected approves', 403)
+          }
           if (!admin && from === 'rejected') {
             // The company's own save after a rejection is its one correction: it goes back to
             // Konnected. Access already refuses a second one; this is the second layer.
@@ -213,7 +229,7 @@ export const Companies: CollectionConfig = {
 
           // Konnected asked for more information: the company's next save is its answer, and the
           // company is back in the team's queue.
-          if (!admin && originalDoc?.infoRequestedAt) {
+          if (!admin && !billingOnly && originalDoc?.infoRequestedAt) {
             data.infoRequestedAt = null
             data.reviewRequestedAt = now
           }
@@ -406,6 +422,23 @@ export const Companies: CollectionConfig = {
       },
       logReassignments(['teamOwner', 'takenBy']),
       logActivityAfterChange({ statusField: 'status' }),
+      async ({ doc, previousDoc, operation, req, context }) => {
+        // A change to the billing details goes to the activity log, by field name only (the
+        // values are the company's contact details and stay out of the log).
+        if (operation !== 'update' || context?.skipActivityLog) return doc
+        for (const field of BILLING_FIELDS) {
+          if ((doc[field] ?? null) === (previousDoc?.[field] ?? null)) continue
+          // A company's own read of the previous document has every billing field, so the
+          // comparison holds for both the company and the team.
+          await writeActivity(req, {
+            action: 'review_change',
+            targetCollection: 'companies',
+            targetId: String(doc.id),
+            field,
+          })
+        }
+        return doc
+      },
       async ({ doc, previousDoc, operation, req }) => {
         // Projects follow their company's owner: when the owner changes, every open project that
         // followed the old owner (or had none) moves to the new one, in the same transaction and
@@ -626,6 +659,47 @@ export const Companies: CollectionConfig = {
       type: 'date',
       access: { read: adminOrCompanyField, create: adminOnlyField, update: adminOnlyField },
       admin: { position: 'sidebar' },
+    },
+    {
+      // Billing (Kanban card "Billing details for invoices"): where Konnected sends invoices. The
+      // company and the team edit it; the team reads it in the payment log. Optional: Konnected
+      // falls back to the contact when it is empty.
+      name: 'invoiceEmail',
+      label: 'Invoice email',
+      type: 'text',
+      maxLength: BILLING_LIMITS.invoiceEmail,
+      access: { read: adminOrCompanyField },
+      hooks: {
+        beforeValidate: [
+          ({ value }) =>
+            typeof value === 'string' ? value.trim().toLowerCase() || null : (value ?? undefined),
+        ],
+      },
+      validate: ((value: unknown) =>
+        isBlank(value) || (typeof value === 'string' && isEmailAddress(value))
+          ? true
+          : 'Use an email address.') satisfies Validate,
+    },
+    {
+      // The reference or order number the company wants on every invoice.
+      name: 'invoiceReference',
+      label: 'Invoice reference',
+      type: 'text',
+      maxLength: BILLING_LIMITS.invoiceReference,
+      access: { read: adminOrCompanyField },
+      hooks: {
+        beforeValidate: [
+          ({ value }) => (typeof value === 'string' ? value.trim() || null : (value ?? undefined)),
+        ],
+      },
+    },
+    {
+      // The company takes e-invoices (EHF): Konnected sends the invoice through EHF.
+      name: 'ehfInvoice',
+      label: 'Takes e-invoices (EHF)',
+      type: 'checkbox',
+      defaultValue: false,
+      access: { read: adminOrCompanyField },
     },
   ],
 }

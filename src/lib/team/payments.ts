@@ -27,7 +27,8 @@ import { myOwnerIds } from './members'
 /**
  * The team's payment log (Kanban card "Manual payment log in admin", mockup "Payments"): one row
  * per paid match with the price, 25 % VAT and the total, when the invoice was sent and paid, when
- * the student was paid, and the team's notes. Read and written through the Local API as the team
+ * the student was paid, the team's notes, and where the invoice goes (the company's billing
+ * details: invoice email, reference, EHF). Read and written through the Local API as the team
  * member with `overrideAccess: false`; the Payments hook checks the dates. Nothing here logs
  * notes or names.
  */
@@ -39,7 +40,10 @@ export type PaymentRow = {
   matchId: number
   projectId: number
   title: string
+  companyId: number | null
   companyName: string | null
+  /** Where the invoice goes (the company's billing details), or null when the company is gone. */
+  billing: { invoiceEmail: string | null; invoiceReference: string | null; ehf: boolean } | null
   studentName: string
   owner: Owner
   amounts: PriceBreakdown | null
@@ -116,10 +120,35 @@ async function allRows(payload: Payload, actor: SessionUser): Promise<PaymentRow
       ...asActor(actor),
     }),
   ])
-  const owners = await ownersById(
-    payload,
-    actor,
-    projects.docs.map((p) => relationId(p.owner as number)),
+  const companyIds = [
+    ...new Set(projects.docs.map((p) => relationId(p.company as number)).filter(Boolean)),
+  ] as number[]
+  const [owners, companies] = await Promise.all([
+    ownersById(
+      payload,
+      actor,
+      projects.docs.map((p) => relationId(p.owner as number)),
+    ),
+    companyIds.length
+      ? payload.find({
+          collection: 'companies',
+          where: { id: { in: companyIds } },
+          depth: 0,
+          pagination: false,
+          select: { invoiceEmail: true, invoiceReference: true, ehfInvoice: true },
+          ...asActor(actor),
+        })
+      : null,
+  ])
+  const billingOf = new Map(
+    (companies?.docs ?? []).map((c) => [
+      c.id,
+      {
+        invoiceEmail: c.invoiceEmail ?? null,
+        invoiceReference: c.invoiceReference ?? null,
+        ehf: Boolean(c.ehfInvoice),
+      },
+    ]),
   )
   const matchOf = new Map(matches.docs.map((m) => [m.id, m]))
   const projectOf = new Map(projects.docs.map((p) => [p.id, p]))
@@ -153,7 +182,9 @@ async function allRows(payload: Payload, actor: SessionUser): Promise<PaymentRow
       matchId,
       projectId: project.id,
       title: project.title,
+      companyId: relationId(project.company as number) ?? null,
       companyName: project.companyName ?? null,
+      billing: billingOf.get(relationId(project.company as number) ?? 0) ?? null,
       studentName: nameOf.get(relationId(match.student as number)!) ?? '',
       owner: owners.get(relationId(project.owner as number) ?? 0) ?? null,
       amounts: rowAmounts(p.projectFee),

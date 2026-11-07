@@ -42,10 +42,21 @@ const SLUGS = [
   'signatures',
   'agreement-pdfs',
   'team-members',
+  'questions',
+  'saved-answers',
+  'feedback',
 ] as const
 
 /** alpha's problem report note. Only alpha and the team read it. */
 const PROBLEM_NOTE = 'Sentinel-Problem-Note-Alpha'
+/** Ask Konnected: alpha's question and Konnected's answer. Only alpha and the team read them. */
+const ALPHA_QUESTION = 'Sentinel-Question-Alpha'
+const ALPHA_ANSWER = 'Leak-Answer-To-Alpha'
+/** What Konnected passed on to company A in its own words: company A reads it (positive control). */
+const RELAY_TO_COMPANY = 'Leak-Check-Relay-To-Company-A'
+/** The team's saved answer and alpha's feedback: team only. */
+const SAVED_ANSWER = 'Leak-Saved-Answer-Team'
+const ALPHA_FEEDBACK = 'Sentinel-Feedback-Alpha'
 
 // What a company must never see about student alpha. alpha shares only skills, so the skill is
 // allowed (and expected) in a match's sharedInfo. beta shares nothing.
@@ -66,6 +77,12 @@ const FORBIDDEN = [
   '4242.5',
   // Problem reports card: alpha's note to Konnected about a running project.
   PROBLEM_NOTE,
+  // Ask Konnected and feedback cards: alpha's question, the answer to alpha, the team's saved
+  // answers and alpha's feedback.
+  ALPHA_QUESTION,
+  ALPHA_ANSWER,
+  SAVED_ANSWER,
+  ALPHA_FEEDBACK,
 ]
 
 const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
@@ -74,7 +91,7 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   'student-profiles':
     '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt reviewNote reviewNoteAt reviewRequestedAt changedSinceReviewAt reviewedSnapshot privacy { shareName shareSchool shareContactEmail sharePhone } takenBy { id email } user { id email } } } }',
   companies:
-    '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt noteToCompany noteToCompanyAt infoRequestedAt reviewRequestedAt resentAt user { id email } teamOwner { id email } takenBy { id email } logo { id url } } } }',
+    '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt noteToCompany noteToCompanyAt infoRequestedAt reviewRequestedAt resentAt invoiceEmail invoiceReference ehfInvoice user { id email } teamOwner { id email } takenBy { id email } logo { id url } } } }',
   projects:
     '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt closeReason closeOutcome closedAt reopenedAt reopenReason decisionBy decisionReminderFor status companyName owner { id email } takenBy { id email } company { id name } attachments { id originalName } } } }',
   applications:
@@ -84,7 +101,7 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   deliverables:
     '{ Deliverables(limit: 100) { docs { id status note returnNote returnedAt fixNote fixRequestedAt releasedAt acceptedAt acceptedBy submittedAt links { label url } files { id originalName uploadedBy { id email } } match { id student { id name contactEmail } project { id } } } } }',
   payments:
-    '{ Payments(limit: 100) { docs { id projectFee konnectedShare studentPay invoiceNumber invoiceSentAt invoicePaidAt studentPaidAt notes match { id student { id name } project { id } } } } }',
+    '{ Payments(limit: 100) { docs { id projectFee konnectedShare studentPay studentPayout invoiceNumber invoiceSentAt invoicePaidAt studentPaidAt notes match { id student { id name } project { id } } } } }',
   'problem-reports':
     '{ ProblemReports(limit: 100) { docs { id kind note status resolution resolvedAt student { id name contactEmail user { id email } } match { id student { id name } sharedInfo { name } project { id title } } project { id title } } } }',
   'activity-logs': '{ ActivityLogs(limit: 100) { docs { id action targetCollection } } }',
@@ -105,6 +122,11 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
     '{ AgreementPdfs(limit: 100) { docs { id filename url variant sha256 agreement { id kind values student { id name } } } } }',
   'team-members':
     '{ TeamMembers(limit: 100) { docs { id awayFrom awayUntil morningEmailOn user { id email name } coveredBy { id email } } } }',
+  questions:
+    '{ Questions(limit: 100) { docs { id kind side body answer status answeredByName application { id note student { id name contactEmail } } project { id title } recipient { id email } askedBy { id email } relayOf { id body answer } } } }',
+  'saved-answers': '{ SavedAnswers(limit: 100) { docs { id title body } } }',
+  feedback:
+    '{ FeedbackEntries(limit: 100) { docs { id side rating wentWell couldBeBetter again author { id email name } match { id student { id name } } project { id title } } } }',
 }
 
 let world: World
@@ -276,6 +298,47 @@ beforeAll(async () => {
     user: asUser(world.admin),
     overrideAccess: false,
   })
+  // Ask Konnected: alpha asks about project A; the team answers alpha and passes a question on
+  // to company A in its own words, and keeps a saved answer.
+  const question = await world.payload.create({
+    collection: 'questions',
+    data: { application: world.application.id, body: ALPHA_QUESTION } as never,
+    user: asUser(world.alpha.user),
+    overrideAccess: false,
+  })
+  await world.payload.create({
+    collection: 'questions',
+    data: { relayOf: question.id, body: RELAY_TO_COMPANY } as never,
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  await world.payload.update({
+    collection: 'questions',
+    id: question.id,
+    data: { status: 'answered', answer: ALPHA_ANSWER },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  await world.payload.create({
+    collection: 'saved-answers',
+    data: { title: 'Leak check', body: SAVED_ANSWER },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  // Feedback: project A is not closed in this world, so alpha's row is written straight to the
+  // database (the read rules are what this file checks; the feedback tests cover sending).
+  await world.payload.db.create({
+    collection: 'feedback',
+    data: {
+      project: world.projectA.id,
+      match: world.match.id,
+      side: 'student',
+      author: world.alpha.user.id,
+      rating: 4,
+      wentWell: ALPHA_FEEDBACK,
+      again: true,
+    },
+  })
 })
 
 async function localAll(user: World['admin'] | undefined, slug: (typeof SLUGS)[number]) {
@@ -326,6 +389,10 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       expect(all).toContain(SENTINEL.alpha.contactEmail)
       expect(all).toContain(SENTINEL.beta.phone)
       expect(all).toContain(SENTINEL.alpha.cvName)
+      // The new cards' team data is there too.
+      expect(all).toContain(ALPHA_QUESTION)
+      expect(all).toContain(ALPHA_FEEDBACK)
+      expect(all).toContain(SAVED_ANSWER)
     })
 
     it('a company reads no student personal data in any collection at depth 5', async () => {
@@ -348,6 +415,8 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       // Not the unreleased deliverable, not another company's project.
       expect(all).not.toContain('Not released yet')
       expect(all).not.toContain('Project B draft')
+      // What Konnected passed on to the company, in its own words.
+      expect(all).toContain(RELAY_TO_COMPANY)
     })
   },
 )
@@ -363,6 +432,11 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       'Leak-Return-Note-Alpha',
       'Leak-Payment-Notes',
       PROBLEM_NOTE,
+      ALPHA_QUESTION,
+      ALPHA_ANSWER,
+      SAVED_ANSWER,
+      ALPHA_FEEDBACK,
+      RELAY_TO_COMPANY,
     ]
 
     it('another student (beta) reads nothing of alpha, in any collection at depth 5', async () => {
@@ -671,10 +745,12 @@ describe.each(['local', 'rest', 'graphql'] as const)(
       return (await graphql(GRAPHQL_QUERIES[slug], cookie)).text
     }
 
-    it('the student never reads the payment notes or what they are paid', async () => {
+    it('the student reads their own pay and status, never the payment notes', async () => {
       const own = await sweep('alpha', 'payments')
       expect(own).not.toContain('Leak-Payment-Notes')
-      expect(own).not.toContain('4242.5')
+      // Their own pay is theirs (Kanban card "Student payments page (status only)").
+      expect(own).toContain('4242.5')
+      expect(await sweep('beta', 'payments')).not.toContain('4242.5')
     })
 
     it('another student reads neither the hand-ins nor the team note', async () => {

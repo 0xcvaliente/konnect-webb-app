@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import { isAdmin, relationId } from '@/access/roles'
 import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import { storedToDay } from '@/lib/projects/fields'
+import { listQuestionQueue } from '@/lib/questions/team'
 import { PROFILE_REVIEW_DAYS } from '@/lib/students/fields'
 import {
   countdownTo,
@@ -46,6 +47,7 @@ export type WorkKind =
   | 'noMatch'
   | 'payment'
   | 'workDue'
+  | 'question'
 
 export type WorkItem = {
   key: string
@@ -365,11 +367,12 @@ export async function loadToday(
       listDeliverableQueue(payload, actor),
       listOpenProblems(payload, actor),
     ])
-  const [noMatch, payments, workDue, kickoffs] = await Promise.all([
+  const [noMatch, payments, workDue, kickoffs, questions] = await Promise.all([
     listProjectsWithoutMatch(payload, actor),
     listPaymentLog(payload, actor, { filter: 'action' }),
     workDueItems(payload, actor, today),
     kickoffItems(payload, actor),
+    listQuestionQueue(payload, actor, { now }),
   ])
 
   const items: WorkItem[] = [
@@ -444,6 +447,19 @@ export async function loadToday(
       pool: null,
     })),
     ...workDue,
+    // Ask Konnected: an answer within 2 working days, counted to `now`.
+    ...(questions ?? []).map((q): WorkItem => ({
+      key: `question-${q.id}`,
+      kind: 'question',
+      title: q.title,
+      detail: q.companyName,
+      href: `/team/questions?item=${q.id}`,
+      ownerId: q.ownerId,
+      since: q.since,
+      due: q.due,
+      target: onProject(q.projectId),
+      pool: null,
+    })),
   ]
     .map(toPool(team ?? [], today))
     .sort(byUrgency)

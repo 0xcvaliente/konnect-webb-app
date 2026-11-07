@@ -6,7 +6,14 @@ import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import type { SessionUser } from '@/lib/students/profile'
 import type { Payment } from '@/payload-types'
 
-import { type CompanyInvoiceStatus, companyInvoiceStatus, dueDay, rowAmounts } from './fields'
+import {
+  type CompanyInvoiceStatus,
+  companyInvoiceStatus,
+  dueDay,
+  rowAmounts,
+  type StudentPayoutStatus,
+  studentPayoutStatus,
+} from './fields'
 
 /**
  * What the company and the student see of the payment log. Read as the signed-in user with access
@@ -92,15 +99,20 @@ export type StudentPayment = {
   id: number
   title: string
   companyName: string | null
+  /** Where the student's pay stands: waiting for the company, in the next pay run, or paid. */
+  status: StudentPayoutStatus
   /** The day Konnected paid the student (`YYYY-MM-DD`, Oslo), or null while not paid. */
   paidOn: string | null
+  /** What the student is paid for the project (NOK), if the team set it. */
+  pay: number | null
   /** The student's application for the project, for the link. */
   applicationId: number | null
 }
 
 /**
- * The student's own payments, status only: paid on a day, or waiting for the monthly pay run after
- * the company has paid. No amounts and nothing about the company's invoice.
+ * The student's own payments, status only: waiting for the company to pay Konnected, in the next
+ * monthly pay run (the company paid), or paid on a day. The only amount is the student's own pay,
+ * if the team set it; nothing about the company's invoice, its dates or the price.
  */
 export async function listStudentPayments(
   payload: Payload,
@@ -143,11 +155,16 @@ export async function listStudentPayments(
     .filter((p) => p.studentPaidAt || !ended.has(relationId(p.match as number)!))
     .map((p) => {
       const application = applicationOf.get(projectOfMatch.get(relationId(p.match as number)!) ?? 0)
+      const paidOn = storedToDay(p.studentPaidAt)
       return {
         id: p.id,
         title: application?.projectTitle ?? '',
         companyName: application?.companyName ?? null,
-        paidOn: storedToDay(p.studentPaidAt),
+        // Stored by the Payments hook from the dates (the student cannot read the company's).
+        status: (p.studentPayout ??
+          studentPayoutStatus({ invoicePaid: null, studentPaid: paidOn })) as StudentPayoutStatus,
+        paidOn,
+        pay: typeof p.studentPay === 'number' ? p.studentPay : null,
         applicationId: application?.id ?? null,
       }
     })

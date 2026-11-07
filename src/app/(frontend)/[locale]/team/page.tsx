@@ -85,6 +85,10 @@ export default async function TeamHomePage({
   const kickoffs = (todayData?.items ?? []).filter((i) => i.kind === 'kickoff')
   const noMatchList = noMatch ?? []
   const toCheck = (deliverables ?? []).filter((d) => d.section === 'check')
+  // The open questions, oldest first, as Today built them (with owner and countdown).
+  const questionList = (todayData?.items ?? [])
+    .filter((i) => i.kind === 'question')
+    .sort((a, b) => a.since.localeCompare(b.since))
   const firstPayment = payments?.rows[0] ?? null
   const now = new Date()
   const format = await getFormatter()
@@ -161,6 +165,21 @@ export default async function TeamHomePage({
             name: toCheck[0].title,
             waited: tq('waited', {
               count: Math.max(0, calendarDaysBetween(new Date(toCheck[0].since), now)),
+            }),
+          })
+        : t('queueEmpty'),
+    },
+    {
+      // Ask Konnected: questions waiting for an answer (2 working days).
+      key: 'questions',
+      href: '/team/questions',
+      label: t('queue.questions'),
+      count: questionList.length,
+      sub: questionList[0]
+        ? t('firstQuestion', {
+            name: questionList[0].title,
+            waited: tq('waited', {
+              count: Math.max(0, calendarDaysBetween(new Date(questionList[0].since), now)),
             }),
           })
         : t('queueEmpty'),

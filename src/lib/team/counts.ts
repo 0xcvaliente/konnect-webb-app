@@ -7,6 +7,7 @@ import { deliverablesCount } from './deliverables'
 import { matchingCount } from './matching'
 import { mineIds } from './members'
 import { paymentsCount } from './payments'
+import { questionsCount } from '@/lib/questions/team'
 import { itemsOf, loadToday, type TodayData } from './today'
 
 /**
@@ -19,11 +20,12 @@ export async function teamCounts(
   user: SessionUser,
   today?: TodayData | null,
 ): Promise<Partial<Record<TeamNavKey, number>>> {
-  const [approvals, matching, deliverables, payments, data] = await Promise.all([
+  const [approvals, matching, deliverables, payments, questions, data] = await Promise.all([
     approvalCounts(payload, user),
     matchingCount(payload, user),
     deliverablesCount(payload, user),
     paymentsCount(payload, user),
+    questionsCount(payload, user),
     today === undefined ? loadToday(payload, user) : today,
   ])
   const mine = data ? itemsOf(data.items, mineIds(data.team, user.id, data.today)).length : 0
@@ -33,6 +35,7 @@ export async function teamCounts(
         approvals: approvals.companies + approvals.projects + approvals.students,
         matching,
         deliverables,
+        questions,
         payments,
       }
     : {}

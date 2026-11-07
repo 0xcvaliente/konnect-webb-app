@@ -539,6 +539,43 @@
       "next": "Select a student in Matching, or choose what happens next if nobody fits. Each student gets an email when you decide.",
       "button": "Open Matching",
       "ignore": "You get this email the working day before a decision is due on a project you own."
+    },
+    "questions": {
+      "answer": {
+        "subject": "Answer to your question about “{title}”",
+        "heading": "Konnected answered your question",
+        "asked": "You asked:",
+        "answered": "{name} at Konnected answered:",
+        "answeredTeam": "Konnected answered:",
+        "next": "The question and the answer are also in the app, with the project.",
+        "button": "Open in the app",
+        "ignore": "You get this email because you asked Konnected a question in the app."
+      },
+      "relay": {
+        "subject": "Konnected has a question about “{title}”",
+        "heading": "A question from Konnected",
+        "body": "Konnected needs your answer about “{title}”:",
+        "next": "Answer it in the app. Only Konnected reads your answer, and passes on what is needed.",
+        "button": "Answer in the app",
+        "ignore": "You get this email because you take part in this project through Konnected."
+      }
+    },
+    "questionReminder": {
+      "subject": "Answer due {date}: {title}",
+      "heading": "Hi {name}",
+      "body": "A question about “{title}” ({company}) waits for an answer. Konnected promised one by {date}.",
+      "next": "Answer it under Questions, or pass it on to the other side if you need their input first.",
+      "button": "Open Questions",
+      "ignore": "You get this email the working day before an answer is due on a project you own."
+    },
+    "feedback": {
+      "subject": "How did “{title}” go?",
+      "heading": "How did it go?",
+      "bodyStudent": "“{title}” for {company} is closed. Thank you for the work. Konnected would like to hear how it went. It takes two minutes.",
+      "bodyCompany": "“{title}” is closed. Thank you for working with Konnected. We would like to hear how it went. It takes two minutes.",
+      "private": "Only the Konnected team reads your answers. The other side does not see them.",
+      "button": "Give feedback",
+      "ignore": "You get this email once, when a project you took part in closes."
     }
   },
   "DesignGuide": {
@@ -1261,7 +1298,8 @@
       "payments": "Payments that need the team",
       "problems": "Problems reported",
       "noMatch": "Projects without a match",
-      "kickoff": "Kick-offs to record"
+      "kickoff": "Kick-offs to record",
+      "questions": "Questions to answer"
     },
     "oldest": "Oldest: {name}, {waited}",
     "queueEmpty": "Nothing waits here.",
@@ -1283,7 +1321,8 @@
     "noMatchTitle": "Projects without a match",
     "noMatchEmpty": "Every project whose applications closed has a student.",
     "noMatchSub": "{company}, closed {date}, {count, plural, =0 {no application waits} one {# application waits} other {# applications wait}}",
-    "firstKickoff": "First: {name}, matched"
+    "firstKickoff": "First: {name}, matched",
+    "firstQuestion": "Oldest: {name}, {waited}"
   },
   "TeamAccounts": {
     "title": "Accounts",
@@ -2753,19 +2792,26 @@
   },
   "StudentPayments": {
     "title": "Payments",
-    "lede": "Konnected pays you after your work is released. This page shows status only.",
+    "lede": "Where your pay stands for each paid project. Konnected pays you after the company has paid. This page shows status only.",
     "emptyTitle": "No payments yet",
     "emptyBody": "When Konnected selects you for a paid project, it is listed here.",
     "toProjects": "Find a project",
     "listTitle": "Your payments",
     "paidOn": "Paid {date}",
-    "waiting": "Paid in the monthly pay run after the company pays.",
     "status": {
       "paid": "Paid",
-      "waiting": "Not paid yet"
+      "waiting_company": "Waiting for the company",
+      "next_pay_run": "In the next pay run"
     },
     "detailsTitle": "Payout details",
-    "detailsBody": "There is nothing to fill in here. Konnected tells you if it needs anything more to pay you."
+    "detailsBody": "There is nothing to fill in here. Konnected tells you if it needs anything more to pay you.",
+    "theCompany": "the company",
+    "pay": "Your pay: {amount}",
+    "line": {
+      "waiting_company": "Konnected pays you in the monthly pay run after {company} has paid.",
+      "next_pay_run": "{company} has paid. Konnected pays you in the next monthly pay run.",
+      "paid": "Paid."
+    }
   },
   "Problems": {
     "errors": {
@@ -3076,7 +3122,8 @@
       "noMatch": "Project without a match",
       "payment": "Payment that needs the team",
       "workDue": "Work due",
-      "kickoff": "Kick-off to record"
+      "kickoff": "Kick-off to record",
+      "question": "Question to answer"
     },
     "itemSub": "{kind}, {detail}",
     "due": {
@@ -3259,5 +3306,213 @@
     "history": "Notes written",
     "shown": "shown now",
     "cleared": "Note removed"
+  },
+  "AskKonnected": {
+    "title": "Ask Konnected",
+    "bodyStudent": "Questions about this project go to the Konnected team, not to {company}. You get the answer by email, and it stays here.",
+    "bodyCompany": "Questions about this project go to the Konnected team. You get the answer by email, and it stays here.",
+    "askedTitle": "Your questions",
+    "askedOn": "You asked on {date}",
+    "waiting": "Konnected answers by {date}.",
+    "answered": "{name} answered on {date}",
+    "answeredTeam": "Konnected answered on {date}",
+    "label": "Your question",
+    "hint": "Konnected answers within 2 working days. Only you and the Konnected team read it.",
+    "send": "Send question",
+    "sent": "Sent to Konnected. You get the answer by email.",
+    "limit": "You have 3 open questions on this project. Konnected answers those first, then you can ask more.",
+    "relaysTitle": "Konnected asks you",
+    "relayFrom": "From Konnected, {date}",
+    "relayLabel": "Your answer",
+    "relayHint": "Only Konnected reads your answer, and passes on what is needed.",
+    "relaySend": "Send answer",
+    "relaySent": "Sent to Konnected.",
+    "relayAnswered": "You answered on {date}",
+    "errors": {
+      "forbidden": "You cannot do that here.",
+      "not_found": "That is not one of yours. Load the page again.",
+      "not_open": "This was answered already. Load the page again.",
+      "text_required": "Write something first.",
+      "too_long": "That is too long. Make it shorter.",
+      "too_many": "You have 3 open questions on this project. Wait for Konnected's answers first.",
+      "no_recipient": "There is nobody to ask yet.",
+      "generic": "That did not work. Try again."
+    }
+  },
+  "TeamQuestions": {
+    "title": "Questions",
+    "lede": "Questions from students and companies about their projects. Konnected answers within 2 working days. Each answer is emailed and kept with the project.",
+    "back": "Back to today",
+    "whoLabel": "Whose questions to show",
+    "mine": "Mine",
+    "everyone": "Everyone",
+    "queueTitle": "Waiting for an answer",
+    "queueEmpty": "No question waits for an answer.",
+    "queueEmptyMine": "No open question on your projects. Look at Everyone.",
+    "itemSub": "{side}, {title}, {waited}",
+    "side": {
+      "student": "Student",
+      "company": "Company"
+    },
+    "asked": "{side}, {title}. Asked {date}.",
+    "team": "Konnected",
+    "answeredPill": "Answered",
+    "openPill": "Open",
+    "answeredOn": "{name} answered on {date}",
+    "answerLabel": "Your answer",
+    "answerHint": {
+      "student": "Emailed to {asker} and kept on their application page. Only they and the team see it.",
+      "company": "Emailed to {asker} and kept on their project page. Only they and the team see it."
+    },
+    "savedLabel": "Start from a saved answer",
+    "savedNone": "Pick a saved answer",
+    "savedHint": "Fills in the answer. Change it to fit before you send.",
+    "send": "Send answer",
+    "sent": "Answer sent to {asker}.",
+    "openProject": "Open the project",
+    "next": "Next question",
+    "emptyTitle": "Nothing to answer",
+    "emptyBody": "When a student or a company asks Konnected something, it shows here.",
+    "relayTitle": {
+      "student": "Ask the student",
+      "company": "Ask the company"
+    },
+    "relayBody": "When you need the other side's input first, pass the question on in your own words. They get an email and answer once in the app; only the team reads their answer.",
+    "relayTo": {
+      "student": "Ask the student",
+      "company": "Ask the company"
+    },
+    "relayLabel": "Question to pass on",
+    "relayHint": {
+      "student": "The student sees only this text. Leave out the company's internal details.",
+      "company": "The company sees only this text. Leave out the student's name, contact details and anything else about them."
+    },
+    "relaySend": "Pass it on",
+    "relaySent": "Passed on. They get an email.",
+    "relayNone": "No student is selected yet, so there is nobody to ask.",
+    "relayedOn": "Passed on {date}",
+    "relayAnswered": {
+      "student": "The student answered on {date}",
+      "company": "The company answered on {date}"
+    },
+    "relayWaiting": "No answer yet.",
+    "cancel": "Cancel",
+    "answeredTitle": "Answered this week",
+    "answeredEmpty": "Nothing answered in the last 7 days.",
+    "answeredBy": "{name}, {date}",
+    "savedTitle": "Saved answers",
+    "savedBody": "Answers to questions that come back. Pick one when you answer, then change it to fit.",
+    "savedEmpty": "No saved answers yet.",
+    "savedNew": "Save a new answer",
+    "savedTitleLabel": "Title",
+    "savedTitleHint": "Short, so you find it again. For example: Own tools.",
+    "savedBodyLabel": "Answer",
+    "savedAdd": "Save answer",
+    "savedAdded": "Saved.",
+    "savedRemove": "Remove",
+    "savedRemoved": "Removed.",
+    "projectTitle": "Questions",
+    "projectEmpty": "No questions on this project.",
+    "projectRow": "{side}, {date}",
+    "errors": {
+      "forbidden": "Only the Konnected team can do that.",
+      "not_found": "That question is gone. Load the page again.",
+      "not_open": "Someone answered it already. Load the page again.",
+      "text_required": "Write something first.",
+      "too_long": "That is too long. Make it shorter.",
+      "too_many": "Too many open questions.",
+      "no_recipient": "There is nobody on the other side to ask yet.",
+      "generic": "That did not work. Try again."
+    }
+  },
+  "Feedback": {
+    "title": "How did it go?",
+    "ledeStudent": "{title}, for {company}. Only Konnected reads your answers.",
+    "ledeCompany": "{title}. Only Konnected reads your answers.",
+    "backStudent": "Back to my application",
+    "backCompany": "Back to the project",
+    "overall": "Overall",
+    "ratingLabel": "{n} of 5",
+    "ratingHint": "1 is poor, 5 is very good.",
+    "wentWell": "What went well?",
+    "better": "What could be better?",
+    "betterHintStudent": "For example the brief, the timeframe, or how Konnected kept in touch.",
+    "betterHintCompany": "For example the brief, the work, or how Konnected kept you updated.",
+    "againStudent": "I would like another project like this",
+    "againCompany": "We would like to send another project",
+    "send": "Send to Konnected",
+    "sentToast": "Thank you. Konnected has your feedback.",
+    "sentTitle": "Thank you",
+    "sentBody": "Konnected has your answers. Only the team reads them.",
+    "notOpenTitle": "Feedback opens when the project closes",
+    "notOpenBody": "Konnected asks for feedback once the work is delivered and the project is closed.",
+    "whyTitle": "Why Konnected asks",
+    "whyStudent": "Konnected uses your answers to improve briefs and matching. The company does not see them.",
+    "whyCompany": "Konnected uses your answers to improve matching and follow-up. The student does not see them.",
+    "ratingsLater": "Ratings on profiles come after launch.",
+    "cardTitle": "How did it go?",
+    "cardBody": "Two minutes. Only Konnected reads it.",
+    "cardButton": "Give feedback",
+    "cardSent": "Thank you. Konnected has your feedback.",
+    "errors": {
+      "forbidden": "You cannot give feedback here.",
+      "not_found": "This project is not one of yours.",
+      "not_open": "Feedback opens when the project closes after delivery.",
+      "already_sent": "You sent your feedback already. Thank you.",
+      "rating_required": "Pick a number from 1 to 5.",
+      "too_long": "An answer is too long. Make it shorter.",
+      "generic": "That did not work. Try again."
+    }
+  },
+  "TeamFeedback": {
+    "title": "Feedback",
+    "private": "Only the Konnected team sees feedback.",
+    "empty": "No feedback yet. The student and the company were asked when the project closed.",
+    "fromStudent": "{name}, student",
+    "fromCompany": "{name}",
+    "student": "The student",
+    "rating": "{rating} of 5",
+    "wentWell": "Went well",
+    "better": "Could be better",
+    "again": {
+      "student": "Would like another project like this",
+      "company": "Would like to send another project"
+    },
+    "notAgain": {
+      "student": "Did not ask for another project like this",
+      "company": "Did not say they would send another project"
+    }
+  },
+  "Billing": {
+    "title": "Billing",
+    "body": "Where Konnected sends invoices for paid projects. Konnected adds {vat} % VAT, and you pay within {days} days.",
+    "invoiceEmail": "Invoice email",
+    "invoiceEmailHint": "Leave it empty to use the contact person's email.",
+    "reference": "Reference or order number",
+    "referenceHint": "Shown on every invoice.",
+    "ehf": "We take e-invoices (EHF)",
+    "ehfTeam": "Takes e-invoices (EHF)",
+    "ehfHint": "Konnected sends invoices through EHF when this is ticked.",
+    "ehfLabel": "E-invoice (EHF)",
+    "save": "Save billing",
+    "saved": "Billing details saved.",
+    "cancel": "Cancel",
+    "edit": "Edit billing",
+    "locked": "You can add billing details once Konnected has approved the company.",
+    "teamTitle": "Billing for {company}",
+    "noEmail": "No invoice email: use the contact",
+    "refShort": "ref. {ref}",
+    "ehfShort": "EHF",
+    "invoiceTo": "Invoice to: {to}",
+    "yes": "Yes",
+    "no": "No",
+    "errors": {
+      "invalid": "Use an email address, like faktura@company.no.",
+      "too_long": "Use at most {max} characters.",
+      "forbidden": "You cannot change these details.",
+      "not_found": "The company is gone. Load the page again.",
+      "not_editable": "Billing details cannot be changed right now.",
+      "generic": "That did not work. Try again."
+    }
   }
 }

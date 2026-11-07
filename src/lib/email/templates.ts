@@ -772,3 +772,116 @@ export function decisionReminderEmail(locale: EmailLocale, r: DecisionReminder):
     footer: all.common.accountFooter,
   })
 }
+
+// ---------- Ask Konnected ----------
+
+export type QuestionEmailValues = {
+  title: string
+  question: string
+  answer?: string | null
+  /** The team member's first name, with the answer. */
+  name?: string | null
+  href: string
+}
+
+/**
+ * To the asker: Konnected's answer to their question, with the question they asked. The asker's
+ * own words and the team's answer only; nothing about the other side.
+ */
+export function questionAnswerEmail(locale: EmailLocale, v: QuestionEmailValues): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.questions.answer
+  const fill = (text: string) => text.replace('{title}', v.title).replace('{name}', v.name ?? '')
+  return render({
+    locale,
+    subject: fill(m.subject),
+    heading: m.heading,
+    paragraphs: [
+      m.asked,
+      ...noteParagraphs(v.question),
+      v.name ? fill(m.answered) : m.answeredTeam,
+      ...noteParagraphs(v.answer),
+      m.next,
+    ],
+    action: { label: m.button, href: v.href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+/**
+ * To the other side: a question Konnected passes on, in the team's own words (the team leaves
+ * out the asker's name and contact details). Answered once, in the app.
+ */
+export function questionRelayEmail(locale: EmailLocale, v: QuestionEmailValues): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.questions.relay
+  const fill = (text: string) => text.replace('{title}', v.title)
+  return render({
+    locale,
+    subject: fill(m.subject),
+    heading: m.heading,
+    paragraphs: [fill(m.body), ...noteParagraphs(v.question), m.next],
+    action: { label: m.button, href: v.href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+export type QuestionReminder = {
+  name: string
+  title: string
+  company: string
+  /** `YYYY-MM-DD`: the last day of the 2 working days Konnected promised. */
+  dueDay: string
+  href: string
+}
+
+/**
+ * To the project's owner on the team, the working day before an answer is due. Says neither who
+ * asked nor what: the details stay behind sign-in on Questions.
+ */
+export function questionReminderEmail(locale: EmailLocale, r: QuestionReminder): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.questionReminder
+  const fill = (text: string) =>
+    text
+      .replace('{name}', r.name)
+      .replace('{title}', r.title)
+      .replace('{company}', r.company)
+      .replace('{date}', formatDay(locale, r.dueDay))
+  return render({
+    locale,
+    subject: fill(m.subject),
+    heading: fill(m.heading),
+    paragraphs: [fill(m.body), m.next],
+    action: { label: m.button, href: r.href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+// ---------- Feedback after a project ----------
+
+/**
+ * To the student and the company when a delivered project closes: a short form, read only by the
+ * Konnected team. Names nobody from the other side.
+ */
+export function feedbackRequestEmail(
+  locale: EmailLocale,
+  side: 'student' | 'company',
+  v: { title: string; company: string; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.feedback
+  const fill = (text: string) => text.replace('{title}', v.title).replace('{company}', v.company)
+  return render({
+    locale,
+    subject: fill(m.subject),
+    heading: m.heading,
+    paragraphs: [fill(side === 'student' ? m.bodyStudent : m.bodyCompany), m.private],
+    action: { label: m.button, href: v.href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}

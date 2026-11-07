@@ -729,9 +729,10 @@ describe('payments', () => {
     expect(res.docs[0]).not.toHaveProperty('konnectedShare')
     expect(res.docs[0]).not.toHaveProperty('studentPay')
     expect(res.docs[0]).not.toHaveProperty('studentPaidAt')
+    expect(res.docs[0]).not.toHaveProperty('studentPayout')
   })
 
-  it('another company sees nothing, the student only whether they were paid, only admin writes', async () => {
+  it('another company sees nothing, the student only their status and own pay, only admin writes', async () => {
     const other = await w.payload.find({ collection: 'payments', ...as(w.companyB.user) })
     expect(other.docs).toHaveLength(0)
     const student = await w.payload.find({
@@ -743,7 +744,6 @@ describe('payments', () => {
     for (const key of [
       'projectFee',
       'konnectedShare',
-      'studentPay',
       'invoiceNumber',
       'invoiceSentAt',
       'invoicePaidAt',
@@ -752,6 +752,8 @@ describe('payments', () => {
       expect(student.docs[0], key).not.toHaveProperty(key)
     }
     expect(student.docs[0]).toHaveProperty('studentPaidAt')
+    // Where their pay stands and their own pay (Kanban card "Student payments page").
+    expect(student.docs[0]).toMatchObject({ studentPayout: 'waiting_company', studentPay: 700 })
     const beta = await w.payload.find({ collection: 'payments', ...as(w.beta.user) })
     expect(beta.docs).toHaveLength(0)
     await expect(

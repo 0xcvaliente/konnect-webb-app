@@ -710,6 +710,63 @@ async function seed() {
   const open = await seedProject('Seed project: published')
   await applyOnce(payload, open.id, fresh)
 
+  // ---------- Ask Konnected and billing (Kanban cards "Ask Konnected" and "Billing details") ----------
+  // The seed company's billing details, saved by the company, and one open question from the seed
+  // student about their running project and one from the company about its published project.
+  const companyCtx = { ...companyUser, collection: 'users' as const }
+  const billed = await payload.findByID({
+    collection: 'companies',
+    id: companyId,
+    depth: 0,
+    overrideAccess: true,
+  })
+  if (!billed.invoiceEmail) {
+    await payload.update({
+      collection: 'companies',
+      id: companyId,
+      data: {
+        invoiceEmail: 'faktura@seed-startup.example',
+        invoiceReference: 'Seed Contact',
+        ehfInvoice: true,
+      },
+      user: companyCtx,
+      overrideAccess: false,
+    })
+  }
+  const asked = await payload.count({ collection: 'questions', overrideAccess: true })
+  if (!asked.totalDocs) {
+    const running = await seedProject('Seed project: in_progress')
+    const own = await payload.find({
+      collection: 'applications',
+      where: { project: { equals: running.id } },
+      limit: 1,
+      depth: 0,
+      user: studentCtx,
+      overrideAccess: false,
+    })
+    if (own.docs[0]) {
+      await payload.create({
+        collection: 'questions',
+        data: {
+          application: own.docs[0].id,
+          body: 'Can I deliver the raw notes as a spreadsheet as well?',
+        } as never,
+        user: studentCtx,
+        overrideAccess: false,
+      })
+    }
+    const listed = await seedProject('Seed project: published')
+    await payload.create({
+      collection: 'questions',
+      data: {
+        project: listed.id,
+        body: 'Can we add a second deliverable after a student is selected?',
+      } as never,
+      user: companyCtx,
+      overrideAccess: false,
+    })
+  }
+
   // ---------- One test user for every other role and state ----------
   // A company Konnected has not approved yet (it may keep drafts), a company user who has not
   // registered a company, and a new account that has not chosen student or company.

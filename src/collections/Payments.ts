@@ -18,6 +18,8 @@ import {
   INVOICE_NUMBER_MAX,
   PAYMENT_NOTES_MAX,
   type PaymentError,
+  STUDENT_PAYOUT_STATUSES,
+  studentPayoutStatus,
 } from '@/lib/payments/fields'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 
@@ -49,8 +51,9 @@ const text = (value: unknown): string | null => {
  *
  * Admin reads and writes everything. A company reads a summary of its own invoices: the price
  * (excluding VAT), the invoice number and when the invoice was sent and paid. A student reads only
- * whether and when they were paid. What the student is paid, Konnected's share and the team's
- * notes are admin-only. Nobody but admins writes.
+ * where their pay stands (waiting for the company, in the next pay run, paid), the day they were
+ * paid and what they are paid, if the team set it. Konnected's share and the team's notes are
+ * admin-only. Nobody but admins writes.
  */
 export const Payments: CollectionConfig = {
   slug: 'payments',
@@ -114,7 +117,7 @@ export const Payments: CollectionConfig = {
                 collection: 'projects',
                 id: projectId,
                 depth: 0,
-                select: { paidOrUnpaid: true, fee: true },
+                select: { paidOrUnpaid: true, fee: true, studentPay: true },
                 overrideAccess: true,
                 disableErrors: true,
                 req,
@@ -128,6 +131,10 @@ export const Payments: CollectionConfig = {
           // The fixed price Konnected set at review, unless the team typed one.
           if (data.projectFee === undefined || data.projectFee === null) {
             data.projectFee = isValidPrice(project.fee) ? project.fee : null
+          }
+          // What the student is paid, if Konnected decided it at review, unless the team typed one.
+          if (data.studentPay === undefined || data.studentPay === null) {
+            data.studentPay = isValidPrice(project.studentPay) ? project.studentPay : null
           }
         }
         if (
@@ -161,6 +168,11 @@ export const Payments: CollectionConfig = {
           todayInOslo(),
         )
         if (problem) throw fail(problem, `The payment dates are not possible (${problem})`)
+        // The student's status follows the dates on every save (never typed by anyone).
+        data.studentPayout = studentPayoutStatus({
+          invoicePaid: pick('invoicePaidAt'),
+          studentPaid: pick('studentPaidAt'),
+        })
         return data
       },
     ],
@@ -190,7 +202,14 @@ export const Payments: CollectionConfig = {
       access: { read: adminOrCompanyField },
     },
     { name: 'konnectedShare', type: 'number', min: 0, access: { read: adminOnlyField } },
-    { name: 'studentPay', type: 'number', min: 0, access: { read: adminOnlyField } },
+    {
+      // What the student is paid for this project, if the team set it. The student reads their
+      // own (on the Payments page); a company never does.
+      name: 'studentPay',
+      type: 'number',
+      min: 0,
+      access: { read: adminOrStudentField },
+    },
     {
       name: 'invoiceNumber',
       type: 'text',
@@ -204,6 +223,17 @@ export const Payments: CollectionConfig = {
       name: 'studentPaidAt',
       type: 'date',
       access: { read: adminOrStudentField },
+    },
+    {
+      // Where the student's pay stands, worked out from the dates by the hook above: waiting for
+      // the company to pay, in the next monthly pay run, or paid. The student reads only this
+      // (not when or whether the company paid); a company never does.
+      name: 'studentPayout',
+      type: 'select',
+      defaultValue: 'waiting_company',
+      options: [...STUDENT_PAYOUT_STATUSES],
+      access: { read: adminOrStudentField },
+      admin: { readOnly: true },
     },
     {
       // The team's own notes. Never shown to the company or the student.

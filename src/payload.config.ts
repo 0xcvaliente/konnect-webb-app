@@ -17,11 +17,14 @@ import { CompanyLogos } from './collections/CompanyLogos'
 import { Cvs } from './collections/Cvs'
 import { DeliverableFiles } from './collections/DeliverableFiles'
 import { Deliverables } from './collections/Deliverables'
+import { Feedback } from './collections/Feedback'
 import { MagicLinks } from './collections/MagicLinks'
 import { Matches } from './collections/Matches'
 import { Payments } from './collections/Payments'
 import { ProblemReports } from './collections/ProblemReports'
 import { Projects } from './collections/Projects'
+import { Questions } from './collections/Questions'
+import { SavedAnswers } from './collections/SavedAnswers'
 import { Signatures } from './collections/Signatures'
 import { StudentProfiles } from './collections/StudentProfiles'
 import { TeamMembers } from './collections/TeamMembers'
@@ -31,6 +34,7 @@ import { AGREEMENTS_QUEUE, generateAgreementTask, sendAgreementEmailTask } from 
 import { decisionReminderTask } from './jobs/decisionReminder'
 import { acceptDueDeliverablesTask } from './jobs/deliverables'
 import { teamMorningEmailTask } from './jobs/morningEmail'
+import { questionReminderTask } from './jobs/questionReminder'
 import { MAINTENANCE_QUEUE, removeUnusedFilesTask } from './jobs/removeUnusedFiles'
 import { emailAdapter } from './lib/email/adapter'
 import { MAX_UPLOAD_BYTES, MB } from './lib/uploads/fileRules'
@@ -63,6 +67,9 @@ export default buildConfig({
     AgreementPdfs,
     Payments,
     ProblemReports,
+    Questions,
+    SavedAnswers,
+    Feedback,
     TeamMembers,
     ActivityLogs,
     MagicLinks,
@@ -100,6 +107,7 @@ export default buildConfig({
       acceptDueDeliverablesTask,
       teamMorningEmailTask,
       decisionReminderTask,
+      questionReminderTask,
     ],
     autoRun:
       process.env.RUN_JOBS_IN_APP === 'false'

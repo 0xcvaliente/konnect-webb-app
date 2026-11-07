@@ -140,3 +140,25 @@ export function paymentErrorCode(error: unknown): PaymentError | undefined {
   }
   return undefined
 }
+
+/**
+ * Where a student's pay stands, the only thing the student sees of the payment log (Kanban card
+ * "Student payments page (status only)"): waiting for the company to pay Konnected, in the next
+ * monthly pay run (the company paid), or paid. Never the company's dates or the price.
+ */
+export const STUDENT_PAYOUT_STATUSES = ['waiting_company', 'next_pay_run', 'paid'] as const
+export type StudentPayoutStatus = (typeof STUDENT_PAYOUT_STATUSES)[number]
+
+export function studentPayoutStatus(
+  days: Pick<PaymentDays, 'invoicePaid' | 'studentPaid'>,
+): StudentPayoutStatus {
+  if (days.studentPaid) return 'paid'
+  if (days.invoicePaid) return 'next_pay_run'
+  return 'waiting_company'
+}
+
+export const STUDENT_PAYOUT_TONE: Record<StudentPayoutStatus, 'ok' | 'warn' | 'info'> = {
+  waiting_company: 'warn',
+  next_pay_run: 'info',
+  paid: 'ok',
+}
