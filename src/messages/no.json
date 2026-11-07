@@ -2275,6 +2275,7 @@
       "not_found": "Vi fant ikke dette. Det kan ha blitt fjernet.",
       "not_open": "Noen endret dette i mellomtiden. Siden viser nå hvordan det står.",
       "not_started": "Arbeidet har ikke startet ennå. Det starter når studentavtalen er signert.",
+      "closed": "Konnected har avsluttet dette prosjektet. Ingenting mer kan leveres, frigis eller rettes.",
       "waiting": "Konnected sjekker allerede en innlevering. Vent på svaret.",
       "done": "Arbeidet er frigitt. Det er ikke noe mer å levere.",
       "empty": "Legg til minst én fil eller lenke.",
@@ -2296,11 +2297,16 @@
       "fix": "Det er bedt om en rettelse",
       "accepted": "Arbeidet ditt er godtatt",
       "released": "Arbeidet ditt er frigitt",
-      "more": "Last opp mer"
+      "more": "Last opp mer",
+      "closed": "Arbeidet ditt"
     },
     "notStarted": {
       "title": "Arbeidet starter etter avtalen",
       "body": "Du kan laste opp arbeidet ditt her når du og Konnected har signert studentavtalen."
+    },
+    "closed": {
+      "title": "Konnected har avsluttet dette prosjektet",
+      "body": "Det er ikke noe mer å levere. Spør Konnected hvis noe mangler."
     },
     "waiting": {
       "title": "Konnected sjekker arbeidet ditt",

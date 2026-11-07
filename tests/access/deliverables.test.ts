@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 
 import { acceptDueDeliverables } from '@/lib/deliverables/autoAccept'
-import { deliveryState } from '@/lib/deliverables/fields'
+import { deliveryState, workSettled } from '@/lib/deliverables/fields'
 import {
   companyDecision,
   loadCompanyWork,
@@ -429,6 +429,137 @@ describe('the company: released work only, accept or one round of fixes', () => 
   })
 })
 
+describe('a closed project: Konnected closes only settled work, and nothing reopens it', () => {
+  const closeProject = (user: User) =>
+    w.payload.update({
+      collection: 'projects',
+      id: work.project.id,
+      data: { status: 'closed' },
+      ...as(user),
+    })
+
+  it('not while a hand-in waits, the company may still ask for a fix, or a fix is open', async () => {
+    const d = await handIn(w.beta.user)
+    await move(d.id, { status: 'released' }, w.admin)
+    expect(await projectStatus()).toBe('delivered')
+    // Released today: the company has 7 days to ask for its fix.
+    await expect(closeProject(w.admin)).rejects.toThrow(/still open/)
+    await move(d.id, { status: 'fix_requested', fixNote: FIX }, w.companyA.user)
+    await expect(closeProject(w.admin)).rejects.toThrow(/still open/)
+    // The fixed hand-in waits for Konnected.
+    const second = await handIn(w.beta.user, { note: 'Fixed version' })
+    await expect(closeProject(w.admin)).rejects.toThrow(/still open/)
+    await move(second.id, { status: 'released' }, w.admin)
+    await expect(closeProject(w.admin)).rejects.toThrow(/still open/)
+    expect(await projectStatus()).toBe('delivered')
+
+    // Accepted: settled. Only the team closes.
+    await move(second.id, { status: 'accepted' }, w.companyA.user)
+    for (const user of [w.companyA.user, w.beta.user, w.alpha.user]) {
+      await expect(closeProject(user)).rejects.toThrow()
+    }
+    expect((await closeProject(w.admin)).status).toBe('closed')
+  })
+
+  it('released work whose 7 days are over is settled, so Konnected may close', async () => {
+    const d = await handIn(w.beta.user)
+    await move(d.id, { status: 'released' }, w.admin)
+    await w.payload.db.updateOne({
+      collection: 'deliverables',
+      where: { id: { equals: d.id } },
+      data: { releasedAt: new Date(Date.now() - 8 * 86_400_000).toISOString() },
+      returning: false,
+    })
+    expect((await closeProject(w.admin)).status).toBe('closed')
+  })
+
+  it('after closing, the student sees accepted work, not "starts after the agreement"', async () => {
+    const d = await handIn(w.beta.user)
+    await move(d.id, { status: 'released' }, w.admin)
+    await move(d.id, { status: 'accepted' }, w.admin)
+    await closeProject(w.admin)
+    const own = await loadStudentWork(w.payload, session(w.beta.user), work.project.id)
+    expect(own?.state).toMatchObject({
+      blocked: 'closed',
+      accepted: true,
+      canSubmit: false,
+      canAskFix: false,
+    })
+    await expect(handIn(w.beta.user)).rejects.toThrow(/closed/)
+    const form = new FormData()
+    form.set('matchId', String(work.match.id))
+    form.append('linkUrl', 'https://example.test/late')
+    expect(await submitDeliverable(w.payload, session(w.beta.user), form)).toMatchObject({
+      error: 'closed',
+    })
+  })
+
+  it('a closed project takes no release and no fix request, and nobody is emailed', async () => {
+    // A project closed with work still open (the state the close rule now prevents, made directly
+    // in the database): the hooks still refuse to reopen the work.
+    const released = await handIn(w.beta.user)
+    await move(released.id, { status: 'released' }, w.admin)
+    await w.payload.db.updateOne({
+      collection: 'projects',
+      where: { id: { equals: work.project.id } },
+      data: { status: 'closed' },
+      returning: false,
+    })
+    mail.mockClear()
+    await expect(
+      move(released.id, { status: 'fix_requested', fixNote: FIX }, w.companyA.user),
+    ).rejects.toThrow(/closed/)
+    await expect(
+      move(released.id, { status: 'fix_requested', fixNote: FIX }, w.admin),
+    ).rejects.toThrow(/closed/)
+    expect(await read(released.id)).toMatchObject({ status: 'released', fixRequestedAt: null })
+    expect(mail).not.toHaveBeenCalled()
+    // Accepting stays possible: it settles the work, it does not reopen it.
+    expect((await move(released.id, { status: 'accepted' }, w.companyA.user)).status).toBe(
+      'accepted',
+    )
+
+    // A hand-in that waited when the project was closed is not released either.
+    const other = await workingMatch(w.payload, w.admin, w.alpha, w.companyB, 'Other project')
+    const waiting = await w.payload.create({
+      collection: 'deliverables',
+      data: {
+        match: other.match.id,
+        links: [{ url: 'https://example.test/o' }],
+        status: 'submitted',
+      },
+      ...as(w.alpha.user),
+    })
+    await w.payload.db.updateOne({
+      collection: 'projects',
+      where: { id: { equals: other.project.id } },
+      data: { status: 'closed' },
+      returning: false,
+    })
+    await expect(move(waiting.id, { status: 'released' }, w.admin)).rejects.toThrow(/closed/)
+    expect((await read(waiting.id)).status).toBe('submitted')
+  })
+
+  it('a hand-in and the close at the same moment: never a closed project with work waiting', async () => {
+    // The team moved the project to delivered by hand, with nothing released: settled, so it may
+    // close, and the student may still hand in. The two run one after the other.
+    await w.payload.update({
+      collection: 'projects',
+      id: work.project.id,
+      data: { status: 'delivered' },
+      ...as(w.admin),
+    })
+    const [sent, closed] = await Promise.allSettled([handIn(w.beta.user), closeProject(w.admin)])
+    const waiting = await w.payload.count({
+      collection: 'deliverables',
+      where: { and: [{ match: { equals: work.match.id } }, { status: { equals: 'submitted' } }] },
+      overrideAccess: true,
+    })
+    expect(closed.status === 'fulfilled' && waiting.totalDocs > 0).toBe(false)
+    expect([sent.status, closed.status]).toContain('fulfilled')
+  })
+})
+
 describe('the activity log records every hand-in and every decision, with who made it', () => {
   it('create, released, fix requested, accepted', async () => {
     const d = await handIn(w.beta.user)
@@ -612,6 +743,36 @@ describe('deliveryState (the rules, without a database)', () => {
       canAskFix: false,
       canAccept: true,
     })
+  })
+})
+
+describe('a closed project (the rules, without a database)', () => {
+  const at = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString()
+  it('closed is its own reason, not "not started", and takes no fix', () => {
+    const released = { id: 1, status: 'released' as const, createdAt: at(3), releasedAt: at(2) }
+    expect(deliveryState([], 'matched').blocked).toBe('not_started')
+    expect(deliveryState([], 'closed').blocked).toBe('closed')
+    expect(deliveryState([released], 'closed')).toMatchObject({
+      blocked: 'closed',
+      canSubmit: false,
+      canAskFix: false,
+      fixUntil: null,
+    })
+    expect(deliveryState([{ ...released, status: 'accepted' }], 'closed')).toMatchObject({
+      blocked: 'closed',
+      accepted: true,
+    })
+  })
+  it('settled: nothing waits, no fix is open, the newest release is accepted or its 7 days are over', () => {
+    const released = { id: 1, status: 'released' as const, createdAt: at(3), releasedAt: at(2) }
+    const settled = (items: Parameters<typeof deliveryState>[0]) =>
+      workSettled(deliveryState(items, 'delivered'))
+    expect(settled([])).toBe(true)
+    expect(settled([released])).toBe(false)
+    expect(settled([{ ...released, releasedAt: at(9) }])).toBe(true)
+    expect(settled([{ ...released, status: 'accepted' }])).toBe(true)
+    expect(settled([{ ...released, status: 'fix_requested', fixRequestedAt: at(1) }])).toBe(false)
+    expect(settled([{ id: 2, status: 'submitted', createdAt: at(1) }])).toBe(false)
   })
 })
 

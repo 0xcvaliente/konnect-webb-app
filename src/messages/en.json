@@ -2275,6 +2275,7 @@
       "not_found": "This could not be found. It may have been removed.",
       "not_open": "Someone changed this meanwhile. The page now shows where it stands.",
       "not_started": "The work has not started yet. It starts when the student agreement is signed.",
+      "closed": "Konnected closed this project. Nothing more can be handed in, released or fixed.",
       "waiting": "Konnected is already checking a hand-in. Wait for its answer.",
       "done": "The work was released. There is nothing more to hand in.",
       "empty": "Add at least one file or link.",
@@ -2296,11 +2297,16 @@
       "fix": "A fix is asked",
       "accepted": "Your work is accepted",
       "released": "Your work is released",
-      "more": "Upload more"
+      "more": "Upload more",
+      "closed": "Your work"
     },
     "notStarted": {
       "title": "The work starts after the agreement",
       "body": "You can upload your work here once you and Konnected have signed the student agreement."
+    },
+    "closed": {
+      "title": "Konnected closed this project",
+      "body": "There is nothing more to hand in. Ask Konnected if something is missing."
     },
     "waiting": {
       "title": "Konnected is checking your work",

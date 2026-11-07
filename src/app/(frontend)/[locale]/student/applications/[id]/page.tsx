@@ -267,7 +267,7 @@ export default async function StudentApplicationPage({
       : null
   const workStage: WorkStage = !work
     ? 'none'
-    : work.state.accepted
+    : work.state.accepted || work.state.blocked === 'closed'
       ? 'done'
       : work.state.blocked === 'not_started'
         ? 'none'

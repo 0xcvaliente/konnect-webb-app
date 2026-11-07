@@ -18,6 +18,7 @@ import {
   rowAmounts,
 } from '@/lib/payments/fields'
 import { dayToStored, parseDay, storedToDay, todayInOslo } from '@/lib/projects/fields'
+import type { PaymentContext } from '@/collections/Payments'
 import type { Company, Payment } from '@/payload-types'
 
 import { type Owner, ownersById, type SessionUser } from './approvals'
@@ -51,6 +52,8 @@ export type PaymentRow = {
   releasedAt: string | null
   notes: string | null
   status: PaymentStatus
+  /** The row's `updatedAt`: the form sends it back, so a save over someone else's is refused. */
+  version: string
 }
 
 export type PaymentLog = {
@@ -166,6 +169,7 @@ async function allRows(payload: Payload, actor: SessionUser): Promise<PaymentRow
       releasedAt,
       notes: p.notes ?? null,
       status: paymentStatus(days, isReleased, today),
+      version: p.updatedAt,
     })
   }
   return rows
@@ -219,7 +223,9 @@ const dayField = (form: FormData, key: string): string | null | undefined => {
 
 /**
  * Save one row of the log as the team member: invoice number, the three dates and the notes. The
- * price comes from the project and is not edited here. The hook checks the dates again.
+ * price comes from the project and is not edited here. The hook checks the dates again, and
+ * refuses the save (`not_open`) when the row changed since the form loaded (`version`, the row's
+ * `updatedAt`): the form writes every field, so a stale form would undo another member's save.
  */
 export async function savePayment(
   payload: Payload,
@@ -230,6 +236,8 @@ export async function savePayment(
   const raw = form.get('id')
   const id = typeof raw === 'string' && /^\d{1,10}$/.test(raw) ? Number(raw) : 0
   if (!id) return fail('not_found')
+  const versionRaw = form.get('version')
+  const version = typeof versionRaw === 'string' ? versionRaw.trim() : ''
   const invoiceSent = dayField(form, 'invoiceSent')
   const invoicePaid = dayField(form, 'invoicePaid')
   const studentPaid = dayField(form, 'studentPaid')
@@ -243,6 +251,8 @@ export async function savePayment(
   const notes = typeof notesRaw === 'string' ? notesRaw.trim() : ''
   if (invoiceNumber.length > INVOICE_NUMBER_MAX || notes.length > PAYMENT_NOTES_MAX)
     return fail('too_long')
+  // A form without the version it loaded cannot show it is up to date.
+  if (!version) return fail('not_open')
   try {
     await payload.update({
       collection: 'payments',
@@ -254,6 +264,7 @@ export async function savePayment(
         studentPaidAt: studentPaid ? dayToStored(studentPaid) : null,
         notes: notes || null,
       },
+      context: { paymentVersion: version } satisfies PaymentContext,
       ...asActor(actor),
     })
     return { status: 'saved', doneAt: Date.now() }

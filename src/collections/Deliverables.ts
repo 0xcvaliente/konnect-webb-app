@@ -26,6 +26,7 @@ import {
   MAX_LINKS,
   NOTE_MAX,
   RELEASED_STATUSES,
+  WORK_PROJECT_STATUSES,
 } from '@/lib/deliverables/fields'
 import { sendDeliverableEmails } from '@/lib/email/deliverableEmails'
 import {
@@ -104,6 +105,24 @@ async function workOn(req: PayloadRequest, matchId: number) {
   }
 }
 
+/**
+ * The project of a match, with its status. Bypass: the server reads it whatever the acting user
+ * may read, only to apply the rules and to lock it.
+ */
+async function projectOfMatch(req: PayloadRequest, matchId: number | null | undefined) {
+  if (!matchId) return null
+  const match = await req.payload.findByID({
+    collection: 'matches',
+    id: matchId,
+    depth: 0,
+    select: { project: true },
+    overrideAccess: true,
+    disableErrors: true,
+    req,
+  })
+  return relationId(match?.project as Rel) ?? null
+}
+
 const cleanNote = (value: unknown): string | null => {
   if (typeof value !== 'string') return null
   const note = value.trim()
@@ -161,7 +180,11 @@ export const Deliverables: CollectionConfig = {
           assertInitialStatus<DeliverableStatus>('submitted', data.status, 'A new deliverable')
           const matchId = relationId(data.match as Rel)
           if (!matchId) throw fail('not_found', 'A deliverable needs a match', 400)
-          // Two hand-ins at once on one match run one after the other.
+          // Lock order: the project, then the match. The project in share mode, so Konnected
+          // closing it (lib/deliverables/gates.ts) waits for this hand-in or runs before it; two
+          // hand-ins at once on one match run one after the other.
+          const projectId = await projectOfMatch(req, matchId)
+          if (projectId) await lockRow(req, 'projects', projectId, 'share')
           await lockRow(req, 'matches', matchId)
           const work = await workOn(req, matchId)
           if (!work) throw fail('not_found', 'The match does not exist', 404)
@@ -186,6 +209,7 @@ export const Deliverables: CollectionConfig = {
           const state = deliveryState(work.items, work.projectStatus)
           if (state.blocked === 'not_started')
             throw fail('not_started', 'The work on this project has not started', 409)
+          if (state.blocked === 'closed') throw fail('closed', 'The project is closed', 409)
           if (state.blocked === 'waiting')
             throw fail('waiting', 'A hand-in already waits for Konnected', 409)
           if (state.blocked === 'done')
@@ -215,8 +239,17 @@ export const Deliverables: CollectionConfig = {
         }
 
         // Update. The hand-in's status may have changed since this request read it: lock the row
-        // and read it again, so two people deciding at once run one after the other.
+        // and read it again, so two people deciding at once run one after the other. A release or
+        // a fix request depends on the project still running: lock the project first (lock order:
+        // project, then the work on it), so Konnected closing it runs before or after, not between.
         const id = originalDoc!.id as number
+        const opensWork =
+          data.status !== originalDoc!.status &&
+          (data.status === 'released' || data.status === 'fix_requested')
+        const projectId = opensWork
+          ? await projectOfMatch(req, relationId(originalDoc!.match as Rel))
+          : null
+        if (projectId) await lockRow(req, 'projects', projectId)
         await lockRow(req, 'deliverables', id)
         const fresh = await req.payload.findByID({
           collection: 'deliverables',
@@ -248,6 +281,27 @@ export const Deliverables: CollectionConfig = {
         const incoming = { returnNote: data.returnNote, fixNote: data.fixNote }
         for (const key of SERVER_FIELDS) data[key] = originalDoc?.[key] ?? null
         if (from === to) return data
+
+        // Releasing work, or asking for its fix, only while the project runs. Once Konnected
+        // closed it, the student can hand in nothing more.
+        if (to === 'released' || to === 'fix_requested') {
+          const project = projectId
+            ? await req.payload.findByID({
+                collection: 'projects',
+                id: projectId,
+                depth: 0,
+                select: { status: true },
+                overrideAccess: true,
+                disableErrors: true,
+                req,
+              })
+            : null
+          if (!(WORK_PROJECT_STATUSES as readonly string[]).includes(project?.status ?? '')) {
+            throw project?.status === 'closed'
+              ? fail('closed', 'The project is closed', 409)
+              : fail('not_started', 'The work on this project has not started', 409)
+          }
+        }
 
         if (to === 'released') {
           data.releasedAt = now

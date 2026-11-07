@@ -22,11 +22,14 @@ import { savePaymentAction } from '@/lib/team/paymentActions'
  */
 export function PaymentForm({
   paymentId,
+  version,
   today,
   values,
   backHref,
 }: {
   paymentId: number
+  /** The row's `updatedAt` when it loaded; the server refuses the save if the row changed since. */
+  version: string
   /** Today in Oslo (`YYYY-MM-DD`): no date after it. */
   today: string
   values: {
@@ -87,6 +90,7 @@ export function PaymentForm({
   return (
     <form action={run} className="grid gap-4">
       <input type="hidden" name="id" value={paymentId} />
+      <input type="hidden" name="version" value={version} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-1.5">
           <Label htmlFor={`${id}-number`}>{t('form.invoiceNumber')}</Label>

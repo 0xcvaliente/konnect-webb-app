@@ -94,8 +94,8 @@ export type DeliveryState = {
   accepted: boolean
   /** The student may send a hand-in now. */
   canSubmit: boolean
-  /** Why not, when `canSubmit` is false. */
-  blocked: 'not_started' | 'waiting' | 'done' | null
+  /** Why not, when `canSubmit` is false. `closed`: Konnected closed the project. */
+  blocked: 'not_started' | 'closed' | 'waiting' | 'done' | null
   /** The company may accept the current release. */
   canAccept: boolean
   /** The company may ask for its one round of fixes on the current release. */
@@ -133,12 +133,14 @@ export function deliveryState(
   const working = (WORK_PROJECT_STATUSES as readonly string[]).includes(projectStatus ?? '')
 
   let blocked: DeliveryState['blocked'] = null
-  if (!working) blocked = 'not_started'
+  if (projectStatus === 'closed') blocked = 'closed'
+  else if (!working) blocked = 'not_started'
   else if (waiting) blocked = 'waiting'
   else if (current && !fixOpen) blocked = 'done'
 
   const canAccept = current?.status === 'released'
-  const canAskFix = current?.status === 'released' && !fixUsed && !windowOver
+  // Only while the work runs: a closed project takes no more fixes (the Deliverables hook refuses).
+  const canAskFix = working && current?.status === 'released' && !fixUsed && !windowOver
   return {
     waiting,
     current,
@@ -153,14 +155,25 @@ export function deliveryState(
   }
 }
 
+/**
+ * Nothing on this match is left for anyone to do: no hand-in waits for Konnected, no fix round is
+ * open, and the newest release is accepted (or its 7 days are over). Nothing released at all also
+ * counts (the team moved the project on by hand). Konnected closes a project only then
+ * (lib/deliverables/gates.ts).
+ */
+export const workSettled = (state: DeliveryState): boolean =>
+  !state.waiting && !state.fixOpen && (!state.current || state.accepted)
+
 /** Why a deliverable action was refused. Each has its own message in both languages. */
 export const DELIVERABLE_ERRORS = [
   'forbidden',
   'not_found',
   /** Someone else acted first, or the state changed: load the page again. */
   'not_open',
-  /** The project is not in progress (the work has not started, or it is closed). */
+  /** The project is not in progress yet (the student agreement is not signed). */
   'not_started',
+  /** Konnected closed the project: no more hand-ins, releases or fix requests. */
+  'closed',
   /** A hand-in already waits for Konnected. */
   'waiting',
   /** The work was released and no fix was asked: nothing more to hand in. */

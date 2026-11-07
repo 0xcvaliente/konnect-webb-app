@@ -13,7 +13,7 @@ import { HandInView } from './HandInView'
 /**
  * The work on the student's application page ("Final pass" mockup, application page while the
  * work runs): where it stands (not started, with Konnected, released, a fix asked, accepted), the
- * upload form when the student may hand in, and every hand-in so far with its files.
+ * upload form when the student may hand in (never once Konnected closed the project), and every hand-in so far with its files.
  */
 export async function StudentWork({ work, company }: { work: Work; company: string }) {
   const t = await getTranslations('StudentWork')
@@ -48,6 +48,11 @@ export async function StudentWork({ work, company }: { work: Work; company: stri
       head: t('notStarted.title'),
       body: t('notStarted.body'),
     }
+  } else if (state.blocked === 'closed' && !(state.accepted && current)) {
+    // Konnected closes a project only once the work is settled (lib/deliverables/gates.ts), so
+    // this shows only when nothing was released or accepted through the app.
+    title = t('title.closed')
+    banner = { tone: 'info', icon: LockIcon, head: t('closed.title'), body: t('closed.body') }
   } else if (state.waiting) {
     title = t('title.waiting')
     banner = {

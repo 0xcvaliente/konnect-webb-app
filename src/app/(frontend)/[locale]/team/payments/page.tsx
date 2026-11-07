@@ -204,8 +204,10 @@ export default async function TeamPaymentsPage({
             </Banner>
           )}
           <PaymentForm
-            key={editing.id}
+            // A new version (someone saved the row) loads the form again with what is stored.
+            key={`${editing.id}-${editing.version}`}
             paymentId={editing.id}
+            version={editing.version}
             today={todayInOslo()}
             values={{
               invoiceNumber: editing.invoiceNumber,

@@ -11,6 +11,7 @@ import {
   relationId,
 } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { lockRow } from '@/lib/db/locks'
 import { isValidPrice } from '@/lib/money'
 import {
   datesProblem,
@@ -21,6 +22,15 @@ import {
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 
 type Rel = number | { id: number } | null | undefined
+
+/** Context keys the server sets. A client cannot set `req.context` through any API. */
+export type PaymentContext = {
+  /**
+   * The row's `updatedAt` when the team member's form loaded. The save is refused when the row
+   * changed since, so one member's save never silently undoes another's (savePayment).
+   */
+  paymentVersion?: string
+}
 
 /** An APIError with a code the team's screen maps to its own message. */
 const fail = (code: PaymentError, message: string, status = 400): APIError =>
@@ -58,11 +68,33 @@ export const Payments: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
-      async ({ data, originalDoc, operation, req }) => {
+      async ({ data, originalDoc: loaded, operation, req, context }) => {
+        let originalDoc = loaded
         const matchId = relationId((data.match ?? originalDoc?.match) as Rel)
         if (!matchId) throw fail('not_found', 'A payment needs a match', 400)
         if (operation === 'update' && matchId !== relationId(originalDoc?.match as Rel)) {
           throw new APIError('A payment keeps its match', 400)
+        }
+
+        if (operation === 'update') {
+          // Two saves of one row run one after the other. Each reads the row again after the lock,
+          // so the date checks below see what the other one saved.
+          const id = originalDoc!.id as number
+          await lockRow(req, 'payments', id)
+          const fresh = await req.payload.findByID({
+            collection: 'payments',
+            id,
+            depth: 0,
+            overrideAccess: true,
+            disableErrors: true,
+            req,
+          })
+          if (!fresh) throw fail('not_found', 'The payment does not exist', 404)
+          const expected = (context as PaymentContext | undefined)?.paymentVersion
+          if (expected !== undefined && fresh.updatedAt !== expected) {
+            throw fail('not_open', 'Someone saved this row meanwhile. Load it again.', 409)
+          }
+          originalDoc = fresh
         }
 
         if (operation === 'create') {

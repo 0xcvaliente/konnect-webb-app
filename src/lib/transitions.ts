@@ -4,6 +4,7 @@ import type { Role } from '@/access/roles'
 import type { Project } from '@/payload-types'
 import { assertStudentAgreementSigned } from '@/lib/agreements/gates'
 import type { DeliverableStatus } from '@/lib/deliverables/fields'
+import { assertWorkSettled } from '@/lib/deliverables/gates'
 import { assertProjectHasMatch } from '@/lib/matching/rules'
 
 /** from -> to -> roles allowed to make that move. Anything not listed is rejected. */
@@ -42,7 +43,8 @@ export const PROJECT_TRANSITIONS: TransitionMap<ProjectStatus> = {
  * only selecting an application makes (lib/matching/rules.ts: the selection moves the project
  * itself). Moves that need a signed agreement (konnected-agreements): `matched` to
  * `in_progress` needs the student agreement, signed by the student and by Konnected, and still
- * matching the project and match. Call after assertTransition, for every role, with the project
+ * matching the project and match. `delivered` to `closed` needs the work settled: nothing waits for
+ * Konnected, the company or the student (lib/deliverables/gates.ts). Call after assertTransition, for every role, with the project
  * as it will be saved (the stored project with this request's changes).
  *
  * The other gate, the company agreement before `approved` to `published`, is part of the one
@@ -57,6 +59,7 @@ export async function assertProjectGates(
 ): Promise<void> {
   if (from === 'published' && to === 'matched') await assertProjectHasMatch(req, project?.id)
   if (from === 'matched' && to === 'in_progress') await assertStudentAgreementSigned(req, project)
+  if (from === 'delivered' && to === 'closed') await assertWorkSettled(req, project?.id)
 }
 
 export type CompanyStatus = 'pending' | 'approved' | 'rejected'

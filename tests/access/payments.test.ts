@@ -43,6 +43,9 @@ const session = (user: User) => asUser(user) as unknown as SessionUser
 const NOTES = 'Team-Only-Payment-Notes'
 const INVOICE = 'INV-PAY-7781'
 const day = (offset: number) => addDays(todayInOslo(), offset)
+/** The row's version as the team's form loads it (its `updatedAt`). */
+const versionOf = async (id: number) =>
+  (await w.payload.findByID({ collection: 'payments', id, overrideAccess: true })).updatedAt
 
 beforeEach(async () => {
   await resetDatabase()
@@ -263,6 +266,7 @@ describe('only the team writes, and the dates follow the rules', () => {
   it('each recorded date is in the activity log with the team member', async () => {
     const form = new FormData()
     form.set('id', String(row.id))
+    form.set('version', await versionOf(row.id))
     form.set('invoiceNumber', INVOICE)
     form.set('invoiceSent', day(-4))
     form.set('invoicePaid', day(-1))
@@ -312,10 +316,98 @@ describe('only the team writes, and the dates follow the rules', () => {
   })
 })
 
+describe('two team members on one row', () => {
+  const formFor = (version: string, fields: Record<string, string>) => {
+    const form = new FormData()
+    form.set('id', String(row.id))
+    form.set('version', version)
+    for (const [k, v] of Object.entries(fields)) form.set(k, v)
+    return form
+  }
+  const stored = () =>
+    w.payload.findByID({ collection: 'payments', id: row.id, overrideAccess: true })
+
+  it('a save from a form loaded before someone else saved is refused, and undoes nothing', async () => {
+    // A and B open the same empty row.
+    const loaded = await versionOf(row.id)
+    expect(
+      (await listPaymentLog(w.payload, session(w.admin), { filter: 'all' }))!.rows.find(
+        (r) => r.id === row.id,
+      )!.version,
+    ).toBe(loaded)
+
+    // B records the invoice as sent today.
+    expect(
+      await savePayment(w.payload, session(w.admin), formFor(loaded, { invoiceSent: day(0) })),
+    ).toMatchObject({ status: 'saved' })
+    // A adds a note on the form A loaded earlier, which still has no invoice date.
+    expect(
+      await savePayment(w.payload, session(w.admin), formFor(loaded, { notes: NOTES })),
+    ).toMatchObject({ status: 'error', error: 'not_open' })
+    expect(await stored()).toMatchObject({
+      invoiceSentAt: dayToStored(day(0)),
+      notes: null,
+    })
+
+    // B records the company's payment; A's stale form (with the invoice date) cannot clear it.
+    const afterInvoice = await versionOf(row.id)
+    expect(
+      await savePayment(
+        w.payload,
+        session(w.admin),
+        formFor(afterInvoice, { invoiceSent: day(0), invoicePaid: day(0) }),
+      ),
+    ).toMatchObject({ status: 'saved' })
+    expect(
+      await savePayment(
+        w.payload,
+        session(w.admin),
+        formFor(afterInvoice, { invoiceSent: day(0), notes: NOTES }),
+      ),
+    ).toMatchObject({ error: 'not_open' })
+    expect((await stored()).invoicePaidAt).toBe(dayToStored(day(0)))
+
+    // Loaded again, A's save goes through.
+    expect(
+      await savePayment(
+        w.payload,
+        session(w.admin),
+        formFor(await versionOf(row.id), {
+          invoiceSent: day(0),
+          invoicePaid: day(0),
+          notes: NOTES,
+        }),
+      ),
+    ).toMatchObject({ status: 'saved' })
+    expect(await stored()).toMatchObject({ invoicePaidAt: dayToStored(day(0)), notes: NOTES })
+  })
+
+  it('two saves of one loaded form at the same moment: one wins, the other is refused', async () => {
+    const loaded = await versionOf(row.id)
+    const results = await Promise.all([
+      savePayment(w.payload, session(w.admin), formFor(loaded, { invoiceSent: day(-1) })),
+      savePayment(w.payload, session(w.admin), formFor(loaded, { notes: NOTES })),
+    ])
+    expect(results.map((r) => r.status).sort()).toEqual(['error', 'saved'])
+    expect(results.find((r) => r.status === 'error')).toMatchObject({ error: 'not_open' })
+  })
+
+  it('a form without the version it loaded is refused', async () => {
+    const form = new FormData()
+    form.set('id', String(row.id))
+    form.set('notes', NOTES)
+    expect(await savePayment(w.payload, session(w.admin), form)).toMatchObject({
+      error: 'not_open',
+    })
+    expect((await stored()).notes ?? null).toBeNull()
+  })
+})
+
 describe('the log, the company summary and the student status', () => {
   const save = async (fields: Record<string, string>) => {
     const form = new FormData()
     form.set('id', String(row.id))
+    form.set('version', await versionOf(row.id))
     for (const [k, v] of Object.entries(fields)) form.set(k, v)
     return savePayment(w.payload, session(w.admin), form)
   }
