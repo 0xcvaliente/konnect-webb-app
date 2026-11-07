@@ -18,9 +18,9 @@ jobs:
   check:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-24.04
-    # The full run (tests with the agreements suite, then the build) takes close to 10 minutes;
-    # 20 leaves room so a slow runner does not cancel a green job.
-    timeout-minutes: 20
+    # The suite has 600+ tests on a real database; a full run took 19 minutes on 7 Nov.
+    # 40 leaves room so a slow runner does not cancel a green job.
+    timeout-minutes: 40
 
     # PostgreSQL 18, same major version as local development and production.
     services:
