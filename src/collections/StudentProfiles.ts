@@ -10,7 +10,13 @@ import {
   relationId,
 } from '@/access/roles'
 import { copyNameToUser } from '@/hooks/copyNameToUser'
-import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
+import {
+  logActivityAfterChange,
+  logActivityAfterDelete,
+  logReassignments,
+  writeActivity,
+} from '@/hooks/logActivity'
+import { isAdminEmail } from '@/access/adminEmails'
 import { sendProfileReviewEmail } from '@/lib/email/profileEmails'
 import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import {
@@ -148,6 +154,27 @@ export const StudentProfiles: CollectionConfig = {
               data.changedSinceReviewAt = null
               data.reviewNote = null
             }
+            // A review decision on a profile nobody took from the shared pool: the team member
+            // who decided takes it, so a later change by the student lands on their list.
+            if ((reviewedNow || to === 'changes_requested') && !relationId(data.takenBy)) {
+              data.takenBy = req.user!.id
+            }
+            // Bypass: the server reads the chosen user's role and address to check they are on
+            // the team. Only the role and the address are used.
+            const taker = relationId(data.takenBy)
+            if (taker && taker !== relationId(originalDoc?.takenBy)) {
+              const member = await req.payload.findByID({
+                collection: 'users',
+                id: taker,
+                depth: 0,
+                overrideAccess: true,
+                disableErrors: true,
+                req,
+              })
+              if (!member || member.role !== 'admin' || !isAdminEmail(member.email)) {
+                throw new APIError('Profile: the person taking it must be on the team', 400)
+              }
+            }
           }
         }
         // The date of the team's note follows the note.
@@ -175,6 +202,7 @@ export const StudentProfiles: CollectionConfig = {
       },
     ],
     afterChange: [
+      logReassignments(['takenBy']),
       logActivityAfterChange({ statusField: 'reviewStatus' }),
       async ({ doc, previousDoc, operation, req, context }) => {
         if (operation !== 'update') return doc
@@ -330,6 +358,18 @@ export const StudentProfiles: CollectionConfig = {
       index: true,
       access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
       admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // Who on the team took the profile from the shared pool to review it ("Take it"), or made
+      // the first review decision. Later changes by the student land on their list. Team only;
+      // never personal data of the student.
+      name: 'takenBy',
+      label: 'Taken from the pool by',
+      type: 'relationship',
+      relationTo: 'users',
+      index: true,
+      access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { position: 'sidebar' },
     },
     {
       // A copy of the reviewed fields at the last review, to show the team what changed since.

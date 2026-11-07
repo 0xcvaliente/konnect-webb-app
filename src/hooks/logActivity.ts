@@ -5,7 +5,7 @@ import type {
   PayloadRequest,
 } from 'payload'
 
-import { relationId } from '@/access/roles'
+import { isAdmin, relationId } from '@/access/roles'
 import type { ActivityLog } from '@/payload-types'
 
 type Options = {
@@ -100,4 +100,35 @@ export const logActivityAfterDelete =
       targetCollection: collection.slug as CollectionSlug,
       targetId: String(id),
     })
+  }
+
+/**
+ * Write a `reassign` row when a company's or a project's owner on the team changes, or someone
+ * takes an item from the shared pool (team split by company). Only user ids and the team's own
+ * note (`req.context.activityNote`) are logged. A new record that starts with an owner copied from
+ * its company is not a reassignment and is not logged here (its `create` row covers it).
+ */
+export const logReassignments =
+  (fields: string[]): CollectionAfterChangeHook =>
+  async ({ collection, doc, previousDoc, operation, req, context }) => {
+    // Only the team changes owners (field access drops anyone else's value). A company's or a
+    // student's own save is never a reassignment, even though their copy of the previous
+    // document has no owner fields to compare (field read access hides them).
+    if (context?.skipActivityLog || operation !== 'update' || !isAdmin(req.user)) return doc
+    const note = noteOf(req)
+    for (const field of fields) {
+      const before = relationId((previousDoc as Record<string, never> | undefined)?.[field])
+      const after = relationId((doc as Record<string, never>)[field])
+      if ((before ?? null) === (after ?? null)) continue
+      await writeActivity(req, {
+        action: 'reassign',
+        targetCollection: collection.slug,
+        targetId: String(doc.id),
+        field,
+        fromStatus: before ? String(before) : undefined,
+        toStatus: after ? String(after) : undefined,
+        note,
+      })
+    }
+    return doc
   }

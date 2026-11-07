@@ -84,6 +84,7 @@ export interface Config {
     'agreement-pdfs': AgreementPdf;
     payments: Payment;
     'problem-reports': ProblemReport;
+    'team-members': TeamMember;
     'activity-logs': ActivityLog;
     'magic-links': MagicLink;
     'payload-kv': PayloadKv;
@@ -111,6 +112,7 @@ export interface Config {
     'agreement-pdfs': AgreementPdfsSelect<false> | AgreementPdfsSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'problem-reports': ProblemReportsSelect<false> | ProblemReportsSelect<true>;
+    'team-members': TeamMembersSelect<false> | TeamMembersSelect<true>;
     'activity-logs': ActivityLogsSelect<false> | ActivityLogsSelect<true>;
     'magic-links': MagicLinksSelect<false> | MagicLinksSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -140,6 +142,7 @@ export interface Config {
       generateAgreement: TaskGenerateAgreement;
       sendAgreementEmail: TaskSendAgreementEmail;
       acceptDueDeliverables: TaskAcceptDueDeliverables;
+      teamMorningEmail: TaskTeamMorningEmail;
       inline: {
         input: unknown;
         output: unknown;
@@ -223,6 +226,7 @@ export interface Company {
   status: 'pending' | 'approved' | 'rejected';
   user?: (number | null) | User;
   teamOwner?: (number | null) | User;
+  takenBy?: (number | null) | User;
   noteToCompany?: string | null;
   noteToCompanyAt?: string | null;
   infoRequestedAt?: string | null;
@@ -286,6 +290,7 @@ export interface StudentProfile {
   reviewNoteAt?: string | null;
   reviewRequestedAt?: string | null;
   changedSinceReviewAt?: string | null;
+  takenBy?: (number | null) | User;
   reviewedSnapshot?:
     | {
         [k: string]: unknown;
@@ -352,6 +357,8 @@ export interface Project {
   reopenReason?: ('match_ended' | 'no_match') | null;
   workload?: string | null;
   duration?: string | null;
+  owner?: (number | null) | User;
+  takenBy?: (number | null) | User;
   status:
     | 'draft'
     | 'submitted'
@@ -636,6 +643,20 @@ export interface ProblemReport {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "team-members".
+ */
+export interface TeamMember {
+  id: number;
+  user: number | User;
+  awayFrom?: string | null;
+  awayUntil?: string | null;
+  coveredBy?: (number | null) | User;
+  morningEmailOn?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "activity-logs".
  */
 export interface ActivityLog {
@@ -649,7 +670,9 @@ export interface ActivityLog {
     | 'sign_in_method_added'
     | 'review_change'
     | 'info_requested'
-    | 'info_answered';
+    | 'info_answered'
+    | 'reassign'
+    | 'away_change';
   targetCollection: string;
   targetId: string;
   field?: string | null;
@@ -741,7 +764,13 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'removeUnusedFiles' | 'generateAgreement' | 'sendAgreementEmail' | 'acceptDueDeliverables';
+        taskSlug:
+          | 'inline'
+          | 'removeUnusedFiles'
+          | 'generateAgreement'
+          | 'sendAgreementEmail'
+          | 'acceptDueDeliverables'
+          | 'teamMorningEmail';
         taskID: string;
         input?:
           | {
@@ -775,7 +804,15 @@ export interface PayloadJob {
       }[]
     | null;
   taskSlug?:
-    ('inline' | 'removeUnusedFiles' | 'generateAgreement' | 'sendAgreementEmail' | 'acceptDueDeliverables') | null;
+    | (
+        | 'inline'
+        | 'removeUnusedFiles'
+        | 'generateAgreement'
+        | 'sendAgreementEmail'
+        | 'acceptDueDeliverables'
+        | 'teamMorningEmail'
+      )
+    | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -865,6 +902,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'problem-reports';
         value: number | ProblemReport;
+      } | null)
+    | ({
+        relationTo: 'team-members';
+        value: number | TeamMember;
       } | null)
     | ({
         relationTo: 'activity-logs';
@@ -991,6 +1032,7 @@ export interface StudentProfilesSelect<T extends boolean = true> {
   reviewNoteAt?: T;
   reviewRequestedAt?: T;
   changedSinceReviewAt?: T;
+  takenBy?: T;
   reviewedSnapshot?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1011,6 +1053,7 @@ export interface CompaniesSelect<T extends boolean = true> {
   status?: T;
   user?: T;
   teamOwner?: T;
+  takenBy?: T;
   noteToCompany?: T;
   noteToCompanyAt?: T;
   infoRequestedAt?: T;
@@ -1055,6 +1098,8 @@ export interface ProjectsSelect<T extends boolean = true> {
   reopenReason?: T;
   workload?: T;
   duration?: T;
+  owner?: T;
+  takenBy?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1338,6 +1383,19 @@ export interface ProblemReportsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "team-members_select".
+ */
+export interface TeamMembersSelect<T extends boolean = true> {
+  user?: T;
+  awayFrom?: T;
+  awayUntil?: T;
+  coveredBy?: T;
+  morningEmailOn?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "activity-logs_select".
  */
 export interface ActivityLogsSelect<T extends boolean = true> {
@@ -1520,6 +1578,16 @@ export interface TaskAcceptDueDeliverables {
   input?: unknown;
   output: {
     accepted: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskTeamMorningEmail".
+ */
+export interface TaskTeamMorningEmail {
+  input?: unknown;
+  output: {
+    sent: number;
   };
 }
 /**

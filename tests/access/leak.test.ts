@@ -41,6 +41,7 @@ const SLUGS = [
   'agreements',
   'signatures',
   'agreement-pdfs',
+  'team-members',
 ] as const
 
 /** alpha's problem report note. Only alpha and the team read it. */
@@ -71,11 +72,11 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   users:
     '{ Users(limit: 100) { docs { id email name role accountStatus lastSignInAt company { id } } } }',
   'student-profiles':
-    '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt reviewNote reviewNoteAt reviewRequestedAt changedSinceReviewAt reviewedSnapshot privacy { shareName shareSchool shareContactEmail sharePhone } user { id email } } } }',
+    '{ StudentProfiles(limit: 100) { docs { id name school programme year contactEmail phone pitch experience highlights skills interests preferredProjectTypes reviewStatus reviewedAt reviewNote reviewNoteAt reviewRequestedAt changedSinceReviewAt reviewedSnapshot privacy { shareName shareSchool shareContactEmail sharePhone } takenBy { id email } user { id email } } } }',
   companies:
-    '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt noteToCompany noteToCompanyAt infoRequestedAt reviewRequestedAt resentAt user { id email } teamOwner { id email } logo { id url } } } }',
+    '{ Companies(limit: 100) { docs { id name orgNumber contactName contactRole website sector description status approvedAt noteToCompany noteToCompanyAt infoRequestedAt reviewRequestedAt resentAt user { id email } teamOwner { id email } takenBy { id email } logo { id url } } } }',
   projects:
-    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt closeReason closeOutcome closedAt reopenedAt reopenReason status companyName company { id name } attachments { id originalName } } } }',
+    '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt closeReason closeOutcome closedAt reopenedAt reopenReason status companyName owner { id email } takenBy { id email } company { id name } attachments { id originalName } } } }',
   applications:
     '{ Applications(limit: 100) { docs { id status note profileWaiting projectTitle companyName closesOn shortlistedAt decidedAt withdrawnAt endedAt student { id name contactEmail user { id email } } project { id title } } } }',
   matches:
@@ -102,6 +103,8 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
     '{ Signatures(limit: 100) { docs { id party typedName signedAt signInMethod signer { id email name } agreement { id kind values student { id name } } } } }',
   'agreement-pdfs':
     '{ AgreementPdfs(limit: 100) { docs { id filename url variant sha256 agreement { id kind values student { id name } } } } }',
+  'team-members':
+    '{ TeamMembers(limit: 100) { docs { id awayFrom awayUntil morningEmailOn user { id email name } coveredBy { id email } } } }',
 }
 
 let world: World
@@ -257,6 +260,24 @@ beforeAll(async () => {
 })
 
 /** Run one query through the Local API. A denied collection throws, which counts as no data. */
+// Team split (Kanban card "Team split"): the team took alpha's profile from the shared pool and
+// set away days, so the owner fields and the team's own rows are populated in the sweep below.
+beforeAll(async () => {
+  await world.payload.update({
+    collection: 'student-profiles',
+    id: world.alpha.profile.id,
+    data: { takenBy: world.admin.id },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  await world.payload.create({
+    collection: 'team-members',
+    data: { user: world.admin.id, morningEmailOn: '2026-11-09' },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+})
+
 async function localAll(user: World['admin'] | undefined, slug: (typeof SLUGS)[number]) {
   try {
     const res = await world.payload.find({

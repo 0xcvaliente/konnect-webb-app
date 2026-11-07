@@ -514,6 +514,21 @@
         "button": "Open your project",
         "ignore": "If this is not your project, write to the Konnected team."
       }
+    },
+    "teamMorning": {
+      "subject": "Good morning, {name}: {count} for you today",
+      "heading": "Good morning, {name}",
+      "intro": "Here is what is yours on Konnected today.",
+      "overdue": "Overdue ({count}):",
+      "today": "Due today ({count}):",
+      "cover": "Covering for {name} ({count}):",
+      "pool": "{count} waiting in the shared pool. The oldest has waited {days} working days.",
+      "lineLate": "{kind}: {title}, {days} working days late",
+      "lineLateOne": "{kind}: {title}, 1 working day late",
+      "lineToday": "{kind}: {title}, due today",
+      "profile": "a student profile",
+      "button": "Open My work",
+      "ignore": "You get this email on working days when something of yours is due today or overdue."
     }
   },
   "DesignGuide": {
@@ -1793,7 +1808,11 @@
       "reviewedAgain": "Reviewed again after changes",
       "status": "{from} to {to}",
       "statusTo": "Now {to}",
-      "other": "Changed"
+      "other": "Changed",
+      "taken": "{name} took it from the shared pool",
+      "reassigned": "Owner changed from {from} to {to}",
+      "unassigned": "Owner removed",
+      "nobody": "nobody"
     },
     "errors": {
       "forbidden": "Your session has ended or this is not a team account. Sign in again.",
@@ -2974,7 +2993,11 @@
       "dueSet": "Due date set to {date}",
       "dueMoved": "Due date moved from {from} to {to}",
       "ended": "Match ended",
-      "other": "Changed"
+      "other": "Changed",
+      "taken": "{name} took it from the shared pool",
+      "reassigned": "Owner changed from {from} to {to}",
+      "unassigned": "Owner removed",
+      "nobody": "nobody"
     },
     "toast": {
       "dateMoved": "Due date moved. Both get an email.",
@@ -2984,5 +3007,140 @@
       "changesSent": "Sent to {company}.",
       "handled": "Report marked as handled."
     }
+  },
+  "TeamToday": {
+    "title": "Today",
+    "ledeMine": "{mine, plural, =0 {Nothing is yours right now} one {# item is yours} other {# items are yours}}, and {pool, plural, =0 {the shared pool is empty} one {# waits in the shared pool} other {# wait in the shared pool}}.",
+    "ledeCover": "You cover for {names} until {date}.",
+    "ledeAll": "{count, plural, =0 {Nothing waits for the team.} one {# item waits for the team.} other {# items wait for the team.}} Every item shows its owner.",
+    "viewLabel": "Whose work to show",
+    "views": {
+      "mine": "My work",
+      "all": "Everyone"
+    },
+    "yoursTitle": "Yours, {name}",
+    "yoursSub": "Most urgent first.",
+    "yoursEmpty": "Nothing is yours right now. Take something from the shared pool, or look at Everyone.",
+    "poolTitle": "Shared pool",
+    "poolBody": "New companies, student profiles and projects that nobody owns yet. Take one, and it moves to your list. After {days} working days untaken it turns amber.",
+    "poolEmpty": "The shared pool is empty.",
+    "take": "Take it",
+    "taking": "Taking…",
+    "taken": "Taken. It is on your list now.",
+    "poolWaited": "{count, plural, =0 {in the pool since today} one {in the pool # working day} other {in the pool # working days}}",
+    "coverTitle": "Covering for {name}",
+    "coverPill": "Away {from} to {until}",
+    "coverBody": "{name}'s items come to you until {until}. Their startups see you as the contact meanwhile.",
+    "coverEmpty": "Nothing of {name}'s is open right now.",
+    "teamLink": "Team view",
+    "numbersTitle": "Key numbers",
+    "numbers": {
+      "inProgress": "Projects in progress",
+      "waitingForStudent": "Waiting for a student",
+      "agreementsOpen": "Agreements not signed",
+      "studentsReviewed": "Students reviewed",
+      "activeCompanies": "Active companies",
+      "pool": "In the shared pool"
+    },
+    "overdueTitle": "Overdue",
+    "overdueEmpty": "Nothing is overdue.",
+    "soonTitle": "Due soon",
+    "soonEmpty": "Nothing is due today or on the next working day.",
+    "queuesTitle": "Every queue",
+    "kind": {
+      "company": "Company to approve",
+      "profile": "Student profile to review",
+      "project": "Project to review",
+      "publish": "Project to publish",
+      "decision": "Applications to decide",
+      "agreement": "Agreement to sign or fix",
+      "deliverable": "Deliverable to check",
+      "problem": "Problem reported",
+      "noMatch": "Project without a match",
+      "payment": "Payment that needs the team",
+      "workDue": "Work due"
+    },
+    "itemSub": "{kind}, {detail}",
+    "due": {
+      "late": "{count, plural, one {# day late} other {# days late}}",
+      "today": "Due today",
+      "left": "{count, plural, one {# day left} other {# days left}}"
+    },
+    "errors": {
+      "taken": "Someone took it already. The page now shows who.",
+      "notFound": "That item is gone. Refresh the page.",
+      "failed": "That did not work. Try again.",
+      "note": "Write a short note (at least 3 characters).",
+      "owner": "Pick a team member.",
+      "dates": "Check the days: the last day comes after the first, today or later, at most 90 days away.",
+      "cover": "Pick someone else on the team to cover."
+    }
+  },
+  "TeamMembers": {
+    "title": "Team",
+    "back": "Back to today",
+    "lede": "The work is split by company. Each company's owner follows its projects from approval to payment and is the contact for its startup and students. Everyone can still see and do everything.",
+    "you": "You",
+    "awayNow": "Away",
+    "awayLater": "Away from {date}",
+    "nums": {
+      "active": "Active projects",
+      "open": "Open items",
+      "soon": "Due soon",
+      "late": "Overdue"
+    },
+    "owns": "{count, plural, =0 {Owns no company yet.} one {Owns {names}.} other {Owns {names}.}}",
+    "awayText": "Away {from} to {until}, covered by {cover}.",
+    "coversText": "Covering for {names} until {until}.",
+    "awayTitle": "Away and cover",
+    "awayBody": "While someone is away, their items show on their cover's list, and the cover's morning email includes them.",
+    "member": "Team member",
+    "from": "First day away",
+    "until": "Last day away",
+    "cover": "Covered by",
+    "chooseCover": "Choose someone",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "clear": "Remove away days",
+    "cleared": "Away days removed.",
+    "currentAway": "Away days set",
+    "noAway": "Nobody has away days set.",
+    "awayRow": "{name}: {from} to {until}, covered by {cover}",
+    "ownersTitle": "Companies and owners",
+    "ownersBody": "Projects follow their company's owner. To move one project only, use its project page.",
+    "company": "Company",
+    "activeProjects": "Active projects",
+    "owner": "Owner",
+    "noOwner": "Nobody yet",
+    "ownerOf": "Owner of {company}",
+    "noteLabel": "Note for the new owner",
+    "noteHint": "Kept in the history with the change.",
+    "move": "Reassign",
+    "moving": "Reassigning…",
+    "moved": "Reassigned. The history keeps your note.",
+    "noCompanies": "No company is approved or waiting yet.",
+    "howTitle": "How work is shared",
+    "how": {
+      "pool": "New companies, student profiles and projects wait in the shared pool. Whoever takes or approves a company becomes its owner.",
+      "follow": "Problems, deliverables, agreements and payments go to the project's owner.",
+      "cover": "While you are away, your cover gets your items, on Today and in the morning email.",
+      "everyone": "Anyone can see and do everything. Owners only decide whose list an item lands on."
+    },
+    "morningTitle": "Morning email",
+    "morningBody": "On working days at 07:30, each team member gets an email with their items due today and overdue, in the language of their account."
+  },
+  "TeamOwner": {
+    "title": "Owner",
+    "none": "Nobody owns this project yet. It waits in the shared pool.",
+    "follows": "Follows the company's owner.",
+    "moved": "Moved from the company's owner, {name}.",
+    "contact": "The owner follows the project and answers the company's and the student's questions.",
+    "assign": "Assign to",
+    "noteLabel": "Note for the new owner",
+    "noteHint": "Kept in the history with the change.",
+    "move": "Reassign this project",
+    "moving": "Reassigning…",
+    "moved_toast": "Reassigned. The history keeps your note."
   }
 }

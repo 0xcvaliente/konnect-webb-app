@@ -201,8 +201,11 @@ describe('the queue is for the team only', () => {
     expect(all.find((c) => c.id === pending.id)?.owner).toMatchObject({ id: w.admin.id })
     const mine = (await listQueue(w.payload, admin, 'companies', { mine: true }))!
     expect(mine.map((c) => c.id)).toEqual([pending.id])
-    // Profiles sit in the shared pool: none is "mine".
-    expect(await listQueue(w.payload, admin, 'students', { mine: true })).toEqual([])
+    // Profiles sit in the shared pool until someone takes them (or makes the first review
+    // decision): only those are "mine".
+    const profiles = (await listQueue(w.payload, admin, 'students', { mine: true }))!
+    expect(profiles.every((p) => p.owner?.id === w.admin.id)).toBe(true)
+    expect(profiles.map((p) => p.id)).not.toContain(w.beta.profile.id)
   })
 })
 
@@ -234,7 +237,7 @@ describe('company review', () => {
     expect(approved.status).toBe('approved')
     expect(approved.approvedAt).toBeTruthy()
     const rows = await activity('companies', pending.id)
-    expect(rows.at(-1)).toMatchObject({
+    expect(rows.filter((r) => r.action === 'status_change').at(-1)).toMatchObject({
       action: 'status_change',
       fromStatus: 'pending',
       toStatus: 'approved',

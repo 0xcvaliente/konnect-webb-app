@@ -671,3 +671,65 @@ export function problemPathEmail(
     footer: all.common.accountFooter,
   })
 }
+
+// ---------- The team's morning email ----------
+
+export type MorningLine = { kind: string; title: string | null; daysLate: number }
+
+export type MorningDigest = {
+  name: string
+  overdue: MorningLine[]
+  dueToday: MorningLine[]
+  covering: { name: string; lines: MorningLine[] }[]
+  pool: { count: number; oldestDays: number }
+  href: string
+}
+
+/**
+ * A team member's morning email: their items overdue and due today (and those of anyone they
+ * cover), then the shared pool. `kind` is already in the member's language. A student profile is
+ * never named: the email says "a student profile" and the details stay behind sign-in.
+ */
+export function teamMorningEmail(locale: EmailLocale, digest: MorningDigest): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.teamMorning
+  const line = (l: MorningLine) =>
+    (l.daysLate > 1 ? m.lineLate : l.daysLate === 1 ? m.lineLateOne : m.lineToday)
+      .replace('{kind}', l.kind)
+      .replace('{title}', l.title ?? m.profile)
+      .replace('{days}', String(l.daysLate))
+  const count =
+    digest.overdue.length +
+    digest.dueToday.length +
+    digest.covering.reduce((sum, c) => sum + c.lines.length, 0)
+  const paragraphs = [m.intro]
+  if (digest.overdue.length) {
+    paragraphs.push(m.overdue.replace('{count}', String(digest.overdue.length)))
+    paragraphs.push(...digest.overdue.map((l) => `• ${line(l)}`))
+  }
+  if (digest.dueToday.length) {
+    paragraphs.push(m.today.replace('{count}', String(digest.dueToday.length)))
+    paragraphs.push(...digest.dueToday.map((l) => `• ${line(l)}`))
+  }
+  for (const c of digest.covering) {
+    if (!c.lines.length) continue
+    paragraphs.push(m.cover.replace('{name}', c.name).replace('{count}', String(c.lines.length)))
+    paragraphs.push(...c.lines.map((l) => `• ${line(l)}`))
+  }
+  if (digest.pool.count) {
+    paragraphs.push(
+      m.pool
+        .replace('{count}', String(digest.pool.count))
+        .replace('{days}', String(digest.pool.oldestDays)),
+    )
+  }
+  return render({
+    locale,
+    subject: m.subject.replace('{name}', digest.name).replace('{count}', String(count)),
+    heading: m.heading.replace('{name}', digest.name),
+    paragraphs,
+    action: { label: m.button, href: digest.href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}

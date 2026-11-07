@@ -17,6 +17,7 @@ import * as migration_20261107_001309_student_project_list from './20261107_0013
 import * as migration_20261107_013912_applications_apply_and_track from './20261107_013912_applications_apply_and_track';
 import * as migration_20261107_051645_deliverable_handoff_and_payment_log from './20261107_051645_deliverable_handoff_and_payment_log';
 import * as migration_20261107_072741_problem_reports_end_match_reopen from './20261107_072741_problem_reports_end_match_reopen';
+import * as migration_20261107_090418_team_workspace_owners_pool_cover from './20261107_090418_team_workspace_owners_pool_cover';
 
 export const migrations = [
   {
@@ -112,6 +113,11 @@ export const migrations = [
   {
     up: migration_20261107_072741_problem_reports_end_match_reopen.up,
     down: migration_20261107_072741_problem_reports_end_match_reopen.down,
-    name: '20261107_072741_problem_reports_end_match_reopen'
+    name: '20261107_072741_problem_reports_end_match_reopen',
+  },
+  {
+    up: migration_20261107_090418_team_workspace_owners_pool_cover.up,
+    down: migration_20261107_090418_team_workspace_owners_pool_cover.down,
+    name: '20261107_090418_team_workspace_owners_pool_cover'
   },
 ];

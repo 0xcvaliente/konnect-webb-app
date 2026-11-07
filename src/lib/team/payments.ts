@@ -19,9 +19,10 @@ import {
 } from '@/lib/payments/fields'
 import { dayToStored, parseDay, storedToDay, todayInOslo } from '@/lib/projects/fields'
 import type { PaymentContext } from '@/collections/Payments'
-import type { Company, Payment } from '@/payload-types'
+import type { Payment } from '@/payload-types'
 
 import { type Owner, ownersById, type SessionUser } from './approvals'
+import { myOwnerIds } from './members'
 
 /**
  * The team's payment log (Kanban card "Manual payment log in admin", mockup "Payments"): one row
@@ -95,7 +96,7 @@ async function allRows(payload: Payload, actor: SessionUser): Promise<PaymentRow
       where: { id: { in: projectIds } },
       depth: 0,
       pagination: false,
-      select: { title: true, companyName: true, company: true, status: true },
+      select: { title: true, companyName: true, company: true, status: true, owner: true },
       ...asActor(actor),
     }),
     payload.find({
@@ -115,21 +116,11 @@ async function allRows(payload: Payload, actor: SessionUser): Promise<PaymentRow
       ...asActor(actor),
     }),
   ])
-  const companyIds = [
-    ...new Set(projects.docs.map((p) => relationId(p.company as number)).filter(Boolean)),
-  ] as number[]
-  const companies = companyIds.length
-    ? await payload.find({
-        collection: 'companies',
-        where: { id: { in: companyIds } },
-        depth: 0,
-        pagination: false,
-        select: { teamOwner: true },
-        ...asActor(actor),
-      })
-    : { docs: [] as Pick<Company, 'id' | 'teamOwner'>[] }
-  const ownerOf = new Map(companies.docs.map((c) => [c.id, relationId(c.teamOwner as number)]))
-  const owners = await ownersById(payload, actor, [...ownerOf.values()])
+  const owners = await ownersById(
+    payload,
+    actor,
+    projects.docs.map((p) => relationId(p.owner as number)),
+  )
   const matchOf = new Map(matches.docs.map((m) => [m.id, m]))
   const projectOf = new Map(projects.docs.map((p) => [p.id, p]))
   const nameOf = new Map(profiles.docs.map((p) => [p.id, p.name]))
@@ -164,7 +155,7 @@ async function allRows(payload: Payload, actor: SessionUser): Promise<PaymentRow
       title: project.title,
       companyName: project.companyName ?? null,
       studentName: nameOf.get(relationId(match.student as number)!) ?? '',
-      owner: owners.get(ownerOf.get(relationId(project.company as number) ?? 0) ?? 0) ?? null,
+      owner: owners.get(relationId(project.owner as number) ?? 0) ?? null,
       amounts: rowAmounts(p.projectFee),
       invoiceNumber: p.invoiceNumber ?? null,
       ...days,
@@ -185,7 +176,9 @@ export async function listPaymentLog(
   { filter = 'action', mine = false }: { filter?: PaymentFilter; mine?: boolean } = {},
 ): Promise<PaymentLog | null> {
   if (!actor || !isAdmin(actor)) return null
-  const all = (await allRows(payload, actor)).filter((r) => !mine || r.owner?.id === actor.id)
+  // Mine: my own items and those of anyone I cover today.
+  const ids = mine ? await myOwnerIds(payload, actor) : null
+  const all = (await allRows(payload, actor)).filter((r) => !ids || ids.has(r.owner?.id ?? 0))
   const counts = Object.fromEntries(PAYMENT_STATUSES.map((s) => [s, 0])) as Record<
     PaymentStatus,
     number

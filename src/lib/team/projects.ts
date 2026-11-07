@@ -81,6 +81,10 @@ export type TeamProject = {
   closedAt: string | null
   reopenedAt: string | null
   reopenReason: ReopenReason | null
+  /** The project's owner on the team (team split by company), or null. */
+  ownerId: number | null
+  /** The company's owner, whom the project follows unless the team moved it. */
+  companyOwnerId: number | null
   activity: ActivityRow[]
 }
 
@@ -197,8 +201,28 @@ export async function loadTeamProject(
     closedAt: project.closedAt ?? null,
     reopenedAt: project.reopenedAt ?? null,
     reopenReason: (project.reopenReason as ReopenReason | null | undefined) ?? null,
+    ownerId: relationId(project.owner as number) ?? relationId(project.takenBy as number) ?? null,
+    companyOwnerId: await companyOwnerOf(payload, actor, relationId(project.company as number)),
     activity,
   }
+}
+
+/** The owner on the team of a company, read as the team member. */
+async function companyOwnerOf(
+  payload: Payload,
+  actor: SessionUser,
+  companyId: number | undefined,
+): Promise<number | null> {
+  if (!companyId) return null
+  const company = await payload.findByID({
+    collection: 'companies',
+    id: companyId,
+    depth: 0,
+    select: { teamOwner: true },
+    disableErrors: true,
+    ...asActor(actor),
+  })
+  return relationId(company?.teamOwner as number) ?? null
 }
 
 // ---------- Lists for Today ----------
@@ -212,6 +236,8 @@ export type ProblemItem = {
   kind: ProblemKind
   /** When the student reported (ISO). */
   since: string
+  /** The project's owner on the team, or null. */
+  ownerId: number | null
 }
 
 /** Open problem reports, oldest first. */
@@ -238,7 +264,7 @@ export async function listOpenProblems(
       where: { id: { in: projectIds } },
       depth: 0,
       pagination: false,
-      select: { title: true, companyName: true },
+      select: { title: true, companyName: true, owner: true },
       ...asActor(actor),
     }),
     payload.find({
@@ -264,6 +290,7 @@ export async function listOpenProblems(
         studentName: nameOf.get(relationId(r.student as number) ?? 0) ?? '',
         kind: r.kind as ProblemKind,
         since: r.createdAt,
+        ownerId: relationId(project.owner as number) ?? null,
       },
     ]
   })
@@ -277,6 +304,8 @@ export type NoMatchItem = {
   closedOn: string
   /** Applications still waiting for a decision. */
   open: number
+  /** The project's owner on the team, or null. */
+  ownerId: number | null
 }
 
 /** Published projects whose applications closed without a student, closed longest ago first. */
@@ -294,7 +323,7 @@ export async function listProjectsWithoutMatch(
     depth: 0,
     pagination: false,
     sort: 'deadline',
-    select: { title: true, companyName: true, deadline: true },
+    select: { title: true, companyName: true, deadline: true, owner: true },
     ...asActor(actor),
   })
   const late = projects.docs.filter((p) => {
@@ -337,6 +366,7 @@ export async function listProjectsWithoutMatch(
       companyName: p.companyName ?? '',
       closedOn: day(p.deadline)!,
       open: openOf.get(p.id) ?? 0,
+      ownerId: relationId(p.owner as number) ?? null,
     }))
 }
 

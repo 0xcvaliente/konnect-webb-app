@@ -20,7 +20,13 @@ import {
   relationId,
 } from '@/access/roles'
 import { draftingCompanyId } from '@/access/companies'
-import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
+import {
+  logActivityAfterChange,
+  logActivityAfterDelete,
+  logReassignments,
+  writeActivity,
+} from '@/hooks/logActivity'
+import { isAdminEmail } from '@/access/adminEmails'
 import { sendMatchEndedEmails, sendNoMatchEmail } from '@/lib/email/problemEmails'
 import { sendProjectReviewEmail, sendProjectSubmittedEmail } from '@/lib/email/projectEmails'
 import {
@@ -310,6 +316,40 @@ export const Projects: CollectionConfig = {
           data.noteToCompanyAt = data.noteToCompany ? new Date().toISOString() : null
         }
 
+        // The project's owner on the team (team split by company): a new project starts with its
+        // company's owner, and so does a project without one when it reaches Konnected. The team
+        // may move one project to someone else; a team decision on a project nobody owns makes
+        // the deciding team member its owner. Field access keeps both fields admin-only to write.
+        const admin = isAdmin(req.user)
+        const owner = relationId(data.owner === undefined ? originalDoc?.owner : data.owner)
+        if (!owner && (operation === 'create' || sending)) {
+          data.owner = relationId(company.teamOwner) ?? relationId(data.takenBy) ?? null
+        }
+        const decided =
+          operation === 'update' &&
+          from !== to &&
+          ['approved', 'changes_requested', 'rejected', 'published'].includes(to)
+        if (admin && decided && !relationId(data.owner ?? originalDoc?.owner)) {
+          data.owner = req.user!.id
+        }
+        // Bypass: the server reads the chosen users' role and address to check they are on the
+        // team. Only admins can write these fields.
+        for (const key of ['owner', 'takenBy'] as const) {
+          const id = relationId(data[key])
+          if (!id || id === relationId(originalDoc?.[key])) continue
+          const member = await req.payload.findByID({
+            collection: 'users',
+            id,
+            depth: 0,
+            overrideAccess: true,
+            disableErrors: true,
+            req,
+          })
+          if (!member || member.role !== 'admin' || !isAdminEmail(member.email)) {
+            throw new APIError(`Project: the ${key} must be on the team`, 400)
+          }
+        }
+
         // Students never read the company record. They see these copies of the name and logo.
         data.companyName = company.name
         data.companyLogo = relationId(company.logo) ?? null
@@ -317,6 +357,7 @@ export const Projects: CollectionConfig = {
       },
     ],
     afterChange: [
+      logReassignments(['owner', 'takenBy']),
       logActivityAfterChange({ statusField: 'status' }),
       async ({ doc, previousDoc, operation, req, context }) => {
         // Konnected's price and paid or unpaid decisions go to the activity log too. A company
@@ -593,6 +634,34 @@ export const Projects: CollectionConfig = {
     // columns (add first, remove later).
     { name: 'workload', type: 'text', ...retired },
     { name: 'duration', type: 'text', ...retired },
+    {
+      // The project's owner on the Konnected team: copied from the company's owner when the
+      // project is made (or reaches Konnected), and changeable per project by the team. It
+      // decides whose list the project's work lands on; it never limits what a team member may
+      // do. Team only: companies and students never read it.
+      name: 'owner',
+      label: 'Konnected owner',
+      type: 'relationship',
+      relationTo: 'users',
+      index: true,
+      // No `filterOptions`: Payload would check it on every save with the acting user's read
+      // access, and a company cannot read team users. The hook above checks the role instead.
+      access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { position: 'sidebar' },
+    },
+    {
+      // Who on the team took the project from the shared pool (a project of a company nobody
+      // owns yet). Team only.
+      name: 'takenBy',
+      label: 'Taken from the pool by',
+      type: 'relationship',
+      relationTo: 'users',
+      index: true,
+      // No `filterOptions`: Payload would check it on every save with the acting user's read
+      // access, and a company cannot read team users. The hook above checks the role instead.
+      access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { position: 'sidebar' },
+    },
     {
       name: 'status',
       type: 'select',

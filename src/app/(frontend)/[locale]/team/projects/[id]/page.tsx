@@ -19,6 +19,9 @@ import { todayInOslo } from '@/lib/projects/fields'
 import { activityOf, type ActivityRow } from '@/lib/team/approvals'
 import { teamCounts } from '@/lib/team/counts'
 import { loadTeamProject } from '@/lib/team/projects'
+import { listTeam } from '@/lib/team/members'
+import { OwnerChip } from '@/app/(frontend)/[locale]/team/approvals/QueueParts'
+import { ReassignForm } from '@/components/app/team/TeamForms'
 import { requireTeam } from '@/lib/team/session'
 
 import { ProblemPaths } from './ProblemPaths'
@@ -42,6 +45,7 @@ export default async function TeamProjectPage({
   setRequestLocale(locale)
   const { payload, user } = await requireTeam(locale)
   const t = await getTranslations('TeamProject')
+  const to = await getTranslations('TeamOwner')
   const ts = await getTranslations('ProjectStatus')
   const tRole = await getTranslations('Roles')
   const format = await getFormatter()
@@ -78,6 +82,11 @@ export default async function TeamProjectPage({
   const at = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'medium', timeZone: 'Europe/Oslo' })
   const today = todayInOslo()
+  const team = (await listTeam(payload, user)) ?? []
+  const ownerOf = (id: number | null) => {
+    const member = id ? team.find((m) => m.id === id) : undefined
+    return member ? { id: member.id, name: member.name } : null
+  }
   const match = project.match
   const report = project.openReport
   const running =
@@ -113,6 +122,12 @@ export default async function TeamProjectPage({
     if (r.action === 'status_change')
       return t('activity.status', { from: pill(r.fromStatus), to: pill(r.toStatus) })
     if (r.field === 'deadline') return t('activity.deadline', { date: day(r.toStatus ?? null) })
+    if (r.action === 'reassign') {
+      if (r.field === 'takenBy') return t('activity.taken', { name: r.toName ?? '?' })
+      return r.toName
+        ? t('activity.reassigned', { from: r.fromName ?? t('activity.nobody'), to: r.toName })
+        : t('activity.unassigned')
+    }
     return t('activity.other')
   }
 
@@ -253,6 +268,36 @@ export default async function TeamProjectPage({
         </div>
 
         <aside className="grid min-w-0 gap-6">
+          <Card className="gap-3">
+            <CardTitle>{to('title')}</CardTitle>
+            <div>
+              <OwnerChip owner={ownerOf(project.ownerId)} />
+            </div>
+            <p className="text-[0.88rem] text-muted-foreground">
+              {!project.ownerId
+                ? to('none')
+                : project.ownerId === project.companyOwnerId
+                  ? to('follows')
+                  : project.companyOwnerId
+                    ? to('moved', { name: ownerOf(project.companyOwnerId)?.name ?? '' })
+                    : to('contact')}
+            </p>
+            <ReassignForm
+              collection="projects"
+              id={project.id}
+              ownerId={project.ownerId}
+              members={team.map((m) => ({ id: m.id, name: m.name }))}
+              labels={{
+                owner: to('assign'),
+                note: to('noteLabel'),
+                noteHint: to('noteHint'),
+                submit: to('move'),
+                pending: to('moving'),
+                done: to('moved_toast'),
+                choose: to('assign'),
+              }}
+            />
+          </Card>
           <Card className="gap-4">
             <CardTitle>{t('factsTitle')}</CardTitle>
             <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-[18px] gap-y-2.5">

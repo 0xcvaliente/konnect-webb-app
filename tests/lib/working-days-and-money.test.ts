@@ -97,6 +97,59 @@ describe('counting working days', () => {
   })
 })
 
+describe('working days for the team workspace (Today, the pool, the morning email)', () => {
+  it('knows the moving holidays of other years', () => {
+    const y2027 = norwegianHolidays(2027)
+    for (const day of [
+      '2027-03-25',
+      '2027-03-26',
+      '2027-03-29',
+      '2027-05-06',
+      '2027-05-17',
+      '2027-05-17',
+    ])
+      expect(y2027.has(day), day).toBe(true)
+    // Whit Monday 2027 is 17 May as well: one holiday, counted once.
+    expect(y2027.has('2027-05-17')).toBe(true)
+    expect(norwegianHolidays(2025).has('2025-04-21')).toBe(true) // Easter Monday 2025
+    expect(norwegianHolidays(2025).has('2025-05-29')).toBe(true) // Ascension Day 2025
+  })
+
+  it('a 2 working day promise made before Easter is due after it', () => {
+    // Made on Wednesday 24 March 2027: Thursday, Friday and Monday are holidays.
+    const start = new Date('2027-03-24T09:00:00Z')
+    expect(promiseState(start, 2, new Date('2027-03-24T12:00:00Z')).dueDay).toBe('2027-03-31')
+    expect(promiseState(start, 2, new Date('2027-03-30T12:00:00Z'))).toMatchObject({
+      left: 1,
+      tone: 'soon',
+    })
+    // Easter itself counts no days: still due on the 31st when looked at on Easter Monday.
+    expect(promiseState(start, 2, new Date('2027-03-29T12:00:00Z')).left).toBe(2)
+  })
+
+  it('a 3 working day decision after a close on 13 May 2026 skips Ascension Day', () => {
+    // Thursday 14 May is Ascension Day, 17 May is a Sunday that year.
+    expect(addWorkingDays('2026-05-13', 3)).toBe('2026-05-19')
+    expect(workingDaysBetween('2026-05-13', '2026-05-19')).toBe(3)
+  })
+
+  it('17 May on a weekday is not a working day; the day after counts', () => {
+    expect(isWorkingDay('2028-05-17')).toBe(false) // Wednesday
+    expect(addWorkingDays('2028-05-16', 1)).toBe('2028-05-18')
+  })
+
+  it('Christmas and New Year are skipped', () => {
+    expect(addWorkingDays('2026-12-24', 1)).toBe('2026-12-28') // Thu -> Mon (25, 26 and weekend)
+    expect(addWorkingDays('2026-12-31', 1)).toBe('2027-01-04') // Thu -> Mon (1 Jan, weekend)
+  })
+
+  it('counts the day in Oslo across the change to summer time', () => {
+    // 29 March 2026: clocks go forward. 22:30 UTC on the 29th is already the 30th in Oslo.
+    expect(osloDay(new Date('2026-03-29T22:30:00Z'))).toBe('2026-03-30')
+    expect(osloDay(new Date('2026-03-28T22:30:00Z'))).toBe('2026-03-28')
+  })
+})
+
 describe('price and VAT', () => {
   it('adds 25 % VAT to a price in whole kroner', () => {
     expect(priceBreakdown(6500)).toEqual({ price: 6500, vat: 1625, total: 8125 })

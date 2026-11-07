@@ -12,9 +12,10 @@ import {
 } from '@/lib/deliverables/fields'
 import { type HandIn, toHandIn } from '@/lib/deliverables/student'
 import { ACTIVE_MATCH } from '@/lib/problems/rules'
-import type { Company, Deliverable, Match, Project, StudentProfile } from '@/payload-types'
+import type { Deliverable, Match, Project, StudentProfile } from '@/payload-types'
 
 import { type ActivityRow, activityOf, type Owner, ownersById, type SessionUser } from './approvals'
+import { myOwnerIds } from './members'
 
 /**
  * The team's Deliverables screen (Kanban card "Deliverable submission and handoff", mockup
@@ -179,8 +180,10 @@ export async function listDeliverableQueue(
       }
     }
   }
+  // Mine: my own items and those of anyone I cover today.
+  const ids = mine ? await myOwnerIds(payload, actor) : null
   return items
-    .filter((item) => !mine || item.owner?.id === actor.id)
+    .filter((item) => !ids || ids.has(item.owner?.id ?? 0))
     .sort(
       (a, b) =>
         SECTION_ORDER[a.section] - SECTION_ORDER[b.section] ||
@@ -230,7 +233,7 @@ async function matchFacts(
       where: { id: { in: projectIds } },
       depth: 0,
       pagination: false,
-      select: { title: true, companyName: true, company: true, status: true },
+      select: { title: true, companyName: true, company: true, status: true, owner: true },
       ...asActor(actor),
     }),
     payload.find({
@@ -242,21 +245,11 @@ async function matchFacts(
       ...asActor(actor),
     }),
   ])
-  const companyIds = [
-    ...new Set(projects.docs.map((p) => relationId(p.company as number)).filter(Boolean)),
-  ] as number[]
-  const companies = companyIds.length
-    ? await payload.find({
-        collection: 'companies',
-        where: { id: { in: companyIds } },
-        depth: 0,
-        pagination: false,
-        select: { teamOwner: true },
-        ...asActor(actor),
-      })
-    : { docs: [] as Pick<Company, 'id' | 'teamOwner'>[] }
-  const ownerOf = new Map(companies.docs.map((c) => [c.id, relationId(c.teamOwner as number)]))
-  const owners = await ownersById(payload, actor, [...ownerOf.values()])
+  const owners = await ownersById(
+    payload,
+    actor,
+    projects.docs.map((p) => relationId(p.owner as number)),
+  )
   const projectOf = new Map(projects.docs.map((p) => [p.id, p]))
   const nameOf = new Map(profiles.docs.map((p) => [p.id, p.name]))
 
@@ -270,7 +263,7 @@ async function matchFacts(
       title: project.title,
       companyName: project.companyName ?? null,
       studentName: nameOf.get(relationId(m.student as number)!) ?? '',
-      owner: owners.get(ownerOf.get(relationId(project.company as number) ?? 0) ?? 0) ?? null,
+      owner: owners.get(relationId(project.owner as number) ?? 0) ?? null,
     })
   }
   return out
@@ -340,8 +333,7 @@ export async function loadTeamDeliverable(
     }),
     activityOf(payload, actor, 'deliverables', id),
   ])
-  const company = typeof project.company === 'object' ? (project.company as Company) : null
-  const owners = await ownersById(payload, actor, [relationId(company?.teamOwner as number)])
+  const owners = await ownersById(payload, actor, [relationId(project.owner as number)])
   const history = all.docs.map((d) => toHandIn(d as Deliverable))
   return {
     handIn: toHandIn(doc),
@@ -355,7 +347,7 @@ export async function loadTeamDeliverable(
       companyName: project.companyName ?? null,
     },
     studentName: profile?.name ?? '',
-    owner: owners.get(relationId(company?.teamOwner as number) ?? 0) ?? null,
+    owner: owners.get(relationId(project.owner as number) ?? 0) ?? null,
     history,
     state: deliveryState(
       history.map((h) => ({
