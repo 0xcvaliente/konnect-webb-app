@@ -338,6 +338,17 @@
       "next": "Oppdater profilen og lagre den. Den går tilbake til Konnected for gjennomgang. Du kan fortsatt se på prosjekter og søke i mellomtiden.",
       "button": "Oppdater profilen",
       "ignore": "Hvis du ikke har en Konnected-profil, skriv til Konnected-teamet."
+    },
+    "applicationReceived": {
+      "subject": "Konnected har mottatt søknaden din",
+      "heading": "Søknaden din er hos Konnected",
+      "body": "Du har søkt på «{title}». Konnected leser alle søknadene og velger én student for hånd.",
+      "decideBy": "Konnected bestemmer seg innen {date}, 3 arbeidsdager etter søknadsfristen. Du får en e-post uansett utfall.",
+      "decideNoDate": "Konnected bestemmer seg innen 3 arbeidsdager etter søknadsfristen. Du får en e-post uansett utfall.",
+      "profileWaiting": "Konnected går fortsatt gjennom profilen din. Den blir gjennomgått før Konnected bestemmer seg.",
+      "next": "Du kan følge søknaden, og trekke den, under Mine søknader. Hvis du trekker søknaden, kan du ikke søke på dette prosjektet igjen.",
+      "button": "Se søknaden din",
+      "ignore": "Hvis du ikke har søkt, skriv til Konnected-teamet."
     }
   },
   "DesignGuide": {
@@ -1746,7 +1757,9 @@
           "text": "Skriv noen setninger om hva du er god til."
         }
       }
-    }
+    },
+    "appliedTag": "{count, plural, one {Har søkt på # prosjekt} other {Har søkt på # prosjekter}}",
+    "applicationsValue": "{count, plural, =0 {Ingen} other {#}}{waiting, plural, =0 {} other { (# sendt før profilen ble gjennomgått)}}"
   },
   "StudentProjects": {
     "title": "Prosjekter",
@@ -1814,6 +1827,7 @@
       "start": "Tidligste start",
       "where": "Hvor",
       "applyBy": "Søk innen",
+      "decideBy": "Avgjørelse innen",
       "payment": "Betaling",
       "paidNote": "Før skatt. Konnected betaler deg i den månedlige lønnskjøringen etter at bedriften har betalt.",
       "paidNoAmount": "Konnected forteller deg beløpet før arbeidet starter.",
@@ -1822,7 +1836,6 @@
       "notSet": "Ikke satt",
       "limit": "Du kan jobbe med opptil 2 prosjekter samtidig.",
       "apply": "Søk på dette prosjektet",
-      "applyComing": "Kommer snart: søknad åpner i neste oppdatering.",
       "closedTitle": "Søknadsfristen er ute",
       "closedBody": "Konnected bestemmer seg, eller har allerede valgt en student.",
       "otherProjects": "Se andre prosjekter",
@@ -1831,5 +1844,166 @@
       "notOpenBody": "Lenken kan være gammel, eller prosjektet er ikke lenger åpent. Profilen din og de andre prosjektene er fortsatt her.",
       "seeProjects": "Se prosjekter"
     }
+  },
+  "ApplicationStatus": {
+    "applied": "Søkt",
+    "shortlisted": "På kortlisten",
+    "selected": "Valgt",
+    "not_selected": "Ikke valgt",
+    "withdrawn": "Trukket"
+  },
+  "Apply": {
+    "noteLabel": "Hvorfor passer du godt?",
+    "noteHint": "Noen setninger. Bare Konnected leser dette, når søknadene vurderes.",
+    "noteCount": "{count} av {max} tegn",
+    "submit": "Søk på dette prosjektet",
+    "sending": "Sender…",
+    "sentToast": "Søknaden er sendt.",
+    "waitingTitle": "Konnected går fortsatt gjennom profilen din",
+    "waitingBody": "Du kan søke nå. Konnected går gjennom profilen din før det bestemmer seg.",
+    "decideBy": "Konnected bestemmer seg innen {date}, 3 arbeidsdager etter søknadsfristen.",
+    "decideNoDate": "Konnected bestemmer seg innen 3 arbeidsdager etter søknadsfristen.",
+    "appliedTitle": "Søknaden er sendt",
+    "appliedBody": "Konnected vurderer søknadene og velger en student for hånd. Følg den under Mine søknader.",
+    "seeApplication": "Se søknaden din",
+    "withdrawnTitle": "Du har trukket søknaden din",
+    "withdrawnBody": "Du kan ikke søke på dette prosjektet igjen.",
+    "tooManyTitle": "Du jobber allerede med 2 prosjekter",
+    "tooManyBody": "Det er det meste samtidig. Du kan søke igjen når ett av dem er ferdig.",
+    "changesTitle": "Konnected har bedt deg endre profilen din",
+    "changesBody": "Gjør endringene først. Så kan du søke.",
+    "changesAction": "Åpne profilen din",
+    "errors": {
+      "forbidden": "Bare en innlogget student kan søke. Logg inn på nytt.",
+      "no_profile": "Lag profilen din før du søker.",
+      "not_open": "Dette prosjektet er ikke åpent for søknader.",
+      "closed": "Søknadsfristen for dette prosjektet er ute.",
+      "already_applied": "Du har allerede søkt på dette prosjektet.",
+      "withdrawn_before": "Du har trukket søknaden din på dette prosjektet, så du kan ikke søke igjen.",
+      "too_many": "Du jobber allerede med 2 prosjekter, det meste samtidig.",
+      "changes_requested": "Gjør endringene Konnected ba om i profilen din først.",
+      "note_required": "Skriv noen ord om hvorfor du passer til dette prosjektet.",
+      "note_too_long": "Teksten er for lang. Hold den under {max} tegn.",
+      "generic": "Noe gikk galt. Ingenting ble sendt. Prøv igjen om et minutt."
+    }
+  },
+  "Applications": {
+    "title": "Mine søknader",
+    "lede": "Alle prosjektene du har søkt på, med hva som skjer videre og når Konnected bestemmer seg. Åpne en søknad for å se hele forløpet.",
+    "sortLabel": "Vis først",
+    "sort": {
+      "need": "Åpne søknader",
+      "recent": "Nyeste",
+      "company": "Bedrift"
+    },
+    "sortNote": "{count, plural, one {# søknad} other {# søknader}}, {order}",
+    "sortOrder": {
+      "need": "åpne først",
+      "recent": "nyeste først",
+      "company": "etter bedrift, A til Å"
+    },
+    "columns": {
+      "project": "Prosjekt",
+      "dates": "Datoer",
+      "status": "Status"
+    },
+    "listLabel": "Søknadene dine",
+    "applied": "Søkt {date}",
+    "decideBy": "Konnected bestemmer seg innen {date}",
+    "decideSoon": "Konnected bestemmer seg innen 3 arbeidsdager etter søknadsfristen",
+    "shortlisted": "På kortlisten {date}",
+    "decided": "Bestemt {date}",
+    "withdrawn": "Trukket {date}",
+    "emptyTitle": "Du har ikke søkt ennå",
+    "emptyBody": "Søknadene du sender, vises her, med hva som skjer videre og når Konnected bestemmer seg.",
+    "emptyAction": "Se prosjekter"
+  },
+  "Application": {
+    "back": "Tilbake til mine søknader",
+    "decideTitle": "Konnected bestemmer seg innen {date}",
+    "decideNoDateTitle": "Konnected bestemmer seg innen 3 arbeidsdager etter søknadsfristen",
+    "decideBody": "Du får en e-post uansett utfall. Hvis det tar lenger tid, sender Konnected deg en ny dato.",
+    "progress": "Forløp",
+    "stepOf": "Steg {n} av {total}",
+    "finished": "Ferdig",
+    "stepDone": "ferdig",
+    "stepCurrent": "nå",
+    "now": "Nå",
+    "closes": "Søknadsfrist {date}",
+    "by": "Innen {date}",
+    "step": {
+      "applied": {
+        "title": "Søkt",
+        "body": "Du søkte med en kort tekst."
+      },
+      "assess": {
+        "title": "Konnected vurderer søknadene",
+        "body": "Konnected leser alle søknadene og velger én student for hånd."
+      },
+      "shortlisted": {
+        "title": "På kortlisten",
+        "body": "Du er på kortlisten. Konnected kan sende deg et spørsmål på e-post."
+      },
+      "decide": {
+        "title": "Konnected bestemmer seg",
+        "body": "Konnected velger én student for hånd."
+      },
+      "result": {
+        "title": "Valgt eller ikke valgt",
+        "body": "Du får en e-post uansett utfall."
+      },
+      "work": {
+        "title": "Arbeid og leveranse",
+        "body": "Du laster opp arbeidet ditt her, og Konnected sjekker det."
+      },
+      "selected": {
+        "title": "Valgt av Konnected",
+        "body": "Konnected deler det du har sagt ja til å dele, med {company}."
+      },
+      "notSelected": {
+        "title": "Ikke valgt",
+        "body": "Konnected valgte en annen student denne gangen. Profilen din er fortsatt aktiv for nye prosjekter."
+      },
+      "withdrawn": {
+        "title": "Trukket",
+        "body": "Du trakk denne søknaden."
+      }
+    },
+    "noteTitle": "Teksten din",
+    "noteHint": "Bare Konnected leser den.",
+    "projectTitle": "Prosjekt",
+    "company": "Bedrift",
+    "workload": "Arbeidsmengde",
+    "timeframe": "Tidsramme",
+    "applyBy": "Søk innen",
+    "payment": "Betaling",
+    "paid": "Betalt",
+    "unpaid": "Ubetalt",
+    "deliverable": "Forventet leveranse",
+    "seeProject": "Se prosjektsiden",
+    "notListed": "Konnected har matchet eller avsluttet dette prosjektet, så siden er ikke lenger oppført.",
+    "seesTitle": "Dette ser {company}",
+    "seesOpen": "Ingenting ennå. {company} ser opplysningene dine bare hvis Konnected velger deg, og bare det du har sagt ja til å dele.",
+    "seesSelected": "Bare det du har sagt ja til å dele, sendt av Konnected etter at du ble valgt.",
+    "seesSelectedAction": "Sjekk hva du deler",
+    "seesNone": "Ingenting. Opplysningene dine ble ikke delt med {company}.",
+    "withdrawTitle": "Ombestemt deg?",
+    "withdrawBody": "Du kan trekke søknaden mens Konnected fortsatt vurderer.",
+    "withdraw": "Trekk søknaden",
+    "confirmTitle": "Trekke denne søknaden?",
+    "confirmBody": "Konnected slutter å vurdere den. Du kan ikke søke på dette prosjektet igjen.",
+    "confirmYes": "Ja, trekk den",
+    "keep": "Behold den",
+    "withdrawing": "Trekker…",
+    "withdrawnToast": "Søknaden er trukket.",
+    "errors": {
+      "forbidden": "Bare studenten som søkte, kan trekke søknaden. Logg inn på nytt.",
+      "not_found": "Denne søknaden finnes ikke lenger.",
+      "not_withdrawable": "Konnected har allerede bestemt seg, så søknaden kan ikke trekkes lenger.",
+      "generic": "Noe gikk galt. Ingenting ble endret. Prøv igjen om et minutt."
+    },
+    "notFoundTitle": "Fant ikke søknaden",
+    "notFoundBody": "Lenken kan være gammel. Søknadene dine står under Mine søknader.",
+    "seeAll": "Se mine søknader"
   }
 }

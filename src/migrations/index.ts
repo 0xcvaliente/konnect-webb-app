@@ -14,6 +14,7 @@ import * as migration_20261106_220725_agreements from './20261106_220725_agreeme
 import * as migration_20261106_224507_approval_queue_reviews from './20261106_224507_approval_queue_reviews';
 import * as migration_20261106_230959_agreements_status_rules from './20261106_230959_agreements_status_rules';
 import * as migration_20261107_001309_student_project_list from './20261107_001309_student_project_list';
+import * as migration_20261107_013912_applications_apply_and_track from './20261107_013912_applications_apply_and_track';
 
 export const migrations = [
   {
@@ -94,6 +95,11 @@ export const migrations = [
   {
     up: migration_20261107_001309_student_project_list.up,
     down: migration_20261107_001309_student_project_list.down,
-    name: '20261107_001309_student_project_list'
+    name: '20261107_001309_student_project_list',
+  },
+  {
+    up: migration_20261107_013912_applications_apply_and_track.up,
+    down: migration_20261107_013912_applications_apply_and_track.down,
+    name: '20261107_013912_applications_apply_and_track'
   },
 ];

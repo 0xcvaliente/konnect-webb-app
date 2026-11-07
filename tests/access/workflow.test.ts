@@ -445,7 +445,7 @@ describe('applications', () => {
   const apply = (user: User, project: number, extra: Record<string, unknown> = {}) =>
     w.payload.create({
       collection: 'applications',
-      data: { project, ...extra } as never,
+      data: { project, note: 'Why I fit', ...extra } as never,
       ...as(user),
     })
 
@@ -600,7 +600,7 @@ describe('matches', () => {
   it('rejects an application that belongs to another student', async () => {
     const other = await w.payload.create({
       collection: 'applications',
-      data: { project: w.projectOpen.id } as never,
+      data: { project: w.projectOpen.id, note: 'Why I fit' } as never,
       ...as(w.beta.user),
     })
     await expect(

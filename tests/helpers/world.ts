@@ -47,6 +47,7 @@ export const SENTINEL = {
     highlights: 'Sentinel-Highlights-Alpha',
     skill: 'Sentinel-Skill-Alpha',
     cvName: 'Sentinel-CV-Alpha.pdf',
+    applicationNote: 'Sentinel-Application-Note-Alpha',
   },
   beta: {
     name: 'Sentinel-Name-Beta',
@@ -62,6 +63,7 @@ export const SENTINEL = {
     highlights: 'Sentinel-Highlights-Beta',
     skill: 'Sentinel-Skill-Beta',
     cvName: 'Sentinel-CV-Beta.pdf',
+    applicationNote: 'Sentinel-Application-Note-Beta',
   },
 }
 
@@ -276,7 +278,7 @@ export async function createWorld() {
   // alpha applies to project A as themselves, Konnected shortlists then selects.
   const application = await payload.create({
     collection: 'applications',
-    data: { project: projectA.id } as never,
+    data: { project: projectA.id, note: SENTINEL.alpha.applicationNote } as never,
     user: asUser(alpha.user),
     overrideAccess: false,
   })

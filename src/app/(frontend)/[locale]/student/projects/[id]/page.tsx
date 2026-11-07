@@ -1,9 +1,16 @@
-import { CalendarClockIcon, FolderSearchIcon } from 'lucide-react'
+import {
+  CalendarClockIcon,
+  CircleCheckIcon,
+  FolderSearchIcon,
+  HourglassIcon,
+  UserRoundPenIcon,
+} from 'lucide-react'
 import { hasLocale, useTranslations } from 'next-intl'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
+import { ApplyForm } from '@/components/app/applications/ApplyForm'
 import { Banner } from '@/components/app/Banner'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { SiteShell } from '@/components/app/SiteShell'
@@ -12,6 +19,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
+import { APPLICATION_STATUS_TONE, decisionDay } from '@/lib/applications/fields'
+import { applyBoxFor, type ApplyBox as ApplyBoxState } from '@/lib/applications/student'
 import { findProjectForStudent, type ProjectPage } from '@/lib/projects/browse'
 import { requireStudent } from '@/lib/students/session'
 
@@ -20,7 +29,8 @@ import { useDay, useKroner, useWhere } from '../ProjectCard'
 // A published project for students ("Final pass" mockup, Project and apply): the full brief,
 // the company's name and logo, the facts, and the apply box. Never the brief's attachments: only
 // the student Konnected selects gets those. Read as the student with access control on: a
-// project that is not published is "not open". Applying is wired by the next card.
+// project that is not published is "not open". The apply box shows what the student may do: apply
+// with a note, or why not (already applied, withdrawn, 2 running projects, profile changes asked).
 export const dynamic = 'force-dynamic'
 
 /** The project's facts in the side card. A plain component, so it can use the formatters. */
@@ -67,6 +77,10 @@ function Facts({ project }: { project: ProjectPage }) {
     [t('start'), day(project.startDate, 'long') ?? notSet],
     [t('where'), where ?? notSet],
     [t('applyBy'), day(project.deadline, 'long') ?? notSet],
+    // Konnected's promise: a decision within 3 working days after applications close.
+    ...(project.deadline
+      ? ([[t('decideBy'), day(decisionDay(project.deadline), 'long')]] as [string, ReactNode][])
+      : []),
     [t('payment'), payment],
   ]
   return (
@@ -78,6 +92,105 @@ function Facts({ project }: { project: ProjectPage }) {
         </div>
       ))}
     </dl>
+  )
+}
+
+/** The apply box under the facts. Every rule here is checked again on the server when applying. */
+function ApplyBox({ project, box }: { project: ProjectPage; box: ApplyBoxState | null }) {
+  const t = useTranslations('StudentProjects.detail')
+  const ta = useTranslations('Apply')
+  const ts = useTranslations('ApplicationStatus')
+
+  if (box?.kind === 'applied') {
+    return (
+      <div className="grid gap-3">
+        <Banner tone="ok" icon={CircleCheckIcon}>
+          <div className="grid gap-1">
+            <p className="flex flex-wrap items-center gap-2 font-semibold">
+              {ta('appliedTitle')}
+              <Badge tone={APPLICATION_STATUS_TONE[box.status]}>{ts(box.status)}</Badge>
+            </p>
+            <p className="text-[0.88rem] text-muted-foreground">{ta('appliedBody')}</p>
+          </div>
+        </Banner>
+        <Button asChild variant="secondary" className="w-full">
+          <Link href={`/student/applications/${box.applicationId}`}>{ta('seeApplication')}</Link>
+        </Button>
+      </div>
+    )
+  }
+  if (box?.kind === 'withdrawn') {
+    return (
+      <div className="grid gap-3">
+        <Banner>
+          <div className="grid gap-0.5">
+            <p className="font-semibold">{ta('withdrawnTitle')}</p>
+            <p className="text-[0.88rem] text-muted-foreground">{ta('withdrawnBody')}</p>
+          </div>
+        </Banner>
+        <Button asChild variant="secondary" className="w-full">
+          <Link href={`/student/applications/${box.applicationId}`}>{ta('seeApplication')}</Link>
+        </Button>
+      </div>
+    )
+  }
+  if (!project.open) {
+    return (
+      <div className="grid gap-3">
+        <Banner icon={CalendarClockIcon}>
+          <div className="grid gap-0.5">
+            <p className="font-semibold">{t('closedTitle')}</p>
+            <p className="text-[0.88rem] text-muted-foreground">{t('closedBody')}</p>
+          </div>
+        </Banner>
+        <Button asChild variant="secondary" className="w-full">
+          <Link href="/student/projects">{t('otherProjects')}</Link>
+        </Button>
+      </div>
+    )
+  }
+  if (box?.kind === 'too_many') {
+    return (
+      <Banner tone="warn">
+        <div className="grid gap-0.5">
+          <p className="font-semibold">{ta('tooManyTitle')}</p>
+          <p className="text-[0.88rem] text-muted-foreground">{ta('tooManyBody')}</p>
+        </div>
+      </Banner>
+    )
+  }
+  if (box?.kind === 'changes_requested') {
+    return (
+      <div className="grid gap-3">
+        <Banner tone="warn" icon={UserRoundPenIcon}>
+          <div className="grid gap-0.5">
+            <p className="font-semibold">{ta('changesTitle')}</p>
+            <p className="text-[0.88rem] text-muted-foreground">{ta('changesBody')}</p>
+          </div>
+        </Banner>
+        <Button asChild variant="normal" className="w-full">
+          <Link href="/student/profile">{ta('changesAction')}</Link>
+        </Button>
+      </div>
+    )
+  }
+  if (box?.kind !== 'open') return null
+  return (
+    <div className="grid gap-3">
+      <p className="text-[0.88rem] text-muted-foreground">{t('limit')}</p>
+      {box.profileWaiting && (
+        <Banner icon={HourglassIcon}>
+          <div className="grid gap-0.5">
+            <p className="font-semibold">{ta('waitingTitle')}</p>
+            <p className="text-[0.88rem] text-muted-foreground">{ta('waitingBody')}</p>
+          </div>
+        </Banner>
+      )}
+      <ApplyForm projectId={project.id} />
+      {!box.decideBy && (
+        <p className="text-[0.85rem] text-muted-foreground">{ta('decideNoDate')}</p>
+      )}
+    </div>
   )
 }
 
@@ -121,6 +234,8 @@ export default async function StudentProjectPage({
       </SiteShell>
     )
   }
+
+  const box = await applyBoxFor(payload, user, project.id, project.deadline)
 
   const tasks = (project.tasks ?? '')
     .split('\n')
@@ -192,29 +307,7 @@ export default async function StudentProjectPage({
           <Card className="gap-5">
             <Facts project={project} />
 
-            {project.open ? (
-              <div className="grid gap-3">
-                <p className="text-[0.88rem] text-muted-foreground">{t('limit')}</p>
-                <Button type="button" disabled className="w-full" aria-describedby="apply-coming">
-                  {t('apply')}
-                </Button>
-                <p id="apply-coming" className="text-[0.85rem] text-muted-foreground">
-                  {t('applyComing')}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                <Banner icon={CalendarClockIcon}>
-                  <div className="grid gap-0.5">
-                    <p className="font-semibold">{t('closedTitle')}</p>
-                    <p className="text-[0.88rem] text-muted-foreground">{t('closedBody')}</p>
-                  </div>
-                </Banner>
-                <Button asChild variant="secondary" className="w-full">
-                  <Link href="/student/projects">{t('otherProjects')}</Link>
-                </Button>
-              </div>
-            )}
+            <ApplyBox project={project} box={box} />
             <p className="text-[0.82rem] text-muted-foreground">{t('filesNote')}</p>
           </Card>
         </aside>

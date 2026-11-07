@@ -24,6 +24,7 @@ export type EmailType =
   | 'company_info_requested'
   | 'profile_reviewed'
   | 'profile_changes_requested'
+  | 'application_received'
 
 /**
  * Send an email after the answer has gone back to the browser, so the answer takes the

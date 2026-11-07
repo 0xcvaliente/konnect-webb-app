@@ -63,6 +63,11 @@ export type QueueItem = {
   section: QueueSection
   /** The promise countdown, where Konnected promises a number of working days. */
   due: PromiseState | null
+  /**
+   * Student profiles not reviewed yet: how many projects the student has applied to (a profile
+   * waiting for review may apply; the team sees it here and on each application).
+   */
+  applied?: number
 }
 
 const SECTION_ORDER: Record<QueueSection, number> = {
@@ -207,6 +212,26 @@ async function profileItems(payload: Payload, actor: SessionUser): Promise<Queue
     },
     ...asActor(actor),
   })
+  // Applications by profiles still waiting for review (or sent back for changes), counted per
+  // student. Only ids are read.
+  const notReviewed = found.docs.filter((s) => s.reviewStatus !== 'reviewed').map((s) => s.id)
+  const applied = new Map<number, number>()
+  if (notReviewed.length) {
+    const applications = await payload.find({
+      collection: 'applications',
+      where: {
+        and: [{ student: { in: notReviewed } }, { status: { not_equals: 'withdrawn' } }],
+      },
+      depth: 0,
+      pagination: false,
+      select: { student: true },
+      ...asActor(actor),
+    })
+    for (const application of applications.docs) {
+      const id = relationId(application.student)
+      if (id) applied.set(id, (applied.get(id) ?? 0) + 1)
+    }
+  }
   return found.docs.map((s) => {
     const status = s.reviewStatus ?? 'waiting'
     const section: QueueSection =
@@ -228,6 +253,7 @@ async function profileItems(payload: Payload, actor: SessionUser): Promise<Queue
       section,
       // Konnected promises a profile review within 2 working days.
       due: section === 'review' ? promiseState(new Date(since), PROFILE_REVIEW_DAYS) : null,
+      applied: applied.get(s.id) ?? 0,
     }
   })
 }
@@ -422,6 +448,8 @@ export type ProfileReview = {
   email: string | null
   cv: (Pick<Cv, 'id' | 'url' | 'filesize'> & { name: string }) | null
   applications: number
+  /** Of those, sent while the profile was not reviewed yet. */
+  applicationsBeforeReview: number
   /** What the student changed since the last review (empty when nothing or never reviewed). */
   changes: ProfileChange[]
   activity: ActivityRow[]
@@ -450,6 +478,15 @@ export async function loadProfileReview(
       ...asActor(actor),
     })
   ).totalDocs
+  const applicationsBeforeReview = (
+    await payload.count({
+      collection: 'applications',
+      where: {
+        and: [{ student: { equals: profile.id } }, { profileWaiting: { equals: true } }],
+      },
+      ...asActor(actor),
+    })
+  ).totalDocs
   const snapshot = (profile.reviewedSnapshot ?? null) as ReviewSnapshot | null
   const now = reviewSnapshot(profile as unknown as Record<string, unknown>)
   const changes = changedFields(snapshot, profile as unknown as Record<string, unknown>).map(
@@ -467,6 +504,7 @@ export async function loadProfileReview(
         }
       : null,
     applications,
+    applicationsBeforeReview,
     changes,
     activity: await activityOf(payload, actor, 'student-profiles', profile.id),
   }

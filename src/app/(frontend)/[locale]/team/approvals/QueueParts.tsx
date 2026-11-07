@@ -140,6 +140,9 @@ export async function QueueList({
                           <span className="mt-1 flex flex-wrap items-center gap-1.5">
                             <OwnerChip owner={item.owner} />
                             {item.due && <DueChip due={item.due} />}
+                            {item.applied ? (
+                              <Badge tone="warn">{t('appliedTag', { count: item.applied })}</Badge>
+                            ) : null}
                           </span>
                         </Link>
                       </li>

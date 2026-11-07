@@ -386,6 +386,13 @@ export interface Application {
   project: number | Project;
   status: 'applied' | 'shortlisted' | 'selected' | 'not_selected' | 'withdrawn';
   note?: string | null;
+  profileWaiting?: boolean | null;
+  projectTitle?: string | null;
+  companyName?: string | null;
+  closesOn?: string | null;
+  shortlistedAt?: string | null;
+  decidedAt?: string | null;
+  withdrawnAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1007,6 +1014,13 @@ export interface ApplicationsSelect<T extends boolean = true> {
   project?: T;
   status?: T;
   note?: T;
+  profileWaiting?: T;
+  projectTitle?: T;
+  companyName?: T;
+  closesOn?: T;
+  shortlistedAt?: T;
+  decidedAt?: T;
+  withdrawnAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

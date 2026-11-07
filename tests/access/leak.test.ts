@@ -62,7 +62,7 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   projects:
     '{ Projects(limit: 100) { docs { id title description tasks deliverable desiredSkills workloadHours durationWeeks startDate workMode location paidOrUnpaid unpaidBenefit studentPay publishedAt deadline fee noteToCompany noteToCompanyAt submittedAt status companyName company { id name } attachments { id originalName } } } }',
   applications:
-    '{ Applications(limit: 100) { docs { id status note student { id name contactEmail user { id email } } project { id title } } } }',
+    '{ Applications(limit: 100) { docs { id status note profileWaiting projectTitle companyName closesOn shortlistedAt decidedAt withdrawnAt student { id name contactEmail user { id email } } project { id title } } } }',
   matches:
     '{ Matches(limit: 100) { docs { id agreementNotes sharedInfo { name school programme year pitch skills experience contactEmail phone cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
   deliverables:
@@ -129,6 +129,14 @@ beforeAll(async () => {
     collection: 'student-profiles',
     id: world.beta.profile.id,
     data: { pitch: `${SENTINEL.beta.pitch} edited` },
+    user: asUser(world.beta.user),
+    overrideAccess: false,
+  })
+  // Apply card: beta applies to company A's open project with a note (alpha's application to
+  // project A, with alpha's note, is in the world already). Neither may ever reach the company.
+  await world.payload.create({
+    collection: 'applications',
+    data: { project: world.projectOpen.id, note: SENTINEL.beta.applicationNote } as never,
     user: asUser(world.beta.user),
     overrideAccess: false,
   })
@@ -365,6 +373,35 @@ describe('company cannot reach student collections directly', () => {
       // The approval queue's review note, and beta's reviewed copy (its old pitch).
       expect(all, transport).toContain('Sentinel-Review-Note-Alpha')
       expect(all, transport).toContain('reviewedSnapshot')
+      // The apply card: both students' notes and the team-only marker.
+      expect(all, transport).toContain(SENTINEL.alpha.applicationNote)
+      expect(all, transport).toContain(SENTINEL.beta.applicationNote)
+      expect(all, transport).toContain('profileWaiting')
     }
   })
 })
+
+describe.each(['local', 'rest', 'graphql'] as const)(
+  'applications between students (%s)',
+  (transport) => {
+    const sweep = async () => {
+      if (transport === 'local') return localAll(world.beta.user, 'applications')
+      const cookie = await login(world.beta.user.email)
+      if (transport === 'rest')
+        return (await rest.get('applications?depth=5&limit=100', cookie)).text
+      return (await graphql(GRAPHQL_QUERIES.applications, cookie)).text
+    }
+
+    it('a student reads their own application and note, never another student’s', async () => {
+      const all = await sweep()
+      expect(all).toContain(SENTINEL.beta.applicationNote)
+      expect(all).not.toContain(SENTINEL.alpha.applicationNote)
+      expect(all).not.toContain(SENTINEL.alpha.name)
+    })
+
+    it('a student never reads the team-only marker on their own application', async () => {
+      const all = await sweep()
+      expect(all).not.toMatch(/"profileWaiting":\s*(true|false)/)
+    })
+  },
+)
