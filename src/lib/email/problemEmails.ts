@@ -2,13 +2,19 @@ import type { PayloadRequest } from 'payload'
 
 import { relationId } from '@/access/roles'
 import { appUrl } from '@/lib/auth/env'
-import { storedToDay } from '@/lib/projects/fields'
+import { storedToDay, todayInOslo } from '@/lib/projects/fields'
+import { routeToTeam, teamRecipients } from '@/lib/team/recipients'
 import type { Match, ProblemReport, Project } from '@/payload-types'
 
 import { studentRecipient } from './matchingEmails'
 import { companyProjectLink, companyRecipient } from './projectEmails'
 import { type EmailType, sendEmail } from './send'
-import { type EmailLocale, type ProblemEmailKind, problemPathEmail } from './templates'
+import {
+  type EmailLocale,
+  type ProblemEmailKind,
+  problemPathEmail,
+  teamProblemEmail,
+} from './templates'
 
 type Rel = number | { id: number } | null | undefined
 
@@ -111,6 +117,66 @@ export async function sendProblemReceivedEmail(
   })
   if (!project || !match) return
   await toStudent(req, match, project, 'received', 'problem_received')
+}
+
+/**
+ * "A problem was reported", to the team straight away: to the project's owner on the team (the
+ * project's own owner, else its company's), and while that owner is away to whoever covers them;
+ * when nobody on the team owns it (the shared pool), to every team member who is not away, as the
+ * morning email routes work (lib/team/recipients.ts). Only the title and the kind of problem: the
+ * student's note and anything about the student stay behind sign-in.
+ *
+ * Bypass: the student who reported cannot read the project's owners, the company or the team's
+ * addresses; the server reads them with `overrideAccess: true`. Only the email type and the user
+ * id are logged.
+ */
+export async function sendProblemReportedToTeam(
+  req: PayloadRequest,
+  report: Pick<ProblemReport, 'project' | 'kind'>,
+): Promise<void> {
+  const projectId = relationId(report.project as Rel)
+  if (!projectId) return
+  const project = await req.payload.findByID({
+    collection: 'projects',
+    id: projectId,
+    depth: 0,
+    select: { title: true, owner: true, takenBy: true, company: true },
+    overrideAccess: true,
+    disableErrors: true,
+    req,
+  })
+  if (!project) return
+  const team = await teamRecipients(req)
+  if (!team.length) return
+  const onTeam = (id: number | undefined) => (id && team.some((m) => m.id === id) ? id : undefined)
+  let ownerId =
+    onTeam(relationId(project.owner as Rel)) ?? onTeam(relationId(project.takenBy as Rel))
+  if (!ownerId) {
+    const company = await req.payload.findByID({
+      collection: 'companies',
+      id: relationId(project.company as Rel)!,
+      depth: 0,
+      select: { teamOwner: true, takenBy: true },
+      overrideAccess: true,
+      disableErrors: true,
+      req,
+    })
+    ownerId =
+      onTeam(relationId(company?.teamOwner as Rel)) ?? onTeam(relationId(company?.takenBy as Rel))
+  }
+  for (const to of routeToTeam(team, ownerId ?? null, todayInOslo())) {
+    await sendEmail(req.payload, {
+      to: to.email,
+      email: teamProblemEmail(to.locale, {
+        title: project.title,
+        kind: report.kind,
+        pool: !ownerId,
+        href: `${appUrl()}/${to.locale}/team/projects/${project.id}`,
+      }),
+      type: 'problem_reported_team',
+      userId: to.id,
+    })
+  }
 }
 
 /** The due date moved: the new and the old day, to the student and the company. */

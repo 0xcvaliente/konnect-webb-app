@@ -13,6 +13,7 @@ import { Card, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { accountMenuUser } from '@/lib/account'
+import { priceBreakdown } from '@/lib/money'
 import { PROJECT_STATUS_TONE } from '@/lib/projects/display'
 import { addDays } from '@/lib/workingDays'
 import { todayInOslo } from '@/lib/projects/fields'
@@ -24,6 +25,7 @@ import { OwnerChip } from '@/app/(frontend)/[locale]/team/approvals/QueueParts'
 import { ReassignForm } from '@/components/app/team/TeamForms'
 import { requireTeam } from '@/lib/team/session'
 
+import { PayForm } from './PayForm'
 import { ProblemPaths } from './ProblemPaths'
 
 // The team's project page ("Final pass" mockup, team project page, states "Problem reported" and
@@ -81,6 +83,16 @@ export default async function TeamProjectPage({
   }
   const at = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'medium', timeZone: 'Europe/Oslo' })
+  const money = (value: number) =>
+    format.number(value, {
+      style: 'currency',
+      currency: 'NOK',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
+  /** A stored amount from the activity log ("12500"), formatted. */
+  const amount = (value: string | null | undefined) =>
+    value && /^\d+$/.test(value) ? money(Number(value)) : (value ?? '')
   const today = todayInOslo()
   const team = (await listTeam(payload, user)) ?? []
   const ownerOf = (id: number | null) => {
@@ -122,6 +134,14 @@ export default async function TeamProjectPage({
     if (r.action === 'status_change')
       return t('activity.status', { from: pill(r.fromStatus), to: pill(r.toStatus) })
     if (r.field === 'deadline') return t('activity.deadline', { date: day(r.toStatus ?? null) })
+    if (r.action === 'review_change' && (r.field === 'fee' || r.field === 'studentPay')) {
+      const key = r.field === 'fee' ? 'price' : 'studentPay'
+      if (!r.toStatus) return t(`activity.${key}Cleared`)
+      if (!r.fromStatus) return t(`activity.${key}Set`, { to: amount(r.toStatus) })
+      return t(`activity.${key}`, { from: amount(r.fromStatus), to: amount(r.toStatus) })
+    }
+    if (r.action === 'review_change' && r.field === 'applicationsBack')
+      return t('activity.applicationsBack', { count: Number(r.toStatus) || 0 })
     if (r.action === 'reassign') {
       if (r.field === 'takenBy') return t('activity.taken', { name: r.toName ?? '?' })
       return r.toName
@@ -328,6 +348,45 @@ export default async function TeamProjectPage({
               )}
             </div>
           </Card>
+
+          {project.pay && (
+            <Card className="gap-4">
+              <CardTitle>{t('pay.title')}</CardTitle>
+              <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-[18px] gap-y-2.5">
+                <dt className="text-muted-foreground">{t('pay.price')}</dt>
+                <dd className="font-medium tabular-nums">
+                  {project.pay.fee !== null ? money(project.pay.fee) : t('notSet')}
+                </dd>
+                <dt className="text-muted-foreground">{t('pay.total')}</dt>
+                <dd className="font-medium tabular-nums">
+                  {project.pay.fee !== null
+                    ? money(priceBreakdown(project.pay.fee).total)
+                    : t('notSet')}
+                </dd>
+                <dt className="text-muted-foreground">{t('pay.studentPay')}</dt>
+                <dd className="font-medium tabular-nums">
+                  {project.pay.studentPay !== null ? money(project.pay.studentPay) : t('notSet')}
+                </dd>
+              </dl>
+              {project.pay.editable && (
+                <PayForm
+                  projectId={project.id}
+                  fee={project.pay.fee}
+                  studentPay={project.pay.studentPay}
+                  student={student || t('student')}
+                  companySigned={project.pay.companySigned}
+                  studentSigned={project.pay.studentSigned}
+                  invoice={
+                    !project.pay.paymentRow
+                      ? { kind: 'none' }
+                      : project.pay.invoiceSent
+                        ? { kind: 'sent', date: day(project.pay.invoiceSent) }
+                        : { kind: 'open' }
+                  }
+                />
+              )}
+            </Card>
+          )}
 
           {project.endedMatches.length > 0 && (
             <Card className="gap-3">

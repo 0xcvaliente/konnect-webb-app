@@ -672,6 +672,85 @@ export function problemPathEmail(
   })
 }
 
+/**
+ * "A problem was reported": to the project's owner on the team (or the whole team for the shared
+ * pool), straight away. Only the project title and the kind of problem: never the student's note
+ * or anything about the student.
+ */
+export function teamProblemEmail(
+  locale: EmailLocale,
+  { title, kind, pool, href }: { title: string; kind: string; pool: boolean; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.teamProblem
+  const kindText = kind in m.kinds ? m.kinds[kind as keyof typeof m.kinds] : m.kinds.more_time
+  const paragraphs = [m.body.replace('{title}', title).replace('{kind}', kindText), m.next]
+  if (pool) paragraphs.push(m.pool)
+  return render({
+    locale,
+    subject: m.subject.replace('{title}', title),
+    heading: m.heading,
+    paragraphs,
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+// ---------- Payment notices: to the company's or the student's own address ----------
+
+export type PaymentEmailKind = 'invoiceSent' | 'invoicePaid' | 'studentPaid'
+
+/**
+ * The manual payment log's notices: the invoice was sent and the company's payment arrived (to
+ * the company, with the price, VAT and total), and the student was paid in the monthly pay run (to
+ * the student, with what they are paid when Konnected set it on the project). The title is the
+ * company's own text; nothing else about anyone is in them.
+ */
+export function paymentEmail(
+  locale: EmailLocale,
+  kind: PaymentEmailKind,
+  {
+    title,
+    price,
+    amount,
+    dueDay,
+    href,
+  }: {
+    title: string
+    /** The company's price excluding VAT and the total with VAT (company emails). */
+    price?: { price: number; total: number } | null
+    /** What the student is paid (the student's email). */
+    amount?: number | null
+    /** The day the invoice is due, `YYYY-MM-DD` (the invoice email). */
+    dueDay?: string | null
+    href: string
+  },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.payments[kind]
+  const fill = (text: string) =>
+    text
+      .replace('{title}', title)
+      .replace('{price}', price ? formatKroner(locale, price.price) : '')
+      .replace('{total}', price ? formatKroner(locale, price.total) : '')
+      .replace('{amount}', amount ? formatKroner(locale, amount) : '')
+      .replace('{date}', dueDay ? formatDay(locale, dueDay) : '')
+  const withAmount = kind === 'studentPaid' ? Boolean(amount) : Boolean(price)
+  const paragraphs = [fill(withAmount ? m.body : m.bodyNoAmount)]
+  if (kind === 'invoiceSent' && dueDay) paragraphs.push(fill(all.payments.invoiceSent.due))
+  paragraphs.push(fill(m.next))
+  return render({
+    locale,
+    subject: fill(m.subject),
+    heading: m.heading,
+    paragraphs,
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
 // ---------- The team's morning email ----------
 
 export type MorningLine = { kind: string; title: string | null; daysLate: number }

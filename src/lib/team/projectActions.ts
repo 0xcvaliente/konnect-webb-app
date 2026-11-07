@@ -7,8 +7,10 @@ import { getPayload } from 'payload'
 import type { ProblemState } from '@/lib/problems/fields'
 
 import type { SessionUser } from './approvals'
+import type { PayChangeState } from './payChange'
 import {
   askCompanyForChanges,
+  changeProjectPay,
   closeWithoutDelivery,
   endMatchAndReopen,
   markReportHandled,
@@ -58,4 +60,13 @@ export const askChangesAction: Action = async (_prev, form) => {
 export const handledAction: Action = async (_prev, form) => {
   const { payload, user } = await session()
   return markReportHandled(payload, user, form)
+}
+
+/** Change the price and the student's pay of a published (or later) paid project. */
+export async function changePayAction(
+  _prev: PayChangeState,
+  form: FormData,
+): Promise<PayChangeState> {
+  const { payload, user } = await session()
+  return changeProjectPay(payload, user, form)
 }

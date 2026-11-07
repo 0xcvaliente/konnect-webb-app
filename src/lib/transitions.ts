@@ -121,6 +121,10 @@ export const APPLICATION_TRANSITIONS: TransitionMap<ApplicationStatus> = {
   // Konnected ended the match (the student needed to stop, or the team closed the project). Made
   // by the Projects hook when the match ends; the Applications hook checks the match is ended.
   selected: { match_ended: ['admin'] },
+  // "Match again" (owner answer 51): the earlier applicants who were not selected go back into the
+  // pool for the new selection. Only the Projects hook makes this move, in the same change that
+  // ends the match and reopens the project (the Applications hook refuses it otherwise).
+  not_selected: { applied: ['admin'] },
 }
 
 /**

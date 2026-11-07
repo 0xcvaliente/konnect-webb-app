@@ -529,6 +529,49 @@
       "profile": "en studentprofil",
       "button": "Åpne Mitt arbeid",
       "ignore": "Du får denne e-posten på virkedager når noe av ditt har frist i dag eller er forsinket."
+    },
+    "teamProblem": {
+      "subject": "Problem meldt: «{title}»",
+      "heading": "En student har meldt et problem",
+      "body": "Det er meldt et problem på «{title}»: {kind}.",
+      "next": "Åpne prosjektet for å lese meldingen og velge hva som skjer videre. Konnected svarer innen 2 virkedager.",
+      "pool": "Ingen i teamet er ansvarlig for denne bedriften, så hele teamet får denne e-posten. Ta den fra fellesbunken hvis den er din.",
+      "kinds": {
+        "more_time": "studenten trenger mer tid",
+        "cannot_finish": "studenten kan ikke fullføre"
+      },
+      "button": "Åpne prosjektet",
+      "ignore": "Du får denne e-posten fordi du er i Konnected-teamet."
+    },
+    "payments": {
+      "invoiceSent": {
+        "subject": "Faktura sendt for «{title}»",
+        "heading": "Fakturaen er på vei",
+        "body": "Konnected har sendt fakturaen for «{title}»: {price} eksklusiv mva., {total} inkludert 25 % mva.",
+        "bodyNoAmount": "Konnected har sendt fakturaen for «{title}».",
+        "due": "Betalingsfristen er 14 dager: betal innen {date}.",
+        "next": "Du finner fakturaen og statusen under Betalinger.",
+        "button": "Åpne fakturaene dine",
+        "ignore": "Hvis du ikke kjenner til dette prosjektet, skriv til Konnected-teamet."
+      },
+      "invoicePaid": {
+        "subject": "Betaling mottatt for «{title}»",
+        "heading": "Takk, vi har fått betalingen",
+        "body": "Konnected har mottatt betalingen på {total} for «{title}».",
+        "bodyNoAmount": "Konnected har mottatt betalingen for «{title}».",
+        "next": "Du finner fakturaen og statusen under Betalinger.",
+        "button": "Åpne fakturaene dine",
+        "ignore": "Hvis du ikke kjenner til dette prosjektet, skriv til Konnected-teamet."
+      },
+      "studentPaid": {
+        "subject": "Du har fått betalt for «{title}»",
+        "heading": "Betalingen er på vei",
+        "body": "Konnected har betalt deg {amount} for «{title}» i månedens lønnskjøring.",
+        "bodyNoAmount": "Konnected har betalt deg for «{title}» i månedens lønnskjøring.",
+        "next": "Det kan ta noen dager før beløpet vises på kontoen din. Du finner detaljene under Betalinger.",
+        "button": "Åpne betalingene dine",
+        "ignore": "Hvis du ikke jobbet med dette prosjektet, skriv til Konnected-teamet."
+      }
     }
   },
   "DesignGuide": {
@@ -2932,7 +2975,7 @@
     "endConfirm": "Avslutte matchen med {student}?",
     "end1": "{student} går ut av prosjektet og får en e-post.",
     "end2": "Filer {student} lastet opp blir hos Konnected. Ingenting frigis til {company}.",
-    "end3": "Prosjektet tar imot søknader igjen, og du velger en ny student i Matching.",
+    "end3": "Prosjektet tar imot søknader igjen, og du velger en ny student i Matching. Tidligere søkere som ikke ble valgt, er tilbake i bunken; {student} og de som trakk seg, er ikke det.",
     "closesLabel": "Søknadsfrist",
     "endButton": "Avslutt matchen og åpne igjen",
     "closeNoDelivery": "Avslutt uten levering",
@@ -2997,7 +3040,14 @@
       "taken": "{name} tok den fra fellesbunken",
       "reassigned": "Ansvarlig endret fra {from} til {to}",
       "unassigned": "Ansvarlig fjernet",
-      "nobody": "ingen"
+      "nobody": "ingen",
+      "price": "Pris endret fra {from} til {to}",
+      "priceSet": "Pris satt til {to}",
+      "priceCleared": "Pris fjernet",
+      "studentPay": "Studentens betaling endret fra {from} til {to}",
+      "studentPaySet": "Studentens betaling satt til {to}",
+      "studentPayCleared": "Studentens betaling fjernet",
+      "applicationsBack": "{count, plural, one {Én tidligere søker er} other {# tidligere søkere er}} tilbake i Matching"
     },
     "toast": {
       "dateMoved": "Leveringsdatoen er flyttet. Begge får en e-post.",
@@ -3006,6 +3056,38 @@
       "reopened": "Søknadene er åpnet igjen. Bedriften får en e-post.",
       "changesSent": "Sendt til {company}.",
       "handled": "Rapporten er merket som håndtert."
+    },
+    "pay": {
+      "title": "Pris og studentens betaling",
+      "price": "Pris (eks. mva.)",
+      "total": "Bedriften betaler (inkl. 25 % mva.)",
+      "studentPay": "Studentens betaling",
+      "change": "Endre pris eller betaling",
+      "priceLabel": "Pris (NOK, eks. mva.)",
+      "priceHint": "Hele kroner. Bedriften ser prisen på prosjektet og fakturaene sine.",
+      "studentPayLabel": "Studentens betaling (NOK, valgfritt)",
+      "studentPayHint": "Hele kroner, høyst prisen. Studentene ser beløpet på prosjektet. Bedriften ser det aldri. La feltet stå tomt for å vise bare «Betalt».",
+      "logHint": "Endringen skrives i aktivitetsloggen med gammelt og nytt beløp og navnet ditt. Ingen får e-post.",
+      "signedTitle": "En signert avtale beholder det gamle beløpet",
+      "signedCompany": "Bedriften signerte avtalen sin før denne endringen. Den signerte avtalen beholder beløpet den ble signert med: Konnected lager ikke en ny automatisk. For å åpne søknadene igjen senere trengs en ny bedriftsavtale med den nye prisen.",
+      "signedStudent": "{student} signerte studentavtalen før denne endringen. Den lages ikke på nytt.",
+      "confirm": "Jeg forstår at den signerte avtalen beholder det gamle beløpet.",
+      "invoiceSent": "Fakturaen ble sendt {date} med den gamle prisen. Betalingsloggen beholder den prisen: rett fakturaen for hånd.",
+      "invoiceOpen": "Betalingsloggen får den nye prisen, siden ingen faktura er sendt.",
+      "save": "Lagre pris og betaling",
+      "saving": "Lagrer …",
+      "saved": "Pris og betaling er lagret.",
+      "errors": {
+        "forbidden": "Bare Konnected-teamet kan endre prisen.",
+        "not_found": "Fant ikke prosjektet. Last inn siden på nytt.",
+        "not_open": "Prisen kan bare endres på et betalt prosjekt som er publisert, matchet, i gang eller levert.",
+        "price_invalid": "Skriv prisen i hele kroner.",
+        "student_pay_invalid": "Studentens betaling må være hele kroner og høyst prisen.",
+        "same": "Ingenting er endret.",
+        "changed": "Noen endret prisen i mellomtiden. Last inn siden på nytt.",
+        "confirm": "Kryss av for å bekrefte at den signerte avtalen beholder det gamle beløpet.",
+        "generic": "Noe gikk galt. Prøv igjen."
+      }
     }
   },
   "TeamToday": {
