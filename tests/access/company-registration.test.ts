@@ -645,10 +645,19 @@ describe('changing a company', () => {
     )
   })
 
-  it('a company that was not approved cannot change anything', async () => {
+  it('a rejected company corrects and sends once; after that it cannot change anything', async () => {
     const { user, company } = await registered()
     await approve(company.id, 'rejected')
     const me = await fresh(user)
+    // Its one correction (owner decision) goes back to Konnected for review.
+    expect(await saveCompany(w.payload, session(me), registrationForm())).toMatchObject({
+      status: 'done',
+    })
+    const resent = await w.payload.findByID({ collection: 'companies', id: company.id })
+    expect(resent.status).toBe('pending')
+    expect(resent.resentAt).toBeTruthy()
+    // Rejected again: no second correction.
+    await approve(company.id, 'rejected')
     expect(await saveCompany(w.payload, session(me), registrationForm())).toEqual({
       status: 'error',
       error: 'not_editable',
@@ -962,7 +971,12 @@ describe('company logos', () => {
     await approve(company.id)
     let project = await w.payload.create({
       collection: 'projects',
-      data: { title: 'Logo project', description: 'd', status: 'draft' } as never,
+      data: {
+        title: 'Logo project',
+        description: 'd',
+        status: 'draft',
+        paidOrUnpaid: 'unpaid',
+      } as never,
       ...as(await fresh(user)),
     })
     expect(project.companyLogo).toMatchObject({ id: logo.id })

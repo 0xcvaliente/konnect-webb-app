@@ -264,6 +264,80 @@
       "next": "You get an email when the review is done. You cannot edit the project while it is in review.",
       "button": "See your project",
       "ignore": "If you did not send this project, write to the Konnected team."
+    },
+    "companyApproved": {
+      "subject": "Your company is approved on Konnected",
+      "heading": "Your company is approved",
+      "body": "Konnected has approved {name}. You can now send in your first project.",
+      "next": "Konnected reviews every project before students see it.",
+      "button": "Submit a project",
+      "ignore": "If you did not register this company, write to the Konnected team."
+    },
+    "companyRejected": {
+      "subject": "Konnected could not approve {name}",
+      "heading": "Konnected could not approve your company",
+      "body": "Konnected looked at {name} and could not approve it. The reason:",
+      "resend": "If something can be corrected, correct your details in your company profile and send them again. You can do this once.",
+      "final": "If you think this is a mistake, write to the Konnected team.",
+      "button": "Open company profile",
+      "ignore": "If you did not register this company, write to the Konnected team."
+    },
+    "companyInfo": {
+      "subject": "Konnected needs more information about {name}",
+      "heading": "Konnected needs more information",
+      "body": "Konnected is reviewing {name} and needs a little more from you:",
+      "resend": "Correct your details in your company profile and save them. Your company stays in review until then.",
+      "button": "Open company profile",
+      "ignore": "If you did not register this company, write to the Konnected team."
+    },
+    "projectChanges": {
+      "subject": "Konnected asks for changes to your project",
+      "heading": "Changes asked",
+      "body": "Konnected reviewed “{title}” and asks you to change a few things:",
+      "next": "Edit the project and send it again. It comes back to Konnected for review.",
+      "button": "Edit your project",
+      "ignore": "If you did not send this project, write to the Konnected team."
+    },
+    "projectRejected": {
+      "subject": "Konnected could not approve your project",
+      "heading": "Your project was not approved",
+      "body": "Konnected reviewed “{title}” and cannot take it on. The reason:",
+      "next": "You are welcome to send a new project that fits better.",
+      "button": "See your project",
+      "ignore": "If you did not send this project, write to the Konnected team."
+    },
+    "projectApproved": {
+      "subject": "Konnected approved your project",
+      "heading": "Your project is approved",
+      "body": "Konnected approved “{title}”.",
+      "price": "The fixed price is {price} excluding VAT ({total} including 25% VAT). Payment terms are 14 days.",
+      "next": "Konnected publishes it for students next. You get an email when it is published.",
+      "button": "See your project",
+      "ignore": "If you did not send this project, write to the Konnected team."
+    },
+    "projectPublished": {
+      "subject": "Your project is published on Konnected",
+      "heading": "Your project is published",
+      "body": "Students can now apply to “{title}”.",
+      "next": "Konnected picks one student by hand after applications close and tells you who it is.",
+      "button": "See your project",
+      "ignore": "If you did not send this project, write to the Konnected team."
+    },
+    "profileReviewed": {
+      "subject": "Konnected reviewed your profile",
+      "heading": "Your profile is reviewed",
+      "body": "Konnected has reviewed your profile.",
+      "next": "Konnected can now select you for a project. Keep your profile up to date.",
+      "button": "See your profile",
+      "ignore": "If you do not have a Konnected profile, write to the Konnected team."
+    },
+    "profileChanges": {
+      "subject": "Konnected asks you to update your profile",
+      "heading": "Please update your profile",
+      "body": "Konnected looked at your profile and asks you to change a few things:",
+      "next": "Update your profile and save it. It comes back to Konnected for review. You can still browse and apply in the meantime.",
+      "button": "Update your profile",
+      "ignore": "If you do not have a Konnected profile, write to the Konnected team."
     }
   },
   "DesignGuide": {
@@ -507,7 +581,10 @@
       "fix": "Some answers need a look. See the fields marked below.",
       "generic": "Something went wrong and nothing was saved. Try again.",
       "forbidden": "Your session has ended. Sign in again."
-    }
+    },
+    "changesTitle": "Konnected asked for changes",
+    "changesBody": "Update your profile and save it: it goes back to Konnected for review. You can still browse and apply, but Konnected cannot select you until the profile is reviewed.",
+    "waitingBy": "Konnected reviews your profile by {date} at the latest. You can still look at projects and apply in the meantime."
   },
   "CompanyFields": {
     "name": "Company name",
@@ -623,7 +700,16 @@
     "registeredOn": "Registered {date}",
     "startDraft": "Start a draft project",
     "submitProject": "Submit a project",
-    "myProjects": "My projects"
+    "myProjects": "My projects",
+    "ledeInfo": "Konnected needs a little more from you before it can approve your company.",
+    "infoTitle": "Konnected needs more information",
+    "infoBodyProfile": "Correct your details below and save them. Your company stays in review until then, and goes back to Konnected when you save.",
+    "infoBodyStatus": "Correct your details in your company profile and save them. Your company stays in review until then.",
+    "resentBody": "You sent your corrected details on {date}. Konnected reviews them again, usually within a few working days.",
+    "rejectedReason": "The reason Konnected gave:",
+    "rejectedResendProfile": "If something can be corrected, correct your details below and send them again. You can do this once.",
+    "rejectedResendStatus": "If something can be corrected, correct your details in your company profile and send them again. You can do this once.",
+    "correct": "Correct and send again"
   },
   "CompanySteps": {
     "label": "Where your company stands",
@@ -638,7 +724,9 @@
     "rejected": "Not approved",
     "rejectedBody": "See the note above.",
     "done": "Done",
-    "current": "Current step"
+    "current": "Current step",
+    "moreInfo": "More information",
+    "moreInfoBody": "Correct your details and save them."
   },
   "CompanyProfile": {
     "title": "Company profile",
@@ -657,7 +745,11 @@
     },
     "startDraft": "Start a draft project",
     "startDraftHint": "You can send it for review once Konnected approves your company.",
-    "submitProject": "Submit a project"
+    "submitProject": "Submit a project",
+    "resend": "Correct and send again",
+    "resent": "Sent to Konnected for a new review.",
+    "answer": "Save and send to Konnected",
+    "answered": "Saved. Konnected reviews your company again."
   },
   "SignInMethods": {
     "google": "Google",
@@ -688,7 +780,7 @@
   },
   "TeamHome": {
     "title": "Today",
-    "lede": "The team's daily work. The queues for approvals, matching and payments are added here step by step.",
+    "lede": "The team's daily work. Each queue opens on its oldest item. Matching, deliverables and payments are added here step by step.",
     "twoStepTitle": "Keep 2-step verification on for your Google account",
     "twoStepBody": "Team accounts sign in with Google only, so your Google account protects every company and student record. Konnected cannot see whether 2-step verification is on: check it in your Google account.",
     "twoStepLink": "Open Google security settings",
@@ -697,7 +789,15 @@
     "accountsLink": "Open accounts",
     "panelTitle": "Content admin panel",
     "panelBody": "Payload's own admin panel is still at /admin, as a fallback for the team.",
-    "panelLink": "Open the admin panel"
+    "panelLink": "Open the admin panel",
+    "queuesTitle": "Queues",
+    "queue": {
+      "companies": "Companies to approve",
+      "projects": "Projects to review or publish",
+      "students": "Student profiles to review"
+    },
+    "oldest": "Oldest: {name}, {waited}",
+    "queueEmpty": "Nothing waits here."
   },
   "TeamAccounts": {
     "title": "Accounts",
@@ -1120,6 +1220,267 @@
     "resubmit": "Edit and resubmit",
     "newProject": "Submit a new project",
     "nothing": "Nothing right now. Konnected has the next step.",
-    "pendingHint": "You can send it for review once Konnected approves your company."
+    "pendingHint": "You can send it for review once Konnected approves your company.",
+    "priceTitle": "Price",
+    "priceExVat": "Fixed price excl. VAT",
+    "vat": "VAT {rate}%",
+    "total": "Total",
+    "priceNote": "Set by Konnected at review. Konnected sends the invoice; payment terms are {days} days."
+  },
+  "TeamApprovals": {
+    "title": "Approvals",
+    "lede": "Nothing reaches students until Konnected approves the company and the project. Every student profile is reviewed before matching.",
+    "back": "Back to today",
+    "tabsLabel": "Approval queues",
+    "tabs": {
+      "companies": "Companies",
+      "projects": "Projects",
+      "students": "Students"
+    },
+    "whoLabel": "Whose items to show",
+    "mine": "Mine",
+    "everyone": "Everyone",
+    "pool": "Pool",
+    "owner": "Owner: {name}",
+    "waited": "{count, plural, =0 {waiting since today} one {waiting # day} other {waiting # days}}",
+    "due": {
+      "late": "{count, plural, one {# day late} other {# days late}}",
+      "today": "Due today",
+      "left": "{count, plural, one {# day left} other {# days left}}"
+    },
+    "section": {
+      "companiesReview": "To approve",
+      "companiesWaiting": "Waiting on the company",
+      "projectsReview": "To review",
+      "projectsPublish": "Approved, ready to publish",
+      "projectsWaiting": "Waiting on the company",
+      "studentsReview": "To review",
+      "studentsChanged": "Changed since the review",
+      "studentsWaiting": "Waiting on the student"
+    },
+    "emptyMine": "Nothing here is yours right now.",
+    "empty": {
+      "companies": "No companies wait for approval.",
+      "projects": "No projects wait for review.",
+      "students": "No student profiles wait for review."
+    },
+    "emptyTitle": "Queue empty",
+    "emptyBody": {
+      "companies": "No more companies wait for the team. New ones land here when they register.",
+      "projects": "No more projects wait for the team. New ones land here when a company sends one.",
+      "students": "No more student profiles wait for the team. New ones land here when a student finishes the onboarding."
+    },
+    "checkedHere": "Every decision is checked again on the server, written to the activity log and sent to the company or student by email.",
+    "activityTitle": "Activity",
+    "activityEmpty": "Nothing recorded yet.",
+    "system": "Konnected (automatic)",
+    "checksTitle": "Checks",
+    "cancel": "Cancel",
+    "reviewStatus": {
+      "waiting": "Waiting for review",
+      "changes_requested": "Changes asked",
+      "reviewed": "Reviewed"
+    },
+    "activity": {
+      "create": "Created",
+      "delete": "Deleted",
+      "infoRequested": "More information asked",
+      "infoAnswered": "The company saved its corrected details",
+      "price": "Price set to {price} kr excl. VAT",
+      "priceCleared": "Price removed",
+      "pay": "Decided: {choice}",
+      "reviewedAgain": "Reviewed again after changes",
+      "status": "{from} to {to}",
+      "statusTo": "Now {to}",
+      "other": "Changed"
+    },
+    "errors": {
+      "forbidden": "Your session has ended or this is not a team account. Sign in again.",
+      "not_found": "This item no longer exists.",
+      "not_allowed": "This decision no longer applies. Someone may have decided already. Reload the page.",
+      "note_required": "Write a note first. The company or student gets it by email.",
+      "note_too_long": "The note is too long. Keep it under {max} characters.",
+      "pay_choice": "Choose paid or unpaid.",
+      "price_required": "Set the fixed price for a paid project.",
+      "price_invalid": "Write the price in whole kroner, for example 6500.",
+      "company_not_approved": "Konnected has not approved this project's company. Approve the company first.",
+      "duplicate_org": "Another approved company already has this organisation number. One company account per organisation number.",
+      "generic": "Something went wrong and nothing was saved. Try again."
+    },
+    "company": {
+      "registered": "Registered {date}",
+      "missing": "Not filled in",
+      "contact": "Contact",
+      "sameNumberTitle": "Another company has this organisation number",
+      "sameNumberBody": "Also registered: {names}. One company account per organisation number.",
+      "waitingTitle": "Waiting on the company since {date}",
+      "waitingBody": "It stays pending and comes back to the queue when the company saves its details.",
+      "resentTitle": "Sent again after a rejection, on {date}",
+      "resentNote": "The reason Konnected gave:",
+      "decided": {
+        "approved": "Approved. The company can send projects for review.",
+        "rejected": "Not approved."
+      },
+      "check1": "Organisation number found in the Brønnøysund register",
+      "check2": "Website belongs to the company",
+      "check3": "Contact person works at the company",
+      "checkHint": "Tick every check first.",
+      "approve": "Approve company",
+      "approvedToast": "{name} is approved and gets an email.",
+      "askInfo": "Ask for more information",
+      "infoLabel": "What should the company add or correct?",
+      "infoHint": "The company gets this by email and sees it on its profile. It stays pending.",
+      "infoSubmit": "Send to the company",
+      "infoToast": "Sent to {name}. It comes back here when they answer.",
+      "templates": {
+        "orgNumber": {
+          "label": "Organisation number",
+          "text": "We could not find the organisation number in the Brønnøysund register. Please check it."
+        },
+        "website": {
+          "label": "Website",
+          "text": "Please add a website or a page that shows the company."
+        },
+        "contact": {
+          "label": "Contact person",
+          "text": "Please confirm that the contact person works at the company."
+        }
+      },
+      "reject": "Reject",
+      "rejectLabel": "Reason for rejecting",
+      "rejectHint": "The company gets this reason by email and may correct its details and send them once more. Konnected keeps it in the activity log.",
+      "rejectSubmit": "Confirm rejection",
+      "rejectedToast": "{name} is rejected and gets the reason by email."
+    },
+    "project": {
+      "sent": "sent {date}",
+      "company": "Company",
+      "payment": "Payment",
+      "payNone": "Not chosen",
+      "priceSet": "Fixed price",
+      "priceLine": "{price} excl. VAT, {vat} VAT ({rate}%), {total} in total",
+      "waitingTitle": "Waiting on {name} since {date}",
+      "waitingBody": "The project comes back to the queue when the company sends it again.",
+      "rejectedTitle": "Not approved",
+      "unpaidBanner": "Unpaid project. Decide if the work is fair to do without pay. If not, ask the company to make it paid or smaller.",
+      "companyNotApproved": "The company is {status}. Approve the company first.",
+      "check1": "The deliverable is clear",
+      "check2": "The workload fits the timeframe",
+      "check3": "A short assignment, not a job",
+      "check4": "Paid or unpaid suits the work",
+      "checkHint": "Tick every check first.",
+      "payTitle": "Paid or unpaid (Konnected decides)",
+      "pay": {
+        "paid": "Paid",
+        "unpaid": "Unpaid"
+      },
+      "payHint": "The company chose: {choice}.",
+      "payHintNone": "The company did not choose.",
+      "priceLabel": "Fixed price for the company (NOK, excl. VAT)",
+      "priceHint": "Whole kroner. Konnected sets it now; the company sees it on the project and in the agreement. Payment terms 14 days.",
+      "priceExVat": "Price excl. VAT",
+      "vat": "VAT {rate}%",
+      "total": "Total",
+      "unpaidNote": "An unpaid project has no price and no payment rows.",
+      "approve": "Approve project",
+      "approvedToast": "{title} is approved. Publish it when it is ready for students.",
+      "changes": "Request changes",
+      "changesLabel": "What should the company change?",
+      "changesHint": "Tap a reason to add it, then edit the text. The company gets this by email.",
+      "changesSubmit": "Send to the company",
+      "changesToast": "Sent to the company. {title} comes back here when they send it again.",
+      "templates": {
+        "deliverable": {
+          "label": "Deliverable unclear",
+          "text": "Describe exactly what you want back, and in which format."
+        },
+        "workload": {
+          "label": "Too much work",
+          "text": "The workload looks too large for the timeframe."
+        },
+        "language": {
+          "label": "Language",
+          "text": "Say which language the work should be in."
+        },
+        "job": {
+          "label": "Reads like a job",
+          "text": "This reads like a job, not a short assignment."
+        },
+        "paid": {
+          "label": "Should be paid",
+          "text": "This is too much work to do without pay. Please make the project paid, or make it smaller."
+        }
+      },
+      "reject": "Reject",
+      "rejectLabel": "Reason for rejecting",
+      "rejectHint": "The company gets this reason by email.",
+      "rejectSubmit": "Confirm rejection",
+      "rejectedToast": "{title} is rejected. The company gets the reason by email.",
+      "publishTitle": "Ready to publish",
+      "publishBody": "Students see the project and can apply once it is published. The company gets an email."
+    },
+    "publish": {
+      "button": "Publish project",
+      "confirmTitle": "Publish {title}?",
+      "confirmBody": "Students can apply from now on. Konnected picks one student by hand after applications close.",
+      "confirm": "Publish",
+      "cancel": "Cancel",
+      "toast": "{title} is published. Students can apply from now on."
+    },
+    "profile": {
+      "signedUp": "Signed up {date}",
+      "missing": "Not filled in",
+      "empty": "Empty",
+      "email": "Sign-in email",
+      "applications": "Applications",
+      "cv": "CV",
+      "cvFile": "A CV file",
+      "sharing": "Shared after selection",
+      "sharesNothing": "Nothing",
+      "changedPill": "Changed since review",
+      "waitingTitle": "Changes asked on {date}",
+      "waitingBody": "The profile comes back to the queue when the student saves it.",
+      "reviewedOn": "Reviewed on {date}",
+      "changesTitle": "What changed since the review on {date}",
+      "before": "Before:",
+      "after": "Now:",
+      "openCv": "Open CV",
+      "noCvTitle": "No CV yet",
+      "noCvBody": "Ask the student to upload one before you mark the profile as reviewed.",
+      "sharedTitle": "Shared with a company only after selection",
+      "shared": "(shared)",
+      "notShared": "(not shared)",
+      "noAutoCheck": "There is no automatic student check. Konnected reviews each profile by hand before matching.",
+      "check1": "Studies and school filled in",
+      "check2": "CV uploaded and readable",
+      "check3": "Sharing choices set",
+      "checkHint": "Tick every check first.",
+      "review": "Mark as reviewed",
+      "reviewAgain": "Mark as reviewed again",
+      "reviewedToast": "{name}'s profile is reviewed. Konnected can now select them for a project.",
+      "ask": "Ask for changes",
+      "askLabel": "What should the student change?",
+      "askHint": "The student gets this by email and sees it on their profile.",
+      "askSubmit": "Send to the student",
+      "askToast": "Sent to {name}. The profile comes back here when it is updated.",
+      "templates": {
+        "cv": {
+          "label": "Upload a CV",
+          "text": "Please upload your CV as a PDF."
+        },
+        "year": {
+          "label": "Year of study",
+          "text": "Please add your year of study."
+        },
+        "interests": {
+          "label": "Interests",
+          "text": "Please choose at least one interest."
+        },
+        "pitch": {
+          "label": "Pitch",
+          "text": "Please write a few sentences about what you are good at."
+        }
+      }
+    }
   }
 }

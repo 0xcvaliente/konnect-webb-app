@@ -210,6 +210,11 @@ export interface Company {
   status: 'pending' | 'approved' | 'rejected';
   user?: (number | null) | User;
   teamOwner?: (number | null) | User;
+  noteToCompany?: string | null;
+  noteToCompanyAt?: string | null;
+  infoRequestedAt?: string | null;
+  reviewRequestedAt?: string | null;
+  resentAt?: string | null;
   approvedAt?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -262,8 +267,21 @@ export interface StudentProfile {
     shareContactEmail?: boolean | null;
     sharePhone?: boolean | null;
   };
-  reviewStatus?: ('waiting' | 'reviewed') | null;
+  reviewStatus?: ('waiting' | 'changes_requested' | 'reviewed') | null;
   reviewedAt?: string | null;
+  reviewNote?: string | null;
+  reviewNoteAt?: string | null;
+  reviewRequestedAt?: string | null;
+  changedSinceReviewAt?: string | null;
+  reviewedSnapshot?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -311,6 +329,7 @@ export interface Project {
   attachments?: (number | BriefFile)[] | null;
   noteToCompany?: string | null;
   noteToCompanyAt?: string | null;
+  submittedAt?: string | null;
   workload?: string | null;
   duration?: string | null;
   status:
@@ -448,7 +467,15 @@ export interface Payment {
 export interface ActivityLog {
   id: number;
   actor?: (number | null) | User;
-  action: 'create' | 'status_change' | 'delete' | 'sign_out_everywhere' | 'sign_in_method_added';
+  action:
+    | 'create'
+    | 'status_change'
+    | 'delete'
+    | 'sign_out_everywhere'
+    | 'sign_in_method_added'
+    | 'review_change'
+    | 'info_requested'
+    | 'info_answered';
   targetCollection: string;
   targetId: string;
   field?: string | null;
@@ -765,6 +792,11 @@ export interface StudentProfilesSelect<T extends boolean = true> {
       };
   reviewStatus?: T;
   reviewedAt?: T;
+  reviewNote?: T;
+  reviewNoteAt?: T;
+  reviewRequestedAt?: T;
+  changedSinceReviewAt?: T;
+  reviewedSnapshot?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -784,6 +816,11 @@ export interface CompaniesSelect<T extends boolean = true> {
   status?: T;
   user?: T;
   teamOwner?: T;
+  noteToCompany?: T;
+  noteToCompanyAt?: T;
+  infoRequestedAt?: T;
+  reviewRequestedAt?: T;
+  resentAt?: T;
   approvedAt?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -813,6 +850,7 @@ export interface ProjectsSelect<T extends boolean = true> {
   attachments?: T;
   noteToCompany?: T;
   noteToCompanyAt?: T;
+  submittedAt?: T;
   workload?: T;
   duration?: T;
   status?: T;

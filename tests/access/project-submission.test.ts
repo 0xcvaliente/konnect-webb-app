@@ -111,8 +111,14 @@ const draftOfA = (data: Partial<Project> = {}) =>
     ...as(w.companyA.user),
   })
 
+/** Move a project. Approving needs Konnected's fixed price for a paid project. */
 const move = (id: number, status: Project['status'], user: User) =>
-  w.payload.update({ collection: 'projects', id, data: { status }, ...as(user) })
+  w.payload.update({
+    collection: 'projects',
+    id,
+    data: { status, ...(status === 'approved' ? { fee: 5_000 } : {}) },
+    ...as(user),
+  })
 
 const stored = (id: number) => w.payload.findByID({ collection: 'projects', id, depth: 0 })
 
@@ -393,12 +399,19 @@ describe('the confirmation email', () => {
     for (const value of [...Object.values(SENTINEL.alpha), ...Object.values(SENTINEL.beta)])
       expect(all).not.toContain(value)
 
-    // Changes asked, sent again: a second confirmation. Konnected's own moves send nothing here.
+    // Changes asked (its own email, see approvals.test.ts), sent again: a second confirmation.
     send.mockClear()
     await move(p.id, 'changes_requested', w.admin)
-    expect(send).not.toHaveBeenCalled()
+    expect(send).toHaveBeenCalledTimes(1)
+    expect((send.mock.calls[0]![0] as { subject: string }).subject).toBe(
+      no.Email.projectChanges.subject,
+    )
+    send.mockClear()
     await move(p.id, 'submitted', w.companyA.user)
     expect(send).toHaveBeenCalledTimes(1)
+    expect((send.mock.calls[0]![0] as { subject: string }).subject).toBe(
+      no.Email.projectSubmitted.subject,
+    )
   })
 
   it('a draft save sends nothing', async () => {

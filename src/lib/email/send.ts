@@ -15,6 +15,15 @@ export type EmailType =
   | 'account_reactivated'
   | 'role_changed'
   | 'project_submitted'
+  | 'project_changes_requested'
+  | 'project_rejected'
+  | 'project_approved'
+  | 'project_published'
+  | 'company_approved'
+  | 'company_rejected'
+  | 'company_info_requested'
+  | 'profile_reviewed'
+  | 'profile_changes_requested'
 
 /**
  * Send an email after the answer has gone back to the browser, so the answer takes the

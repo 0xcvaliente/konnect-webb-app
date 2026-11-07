@@ -17,7 +17,8 @@ import {
   relationId,
 } from '@/access/roles'
 import { copyNameToUser } from '@/hooks/copyNameToUser'
-import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { logActivityAfterChange, logActivityAfterDelete, writeActivity } from '@/hooks/logActivity'
+import { sendCompanyReviewEmail } from '@/lib/email/companyEmails'
 import {
   COMPANY_STATUSES,
   isValidOrgNumber,
@@ -131,9 +132,11 @@ async function syncUserLink(
  * Read: admins all; a company user only their own company. Students never read companies: they
  * see the name and logo copied onto a published project. Nobody but admins lists companies.
  * Create: a company user without a company (it starts `pending`), and admins.
- * Update: admins; the company user their own company while it is pending or approved, and only
- * the fields they filled in at registration (name and organisation number only while pending).
- * Status, the linked user, the Konnected owner and the approval date are admin only.
+ * Update: admins; the company user their own company while it is pending or approved, or once
+ * after a rejection (that save sends it back to review), and only the fields they filled in at
+ * registration (name and organisation number not once approved). Status, the linked user, the
+ * Konnected owner, the approval date and the review fields (note, more information asked, review
+ * clock, sent again) are written by admins or by the hook only.
  */
 export const Companies: CollectionConfig = {
   slug: 'companies',
@@ -152,9 +155,22 @@ export const Companies: CollectionConfig = {
     update: ({ req: { user } }): Where | boolean => {
       if (isAdmin(user)) return true
       const companyId = companyIdOf(user)
-      // A rejected company cannot change anything; it writes to the team instead.
+      // A rejected company may correct its details and send them again once (owner decision);
+      // after that it cannot change anything and writes to the team instead.
       return companyId
-        ? { and: [{ id: { equals: companyId } }, { status: { in: ['pending', 'approved'] } }] }
+        ? {
+            and: [
+              { id: { equals: companyId } },
+              {
+                or: [
+                  { status: { in: ['pending', 'approved'] } },
+                  {
+                    and: [{ status: { equals: 'rejected' } }, { resentAt: { exists: false } }],
+                  },
+                ],
+              },
+            ],
+          }
         : false
     },
     delete: ({ req: { user } }) => isAdmin(user),
@@ -165,22 +181,78 @@ export const Companies: CollectionConfig = {
         const role = effectiveRole(req.user)
         const admin = isAdmin(req.user)
 
+        const now = new Date().toISOString()
         if (operation === 'create') {
           assertInitialStatus<CompanyStatus>('pending', data.status, 'A new company')
           data.status = 'pending'
+          // The review clock starts now (the team's queue shows how long it has waited).
+          data.reviewRequestedAt = now
           // A company user registers their own company. The client cannot choose the user.
           if (isCompany(req.user)) data.user = req.user!.id
         } else {
           const from = originalDoc?.status as CompanyStatus
+          if (!admin && from === 'rejected') {
+            // The company's own save after a rejection is its one correction: it goes back to
+            // Konnected. Access already refuses a second one; this is the second layer.
+            if (originalDoc?.resentAt) {
+              throw new APIError('Company: already sent again once', 403)
+            }
+            data.status = 'pending'
+            data.resentAt = now
+            data.reviewRequestedAt = now
+          }
           const to = (data.status ?? from) as CompanyStatus
           assertTransition(COMPANY_TRANSITIONS, from, to, role, 'Company')
 
+          // Konnected asked for more information: the company's next save is its answer, and the
+          // company is back in the team's queue.
+          if (!admin && originalDoc?.infoRequestedAt) {
+            data.infoRequestedAt = null
+            data.reviewRequestedAt = now
+          }
+
           // Name and organisation number are checked by Konnected: fixed once approved.
-          if (!admin && from !== 'pending') {
+          if (!admin && from === 'approved') {
             for (const key of LOCKED_AFTER_APPROVAL) {
               if (data[key] !== undefined && data[key] !== originalDoc?.[key]) {
                 throw new APIError(`Company: ${key} cannot change after approval`, 403)
               }
+            }
+          }
+        }
+
+        if (admin && operation === 'update') {
+          // Asking for more information keeps the company pending; it only makes sense then.
+          if (data.infoRequestedAt && !originalDoc?.infoRequestedAt) {
+            if ((data.status ?? originalDoc?.status) !== 'pending') {
+              throw new APIError('Company: ask for more information only while pending', 400)
+            }
+          }
+          // A decision ends any open request for more information.
+          if (data.status !== originalDoc?.status) data.infoRequestedAt = null
+          // The date of Konnected's latest note follows the note.
+          if ((data.noteToCompany ?? '') !== (originalDoc?.noteToCompany ?? '')) {
+            data.noteToCompanyAt = data.noteToCompany ? now : null
+          }
+          // One company account per organisation number (owner decision): the team cannot approve
+          // a second company with a number another approved company already has. Bypass: the
+          // server compares numbers across companies; only ids are read.
+          const orgNumber = data.orgNumber ?? originalDoc?.orgNumber
+          if (data.status === 'approved' && originalDoc?.status !== 'approved' && orgNumber) {
+            const same = await req.payload.count({
+              collection: 'companies',
+              where: {
+                and: [
+                  { orgNumber: { equals: orgNumber } },
+                  { status: { equals: 'approved' } },
+                  { id: { not_equals: originalDoc?.id } },
+                ],
+              },
+              overrideAccess: true,
+              req,
+            })
+            if (same.totalDocs > 0) {
+              throw new APIError('Company: another approved company has this number', 409)
             }
           }
         }
@@ -244,6 +316,38 @@ export const Companies: CollectionConfig = {
       },
     ],
     afterChange: [
+      async ({ doc, previousDoc, operation, req, context }) => {
+        if (operation !== 'update') return doc
+        // Asking for more information and the company's answer are not status changes, so they
+        // get their own activity rows. The team's note goes with the request.
+        if (!context?.skipActivityLog) {
+          if (doc.infoRequestedAt && !previousDoc?.infoRequestedAt) {
+            await writeActivity(req, {
+              action: 'info_requested',
+              targetCollection: 'companies',
+              targetId: String(doc.id),
+              note: doc.noteToCompany?.slice(0, 2000) || undefined,
+            })
+          } else if (
+            !doc.infoRequestedAt &&
+            previousDoc?.infoRequestedAt &&
+            doc.status === previousDoc?.status
+          ) {
+            await writeActivity(req, {
+              action: 'info_answered',
+              targetCollection: 'companies',
+              targetId: String(doc.id),
+            })
+          }
+        }
+        // Tell the company what Konnected decided, in its user's language.
+        if (doc.status !== previousDoc?.status && doc.status !== 'pending') {
+          await sendCompanyReviewEmail(req, doc, doc.status)
+        } else if (doc.infoRequestedAt && !previousDoc?.infoRequestedAt) {
+          await sendCompanyReviewEmail(req, doc, 'info_requested')
+        }
+        return doc
+      },
       async ({ doc, previousDoc, operation, req }) => {
         // Link the company's user to it (and unlink a user an admin replaced).
         const from = operation === 'create' ? undefined : relationId(previousDoc?.user)
@@ -400,6 +504,49 @@ export const Companies: CollectionConfig = {
       validate: withoutFilterOptions(validations.relationship as Validate),
       access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
       admin: { position: 'sidebar' },
+    },
+    {
+      // Konnected's latest note to the company: the reason for a rejection, or what to add or
+      // correct. Written by the team at review; the company reads it on its status and profile.
+      name: 'noteToCompany',
+      label: 'Latest note to the company',
+      type: 'textarea',
+      maxLength: 2000,
+      access: { read: adminOrCompanyField, create: adminOnlyField, update: adminOnlyField },
+    },
+    {
+      name: 'noteToCompanyAt',
+      label: 'Note written',
+      type: 'date',
+      access: { read: adminOrCompanyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // Set when Konnected asks for more information (the company stays pending); cleared by the
+      // company's next save of its details, or by a decision. Server rules in the hook above.
+      name: 'infoRequestedAt',
+      label: 'More information asked',
+      type: 'date',
+      access: { read: adminOrCompanyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { position: 'sidebar' },
+    },
+    {
+      // When the company last came to Konnected for review: registration, its answer to a
+      // request for more information, or its one correction after a rejection. Set by the server.
+      name: 'reviewRequestedAt',
+      label: 'Waiting for review since',
+      type: 'date',
+      access: { read: adminOrCompanyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // When a rejected company corrected its details and sent them again. A company may do that
+      // once (owner decision). Set by the server.
+      name: 'resentAt',
+      label: 'Sent again after rejection',
+      type: 'date',
+      access: { read: adminOrCompanyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
     },
     {
       // When Konnected approved the company. Set by the hook above; an admin may correct it.

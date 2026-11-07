@@ -16,6 +16,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { companyShellProps } from '@/lib/companies/display'
+import { PAYMENT_TERMS_DAYS, priceBreakdown, VAT_RATE } from '@/lib/money'
 import { requireOwnCompany } from '@/lib/companies/session'
 import { isEditable, PROJECT_STATUS_TONE } from '@/lib/projects/display'
 import { findOwnProject, projectHistory } from '@/lib/projects/project'
@@ -65,6 +66,18 @@ export default async function CompanyProjectPage({
   const editable = isEditable(status) && company.status !== 'rejected'
   const justSent = sent === '1' && status === 'submitted'
   const note = project.noteToCompany?.trim()
+  // Konnected's fixed price, once set at review (paid projects only). The company reads it.
+  const price =
+    project.paidOrUnpaid === 'paid' && project.fee && status !== 'draft' && status !== 'submitted'
+      ? priceBreakdown(project.fee)
+      : null
+  const money = (value: number) =>
+    format.number(value, {
+      style: 'currency',
+      currency: 'NOK',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
   const noteDate = project.noteToCompanyAt
     ? format.dateTime(new Date(project.noteToCompanyAt), {
         dateStyle: 'medium',
@@ -153,6 +166,26 @@ export default async function CompanyProjectPage({
             </CardHeader>
             <ProjectTrack status={status} />
           </Card>
+          {price && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('priceTitle')}</CardTitle>
+              </CardHeader>
+              <dl className="grid grid-cols-[minmax(0,1fr)_max-content] gap-x-4 gap-y-1.5">
+                <dt className="text-muted-foreground">{t('priceExVat')}</dt>
+                <dd className="text-right tabular-nums">{money(price.price)}</dd>
+                <dt className="text-muted-foreground">{t('vat', { rate: VAT_RATE * 100 })}</dt>
+                <dd className="text-right tabular-nums">{money(price.vat)}</dd>
+                <dt className="border-t border-line pt-1.5 font-semibold">{t('total')}</dt>
+                <dd className="border-t border-line pt-1.5 text-right font-semibold tabular-nums">
+                  {money(price.total)}
+                </dd>
+              </dl>
+              <p className="text-[0.85rem] text-muted-foreground">
+                {t('priceNote', { days: PAYMENT_TERMS_DAYS })}
+              </p>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>{t('actionsTitle')}</CardTitle>

@@ -104,7 +104,7 @@ export async function TeamShell({
 
         <main
           id="main"
-          className="grid min-w-0 content-start gap-5 px-4 pt-4 pb-10 sm:px-6 sm:pt-[22px]"
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-5 px-4 pt-4 pb-10 sm:px-6 sm:pt-[22px]"
         >
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div className="grid min-w-0 gap-1">

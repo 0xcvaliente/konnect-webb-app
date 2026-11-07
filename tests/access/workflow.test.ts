@@ -395,7 +395,13 @@ describe('project status rules', () => {
   it('follows the whole chain in order and only admin makes the admin moves', async () => {
     const p = await w.payload.create({
       collection: 'projects',
-      data: { ...readyFields(), company: w.companyA.company.id, title: 'Chain', status: 'draft' },
+      data: {
+        ...readyFields(),
+        company: w.companyA.company.id,
+        title: 'Chain',
+        status: 'draft',
+        fee: 4_000,
+      },
       overrideAccess: true,
     })
     await move(p.id, 'submitted', w.companyA.user)
