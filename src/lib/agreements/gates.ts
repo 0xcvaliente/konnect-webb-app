@@ -29,15 +29,26 @@ import { type AgreementSource, agreementValues } from './values'
 const compared = (field: string) =>
   !field.startsWith('agreement.') && !field.startsWith('company.') && field !== 'student.fullName'
 
+/**
+ * Terms a gate may leave out of the comparison. `project.deadline`: the day applications close is
+ * Konnected's recruiting date. Reopening applications after a match ended (or after nobody fitted)
+ * sets a new one, which is not a new term for the company (Projects hook).
+ */
+export type IgnoredTerm = 'project.deadline'
+
 /** The terms the agreement was signed with are the terms the source gives now. */
-function sameTerms(agreement: Agreement, source: AgreementSource): boolean {
+function sameTerms(
+  agreement: Agreement,
+  source: AgreementSource,
+  ignore: readonly IgnoredTerm[] = [],
+): boolean {
   const signed = (agreement.values ?? {}) as Record<string, string | null>
   const now = agreementValues(source, { reference: agreement.reference }) as Record<
     string,
     string | null
   >
   return Object.keys(signed)
-    .filter(compared)
+    .filter((field) => compared(field) && !(ignore as readonly string[]).includes(field))
     .every((field) => (signed[field] ?? null) === (now[field] ?? null))
 }
 
@@ -68,14 +79,19 @@ async function signedAgreements(
 type Gate = 'unsigned' | 'changed' | 'open'
 
 /** The project's company agreement, signed by the company and Konnected, for its company and terms. */
-async function companyGate(req: PayloadRequest, project: Project): Promise<Gate> {
+async function companyGate(
+  req: PayloadRequest,
+  project: Project,
+  ignore: readonly IgnoredTerm[] = [],
+): Promise<Gate> {
   const agreements = await signedAgreements(req, 'company', { project: project.id })
   if (!agreements.length) return 'unsigned'
   const companyId = relationId(project.company)
   const company = { id: companyId } as Company
   const matches = agreements.some(
     (a) =>
-      relationId(a.company) === companyId && sameTerms(a, { kind: 'company', project, company }),
+      relationId(a.company) === companyId &&
+      sameTerms(a, { kind: 'company', project, company }, ignore),
   )
   return matches ? 'open' : 'changed'
 }
@@ -133,13 +149,15 @@ const CHANGED =
 
 /**
  * Gate 1: a project is published only after its company agreement is signed by all parties.
- * `project` is the project as it will be saved, with the changes of the same request.
+ * `project` is the project as it will be saved, with the changes of the same request. `ignore`
+ * leaves terms out of the comparison (only for reopening applications, see IgnoredTerm).
  */
 export async function assertCompanyAgreementSigned(
   req: PayloadRequest,
   project: Project | undefined,
+  ignore: readonly IgnoredTerm[] = [],
 ): Promise<void> {
-  const gate = project?.id ? await companyGate(req, project) : 'unsigned'
+  const gate = project?.id ? await companyGate(req, project, ignore) : 'unsigned'
   if (gate === 'unsigned') {
     throw refuse(
       'Project: the company agreement must be signed by the company and Konnected before publishing',

@@ -35,7 +35,8 @@ import {
   REASON_MAX,
   REOPEN_REASONS,
 } from '@/lib/problems/fields'
-import { closeOpenApplications, endActiveMatch } from '@/lib/problems/rules'
+import { closeOpenApplications, endActiveMatch, problemError } from '@/lib/problems/rules'
+import { lockRow } from '@/lib/db/locks'
 import {
   COMPANY_EDITABLE,
   DURATION_WEEKS,
@@ -57,6 +58,9 @@ import {
   type ProjectStatus,
 } from '@/lib/transitions'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
+
+/** Statuses whose changes wait for each other (row lock in the hook below). */
+const LOCKED_FROM: readonly ProjectStatus[] = ['published', ...ENDS_MATCH]
 
 export const PROJECT_STATUSES: ProjectStatus[] = [
   'draft',
@@ -169,6 +173,25 @@ export const Projects: CollectionConfig = {
 
         const from = (originalDoc?.status ?? 'draft') as ProjectStatus
         const to = (data.status ?? from) as ProjectStatus
+        if (operation === 'update' && originalDoc?.id && LOCKED_FROM.includes(from)) {
+          // A published, matched or running project changes one save at a time: selecting a
+          // student, ending the match, closing, sending it back. Lock the row first (lock order:
+          // project, then match), then read the status again, so a save that waited on another
+          // one sees what it did instead of overwriting it.
+          await lockRow(req, 'projects', originalDoc.id)
+          const fresh = await req.payload.findByID({
+            collection: 'projects',
+            id: originalDoc.id,
+            depth: 0,
+            select: { status: true },
+            overrideAccess: true,
+            disableErrors: true,
+            req,
+          })
+          if (!fresh || fresh.status !== from) {
+            throw problemError('changed', 'The project changed meanwhile. Load it again.', 409)
+          }
+        }
         if (operation === 'update') {
           assertTransition(PROJECT_TRANSITIONS, from, to, role, 'Project')
           await assertProjectGates(req, from, to, originalDoc && { ...originalDoc, ...data })
@@ -264,15 +287,15 @@ export const Projects: CollectionConfig = {
         if (to === 'published' && from !== 'published') data.publishedAt = new Date().toISOString()
         // Publishing goes through one gate: approved company, paid or unpaid and price, and the
         // signed company agreement (lib/projects/publish.ts). Reopening after a match ended
-        // (Kanban card "Problem reports") goes through it too, with the closing day the company
-        // agreement was signed with: the new closing day for applications is Konnected's
-        // recruiting date, not a new term for the company.
+        // (Kanban card "Problem reports") goes through it too, without comparing the closing day:
+        // the closing day for applications is Konnected's recruiting date, not a term for the
+        // company, and every reopen (after a match ended or after nobody fitted) sets a new one.
         if (to === 'published' && from !== 'published') {
-          await assertCanPublish(req, {
-            ...next,
-            fee: data.fee === null ? null : next.fee,
-            ...(ENDS_MATCH.includes(from) ? { deadline: originalDoc?.deadline } : {}),
-          })
+          await assertCanPublish(
+            req,
+            { ...next, fee: data.fee === null ? null : next.fee },
+            ENDS_MATCH.includes(from) ? { ignore: ['project.deadline'] } : {},
+          )
         }
 
         // The problem paths (lib/problems): when and why the project was closed or reopened.
