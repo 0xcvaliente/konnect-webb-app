@@ -202,6 +202,17 @@ async function seed() {
     })
   }
 
+  // Konnected reviews every profile before matching.
+  if (profile.reviewStatus !== 'reviewed') {
+    profile = await payload.update({
+      collection: 'student-profiles',
+      id: profile.id,
+      data: { reviewStatus: 'reviewed' },
+      user: adminCtx,
+      overrideAccess: false,
+    })
+  }
+
   // Company: registered by the company user (starts pending, linked to them), then approved by
   // the admin. The organisation number is made up but has a valid check digit.
   let companyId =
@@ -315,7 +326,8 @@ async function seed() {
 
     for (const step of path) {
       if (step === 'matched') {
-        // Konnected picks the student: apply, shortlist, select, then create the match.
+        // Konnected picks the student: apply, shortlist, select. Selecting makes the match and
+        // moves the project to matched; the dates agreed at kick-off go on the match after.
         const application = await payload.create({
           collection: 'applications',
           data: { project: project.id, note: 'I have done similar work before.' } as never,
@@ -331,12 +343,10 @@ async function seed() {
             overrideAccess: false,
           })
         }
-        await payload.create({
+        await payload.update({
           collection: 'matches',
+          where: { project: { equals: project.id } },
           data: {
-            project: project.id,
-            student: profile.id,
-            application: application.id,
             // Agreed at kick-off; the student agreement uses them.
             startDate: new Date().toISOString(),
             endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
@@ -344,6 +354,7 @@ async function seed() {
           user: adminCtx,
           overrideAccess: false,
         })
+        continue
       }
       // The agreement gates: the company agreement before publishing, the student agreement
       // before the work starts.

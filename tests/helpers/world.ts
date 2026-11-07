@@ -129,8 +129,8 @@ export type World = Awaited<ReturnType<typeof createWorld>>
 /**
  * A small world with every role:
  * - an admin, two students (alpha shares only skills, beta shares nothing), two companies
- * - companyA is approved and has a published project that is matched to alpha, with a match,
- *   a released deliverable, an unreleased deliverable and a payment
+ * - companyA is approved and has a project Konnected selected alpha for (so it has a match) and
+ *   that is in progress, with a released deliverable, an unreleased deliverable and a payment
  * - companyB is approved and has its own draft project
  * - files: each student has a CV on their profile (neither ticked "share my CV"), the released and
  *   the unreleased deliverable each list one file, and project A and project A open each have a
@@ -275,7 +275,18 @@ export async function createWorld() {
   const projectOpen = await makeProject(companyA, 'Project A open', published)
   const projectHidden = await makeProject(companyA, 'Project A not published', ['submitted'])
 
-  // alpha applies to project A as themselves, Konnected shortlists then selects.
+  // alpha applies to project A as themselves. Konnected reviews alpha's profile (every profile is
+  // reviewed before matching), shortlists, then selects: the selection makes the match and moves
+  // the project to matched.
+  await payload.update({
+    collection: 'student-profiles',
+    id: alpha.profile.id,
+    data: { reviewStatus: 'reviewed' },
+    user: adminCtx,
+    overrideAccess: false,
+    // Undone below: the review leaves no activity row behind.
+    context: { skipActivityLog: true },
+  })
   const application = await payload.create({
     collection: 'applications',
     data: { project: projectA.id, note: SENTINEL.alpha.applicationNote } as never,
@@ -291,30 +302,37 @@ export async function createWorld() {
       overrideAccess: false,
     })
   }
-  const match = await payload.create({
+  const made = await payload.find({
     collection: 'matches',
-    data: {
-      project: projectA.id,
-      student: alpha.profile.id,
-      application: application.id,
-      agreementNotes: 'Sentinel-Agreement-Notes',
-    },
+    where: { project: { equals: projectA.id } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
+  const match = await payload.update({
+    collection: 'matches',
+    id: made.docs[0]!.id,
+    data: { agreementNotes: 'Sentinel-Agreement-Notes' },
     user: adminCtx,
     overrideAccess: false,
   })
-  for (const status of ['matched', 'in_progress'] as const) {
-    // The work starts only after the student agreement is signed (the second gate).
-    if (status === 'in_progress') {
-      await signedAgreement(payload, admin, alpha.user, { kind: 'student', matchId: match.id })
-    }
-    await payload.update({
-      collection: 'projects',
-      id: projectA.id,
-      data: { status },
-      user: adminCtx,
-      overrideAccess: false,
-    })
-  }
+  // The approval-queue tests start from a profile that waits for review: put alpha's review back
+  // as it was, straight in the database (no email, no activity row).
+  await payload.db.updateOne({
+    collection: 'student-profiles',
+    where: { id: { equals: alpha.profile.id } },
+    data: { reviewStatus: 'waiting', reviewedAt: null, reviewedSnapshot: null },
+    returning: false,
+  })
+  // The work starts only after the student agreement is signed (the second gate).
+  await signedAgreement(payload, admin, alpha.user, { kind: 'student', matchId: match.id })
+  await payload.update({
+    collection: 'projects',
+    id: projectA.id,
+    data: { status: 'in_progress' },
+    user: adminCtx,
+    overrideAccess: false,
+  })
 
   // alpha uploads one file for each deliverable, as themselves.
   const addDeliverableFile = async (name: string) =>
@@ -419,6 +437,55 @@ export async function createWorld() {
     briefA,
     briefOpen,
   }
+}
+
+/**
+ * Konnected picks `student` for the published project `projectId` the one real way: the student
+ * applies, the team selects. The selection makes the match and moves the project to matched. A
+ * profile that is not reviewed yet is marked reviewed first (selecting needs a reviewed profile).
+ */
+export async function selectStudent(
+  payload: Payload,
+  admin: User,
+  student: { user: User; profile: { id: number } },
+  projectId: number,
+) {
+  const profile = await payload.findByID({
+    collection: 'student-profiles',
+    id: student.profile.id,
+    depth: 0,
+    overrideAccess: true,
+  })
+  if (profile.reviewStatus !== 'reviewed') {
+    await payload.update({
+      collection: 'student-profiles',
+      id: student.profile.id,
+      data: { reviewStatus: 'reviewed' },
+      user: asUser(admin),
+      overrideAccess: false,
+    })
+  }
+  const application = await payload.create({
+    collection: 'applications',
+    data: { project: projectId, note: 'I would like to do this.' } as never,
+    user: asUser(student.user),
+    overrideAccess: false,
+  })
+  await payload.update({
+    collection: 'applications',
+    id: application.id,
+    data: { status: 'selected' },
+    user: asUser(admin),
+    overrideAccess: false,
+  })
+  const found = await payload.find({
+    collection: 'matches',
+    where: { project: { equals: projectId } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
+  return { application, match: found.docs[0]! }
 }
 
 // ---------- HTTP transports. These call the real Next route handlers with a real Request. ----------

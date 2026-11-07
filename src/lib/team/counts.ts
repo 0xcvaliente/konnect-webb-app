@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import type { TeamNavKey } from '@/components/app/nav'
 
 import { approvalCounts, type SessionUser } from './approvals'
+import { matchingCount } from './matching'
 
 /**
  * The numbers next to the team menu items: open items per queue, read as the team member.
@@ -12,8 +13,11 @@ export async function teamCounts(
   payload: Payload,
   user: SessionUser,
 ): Promise<Partial<Record<TeamNavKey, number>>> {
-  const approvals = await approvalCounts(payload, user)
+  const [approvals, matching] = await Promise.all([
+    approvalCounts(payload, user),
+    matchingCount(payload, user),
+  ])
   return approvals
-    ? { approvals: approvals.companies + approvals.projects + approvals.students }
+    ? { approvals: approvals.companies + approvals.projects + approvals.students, matching }
     : {}
 }

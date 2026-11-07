@@ -349,6 +349,46 @@
       "next": "You can follow your application, and withdraw it, under My applications. If you withdraw, you cannot apply to this project again.",
       "button": "See your application",
       "ignore": "If you did not apply, write to the Konnected team."
+    },
+    "matching": {
+      "items": {
+        "name": "name",
+        "school": "programme and university",
+        "skills": "skills",
+        "pitch": "short introduction",
+        "experience": "experience",
+        "cv": "CV",
+        "contactEmail": "contact email",
+        "phone": "phone number"
+      },
+      "selected": {
+        "subject": "You are selected for “{title}”",
+        "heading": "Konnected selected you",
+        "body": "Konnected selected you for “{title}”.",
+        "shares": "{company} will see only what you agreed to share: your {items}.",
+        "sharesNothing": "You share nothing with {company} yet. You can choose what to share on your profile.",
+        "next": "Konnected will contact you to agree what to deliver and by when.",
+        "button": "View your application",
+        "ignore": "If you did not apply to this project, write to the Konnected team."
+      },
+      "notSelected": {
+        "subject": "An update on “{title}”",
+        "heading": "Konnected picked another student",
+        "body": "Konnected picked another student for “{title}”. Your profile stays active for new projects.",
+        "thanks": "Thank you for applying.",
+        "button": "See other projects",
+        "ignore": "If you did not apply to this project, write to the Konnected team."
+      },
+      "found": {
+        "subject": "We found your student for “{title}”",
+        "heading": "We found your student",
+        "body": "Konnected selected a student for “{title}”.",
+        "shares": "The student agreed to share their {items} with you. You find them on the project page.",
+        "sharesNothing": "The student has not chosen to share any details with you yet. Konnected stays your contact.",
+        "next": "Konnected will contact you to agree the next steps.",
+        "button": "Open the project",
+        "ignore": "If you do not know this project, write to the Konnected team."
+      }
     }
   },
   "DesignGuide": {
@@ -1048,7 +1088,7 @@
   },
   "TeamHome": {
     "title": "Today",
-    "lede": "The team's daily work. Each queue opens on its oldest item. Matching, deliverables and payments are added here step by step.",
+    "lede": "The team's daily work. Each queue opens on its oldest item. Deliverables and payments are added here step by step.",
     "twoStepTitle": "Keep 2-step verification on for your Google account",
     "twoStepBody": "Team accounts sign in with Google only, so your Google account protects every company and student record. Konnected cannot see whether 2-step verification is on: check it in your Google account.",
     "twoStepLink": "Open Google security settings",
@@ -1062,10 +1102,12 @@
     "queue": {
       "companies": "Companies to approve",
       "projects": "Projects to review or publish",
-      "students": "Student profiles to review"
+      "students": "Student profiles to review",
+      "matching": "Applications to decide"
     },
     "oldest": "Oldest: {name}, {waited}",
-    "queueEmpty": "Nothing waits here."
+    "queueEmpty": "Nothing waits here.",
+    "decideBy": "First: {name}, decide by {date}"
   },
   "TeamAccounts": {
     "title": "Accounts",
@@ -1493,7 +1535,16 @@
     "priceExVat": "Fixed price excl. VAT",
     "vat": "VAT {rate}%",
     "total": "Total",
-    "priceNote": "Set by Konnected at review. Konnected sends the invoice; payment terms are {days} days."
+    "priceNote": "Set by Konnected at review. Konnected sends the invoice; payment terms are {days} days.",
+    "student": {
+      "title": "Your student",
+      "selectedOn": "Selected {date}",
+      "nameHidden": "Name not shared",
+      "only": "Selected by Konnected. You see only what the student agreed to share.",
+      "nothing": "The student has not chosen to share any details with you yet. Konnected stays your contact.",
+      "notShared": "Not shared with you: {items}. These stay with Konnected.",
+      "openCv": "Open CV"
+    }
   },
   "TeamApprovals": {
     "title": "Approvals",
@@ -2004,6 +2055,120 @@
     },
     "notFoundTitle": "Application not found",
     "notFoundBody": "The link may be old. Your applications are listed under My applications.",
-    "seeAll": "See my applications"
+    "seeAll": "See my applications",
+    "seesListLabel": "Shared with the company",
+    "seesNothingShared": "You share nothing with {company} yet. Choose what to share on your profile."
+  },
+  "TeamMatching": {
+    "back": "Back to today",
+    "title": "Matching",
+    "lede": "Konnected picks one student per project by hand. Companies never see the applicants, only the student Konnected selects, and only what that student agreed to share.",
+    "whoLabel": "Show projects",
+    "mine": "Mine",
+    "everyone": "Everyone",
+    "emptyTitle": "Nothing to decide",
+    "emptyBody": "No published project has applications waiting for a decision.",
+    "queueEmpty": "No applications wait for a decision.",
+    "queueEmptyMine": "None of your companies' projects have applications waiting.",
+    "section": {
+      "decide": "Applications closed, decide now",
+      "open": "Still taking applications"
+    },
+    "applications": "{count, plural, one {# application} other {# applications}}",
+    "closed": "closed {date}",
+    "closes": "closes {date}",
+    "shortlistedTag": "{count} shortlisted",
+    "decideBy": "Decide by {date}",
+    "decideNoDate": "Decide within 3 working days after applications close",
+    "closesOn": "Applications close {date}. Konnected promises a decision within 3 working days after that.",
+    "noClosingDay": "This project has no closing day.",
+    "workload": "Workload",
+    "timeframe": "Timeframe",
+    "payment": "Payment",
+    "pay": {
+      "paid": "Paid",
+      "unpaid": "Unpaid"
+    },
+    "missing": "Not filled in",
+    "skillsAsked": "Skills asked for",
+    "work": "The work",
+    "deliverable": "Expected deliverable",
+    "matchedTitle": "Matched with {name} on {date}",
+    "matchedShares": "{company} sees only what the student agreed to share: {items}.",
+    "matchedSharesNothing": "The student shares nothing with {company} yet.",
+    "next": "Next in queue",
+    "applicantsTitle": "{count, plural, =0 {No open applications} one {# open application} other {# open applications, side by side}}",
+    "applicantsHint": "Profiles not yet reviewed cannot be selected.",
+    "noneLeftMatched": "Every application on this project is decided.",
+    "noneOpen": "No applications wait for a decision on this project.",
+    "decidedTitle": "Decided or withdrawn",
+    "checkedHere": "Every decision is checked again on the server and written to the activity log.",
+    "noStudy": "No programme given",
+    "firstProject": "First project",
+    "changedSinceReview": "Profile changed since review",
+    "skillsHit": "Skills: {hit} of {total} asked for",
+    "skillsLabel": "Skills the project asks for",
+    "has": "Has:",
+    "missingSkill": "Missing:",
+    "applied": "Applied",
+    "running": "Running projects",
+    "runningValue": "{count} of {max}",
+    "hours": "Hours on other projects",
+    "hoursValue": "{count, plural, one {# hour} other {# hours}}",
+    "hoursNone": "None",
+    "profile": "Profile",
+    "reviewed": "Reviewed",
+    "notReviewed": "Not reviewed yet",
+    "noNote": "No note with the application.",
+    "reviewFirst": "Review profile first",
+    "openCv": "Open CV",
+    "fullHint": "Already on {max} projects, the most at one time. Selecting is not possible until one is delivered.",
+    "reviewHint": "Konnected reviews every profile before matching.",
+    "shortlist": "Shortlist",
+    "shortlistedToast": "{name} shortlisted.",
+    "select": "Select",
+    "selectedToast": "{name} selected for {title}. Project matched.",
+    "confirmTitle": "Select {name} for this project?",
+    "confirmSelected": "{first} becomes selected and gets an email.",
+    "confirmOthers": "{count, plural, one {The other applicant becomes not selected and gets a kind email.} other {The # other applicants become not selected and get a kind email.}}",
+    "confirmMatched": "The project becomes matched.",
+    "confirmShares": "{company} sees only what {first} agreed to share: {items}.",
+    "confirmSharesNothing": "{first} shares nothing with {company} yet. {company} sees no details until {first} ticks them.",
+    "confirm": "Confirm selection",
+    "cancel": "Cancel",
+    "errors": {
+      "forbidden": "Only the Konnected team can do this. Sign in again.",
+      "not_found": "This application no longer exists.",
+      "not_open": "This application is no longer open. Someone may have decided first. The page now shows what is true.",
+      "project_not_open": "This project is no longer published. It may have been matched already.",
+      "already_matched": "Another team member selected a student for this project first.",
+      "profile_not_reviewed": "Review this student's profile before selecting them.",
+      "too_many": "This student already has 2 projects running or picked, the most at one time.",
+      "generic": "Something went wrong. Nothing changed. Try again in a minute."
+    },
+    "selectName": "Select {name}",
+    "shortlistName": "Shortlist {name}"
+  },
+  "SharedItems": {
+    "label": {
+      "name": "Name",
+      "school": "Programme and university",
+      "skills": "Skills",
+      "pitch": "Short introduction",
+      "experience": "Experience",
+      "cv": "CV",
+      "contactEmail": "Contact email",
+      "phone": "Phone number"
+    },
+    "inline": {
+      "name": "name",
+      "school": "programme and university",
+      "skills": "skills",
+      "pitch": "short introduction",
+      "experience": "experience",
+      "cv": "CV",
+      "contactEmail": "contact email",
+      "phone": "phone number"
+    }
   }
 }

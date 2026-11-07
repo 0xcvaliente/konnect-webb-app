@@ -16,6 +16,7 @@ import {
   login,
   resetDatabase,
   rest,
+  selectStudent,
   SENTINEL,
   sessionFor,
   type World,
@@ -436,11 +437,7 @@ describe('deliverable files as each role', () => {
 
   it('a deliverable lists only files of its own match, at most 10', async () => {
     // beta gets a match on another project and uploads a file for it.
-    const betaMatch = await w.payload.create({
-      collection: 'matches',
-      data: { project: w.projectOpen.id, student: w.beta.profile.id },
-      ...as('admin'),
-    })
+    const { match: betaMatch } = await selectStudent(w.payload, w.admin, w.beta, w.projectOpen.id)
     const betaFile = await w.payload.create({
       collection: 'deliverable-files',
       data: { match: betaMatch.id },

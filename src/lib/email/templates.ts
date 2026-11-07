@@ -1,5 +1,6 @@
 import en from '@/messages/en.json'
 import no from '@/messages/no.json'
+import type { SharedItem } from '@/lib/matching/fields'
 
 /**
  * Emails in English and Norwegian. Every string comes from the message files
@@ -417,6 +418,89 @@ export function applicationReceivedEmail(
     subject: m.subject,
     heading: m.heading,
     paragraphs,
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+// ---------- Matching: the selected student, the others, and the company ----------
+
+/** Shared item kinds as a list in words ("name, programme and university and CV"). */
+const itemList = (locale: EmailLocale, items: readonly SharedItem[]): string => {
+  const words = MESSAGES[locale].matching.items
+  return new Intl.ListFormat(locale === 'no' ? 'nb-NO' : 'en-GB', {
+    style: 'long',
+    type: 'conjunction',
+  }).format(items.map((item) => words[item]))
+}
+
+/** "You are selected": to the student Konnected picked, with what the company will see. */
+export function selectedEmail(
+  locale: EmailLocale,
+  {
+    title,
+    company,
+    items,
+    href,
+  }: { title: string; company: string; items: readonly SharedItem[]; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.matching.selected
+  return render({
+    locale,
+    subject: m.subject.replace('{title}', title),
+    heading: m.heading,
+    paragraphs: [
+      m.body.replace('{title}', title),
+      items.length
+        ? m.shares.replace('{company}', company).replace('{items}', itemList(locale, items))
+        : m.sharesNothing.replace('{company}', company),
+      m.next,
+    ],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+/** A kind note to a student Konnected did not pick. */
+export function notSelectedEmail(
+  locale: EmailLocale,
+  { title, href }: { title: string; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.matching.notSelected
+  return render({
+    locale,
+    subject: m.subject.replace('{title}', title),
+    heading: m.heading,
+    paragraphs: [m.body.replace('{title}', title), m.thanks],
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}
+
+/**
+ * "We found your student": to the company. Names only the kinds of details the student shares,
+ * never the values; those wait on the project page, behind sign-in.
+ */
+export function studentFoundEmail(
+  locale: EmailLocale,
+  { title, items, href }: { title: string; items: readonly SharedItem[]; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.matching.found
+  return render({
+    locale,
+    subject: m.subject.replace('{title}', title),
+    heading: m.heading,
+    paragraphs: [
+      m.body.replace('{title}', title),
+      items.length ? m.shares.replace('{items}', itemList(locale, items)) : m.sharesNothing,
+      m.next,
+    ],
     action: { label: m.button, href },
     ignore: m.ignore,
     footer: all.common.accountFooter,

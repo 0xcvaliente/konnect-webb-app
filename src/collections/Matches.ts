@@ -12,9 +12,11 @@ import {
 } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
 import { assertRoomForAnotherProject } from '@/lib/applications/rules'
+import { selectionOf } from '@/lib/matching/rules'
 
 /**
- * Konnected's pick of a student for a project. Only admin creates or edits a match.
+ * Konnected's pick of a student for a project. Made only by selecting an application (Matching);
+ * only admin edits a match, and never its student, project or application.
  *
  * A company reads the matches of its own projects, but NOT the `student` or `application`
  * relations (field-level read is admin and student only). What the company learns about the
@@ -38,26 +40,27 @@ export const Matches: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, originalDoc, operation, req }) => {
-        const studentId = relationId(data.student ?? originalDoc?.student)
-        const projectId = relationId(data.project ?? originalDoc?.project)
-        const applicationId = relationId(data.application ?? originalDoc?.application)
+        // A key sent as null counts as sent (clearing it is a change too).
+        const valueOf = (key: 'student' | 'project' | 'application') =>
+          relationId(key in data ? data[key] : originalDoc?.[key])
+        const studentId = valueOf('student')
+        const projectId = valueOf('project')
+        const applicationId = valueOf('application')
         if (!studentId || !projectId)
           throw new APIError('A match needs a student and a project', 400)
 
-        // At most 2 running projects per student: a new match, or a match moved to another
-        // student or project, is a pick and is checked here. Saves that keep both (the shared
-        // copy being rebuilt, dates) are not.
-        if (
-          operation === 'create' ||
-          relationId(originalDoc?.student) !== studentId ||
-          relationId(originalDoc?.project) !== projectId
-        ) {
-          await assertRoomForAnotherProject(req, studentId, projectId, originalDoc?.id)
-        }
-
-        // Bypass for the reads below: the server needs the full student profile to copy only the
-        // shared fields, and the application to check it belongs to this student and project.
-        if (applicationId) {
+        // A match is made only by selecting an application (the Applications hook, which also
+        // marks the other applicants not selected and moves the project to matched). Any other
+        // attempt to create one, through any API, is refused.
+        if (operation === 'create') {
+          if (!applicationId || selectionOf(req) !== applicationId) {
+            throw new APIError(
+              'A match is made by selecting an application. Use Matching in the team workspace.',
+              400,
+            )
+          }
+          // Bypass: the server reads the application to check it is the one being selected, for
+          // this student and project.
           const application = await req.payload.findByID({
             collection: 'applications',
             id: applicationId,
@@ -66,13 +69,28 @@ export const Matches: CollectionConfig = {
             req,
           })
           if (
+            application.status !== 'selected' ||
             relationId(application.student) !== studentId ||
             relationId(application.project) !== projectId
           ) {
-            throw new APIError('The application is not for this student and project', 400)
+            throw new APIError('The application is not selected for this student and project', 400)
           }
+          // At most 2 running projects per student (checked again here; it locks the profile).
+          await assertRoomForAnotherProject(req, studentId, projectId)
+        }
+        // The student, project and application of a match never change. Ending a match and
+        // matching again is its own step (a later card).
+        if (
+          operation === 'update' &&
+          (relationId(originalDoc?.student) !== studentId ||
+            relationId(originalDoc?.project) !== projectId ||
+            relationId(originalDoc?.application) !== applicationId)
+        ) {
+          throw new APIError('A match keeps its student, project and application', 400)
         }
 
+        // Bypass for the read below: the server needs the full student profile to copy only the
+        // shared fields.
         const profile = await req.payload.findByID({
           collection: 'student-profiles',
           id: studentId,

@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { isStudent } from '@/access/roles'
+import { type SharedItem, sharedItemsOf } from '@/lib/matching/fields'
 import { storedToDay, todayInOslo } from '@/lib/projects/fields'
 import { findOwnProfile, type SessionUser } from '@/lib/students/profile'
 import type { ApplicationStatus } from '@/lib/transitions'
@@ -303,4 +304,27 @@ export async function findOwnApplication(
   const doc = found.docs[0] as Application | undefined
   if (!doc) return null
   return toOwn(doc, today)
+}
+
+/**
+ * For a selected application: what Konnected shares with the company, from the student's own
+ * match (the copy of what the student ticked). Read as the student with access control on: a
+ * student reads only their own matches. Null before selection and for anyone else.
+ */
+export async function ownSharedItems(
+  payload: Payload,
+  user: SessionUser | null,
+  projectId: number | null,
+): Promise<SharedItem[] | null> {
+  if (!user || !isStudent(user) || !projectId) return null
+  const found = await payload.find({
+    collection: 'matches',
+    where: { project: { equals: projectId } },
+    limit: 1,
+    depth: 0,
+    select: { sharedInfo: true },
+    ...asStudent(user),
+  })
+  const match = found.docs[0]
+  return match ? sharedItemsOf(match.sharedInfo) : null
 }

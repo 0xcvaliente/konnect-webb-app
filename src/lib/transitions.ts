@@ -3,6 +3,7 @@ import { APIError, type PayloadRequest } from 'payload'
 import type { Role } from '@/access/roles'
 import type { Project } from '@/payload-types'
 import { assertStudentAgreementSigned } from '@/lib/agreements/gates'
+import { assertProjectHasMatch } from '@/lib/matching/rules'
 
 /** from -> to -> roles allowed to make that move. Anything not listed is rejected. */
 export type TransitionMap<S extends string> = Partial<Record<S, Partial<Record<S, Role[]>>>>
@@ -36,7 +37,9 @@ export const PROJECT_TRANSITIONS: TransitionMap<ProjectStatus> = {
 }
 
 /**
- * Project moves that also need a signed agreement (konnected-agreements). `matched` to
+ * Project moves that also need something else. `published` to `matched` needs the match, which
+ * only selecting an application makes (lib/matching/rules.ts: the selection moves the project
+ * itself). Moves that need a signed agreement (konnected-agreements): `matched` to
  * `in_progress` needs the student agreement, signed by the student and by Konnected, and still
  * matching the project and match. Call after assertTransition, for every role, with the project
  * as it will be saved (the stored project with this request's changes).
@@ -51,6 +54,7 @@ export async function assertProjectGates(
   to: ProjectStatus,
   project: Project | undefined,
 ): Promise<void> {
+  if (from === 'published' && to === 'matched') await assertProjectHasMatch(req, project?.id)
   if (from === 'matched' && to === 'in_progress') await assertStudentAgreementSigned(req, project)
 }
 
@@ -82,8 +86,18 @@ export const PROFILE_REVIEW_TRANSITIONS: TransitionMap<ProfileReviewStatus> = {
 export type ApplicationStatus =
   'applied' | 'shortlisted' | 'selected' | 'not_selected' | 'withdrawn'
 
+/**
+ * Konnected may select straight from `applied` (the mockup's Select button is on every reviewed
+ * applicant), and selecting one marks every other open application on the project
+ * `not_selected` (the Applications hook does that, in the same transaction).
+ */
 export const APPLICATION_TRANSITIONS: TransitionMap<ApplicationStatus> = {
-  applied: { shortlisted: ['admin'], withdrawn: ['student'] },
+  applied: {
+    shortlisted: ['admin'],
+    selected: ['admin'],
+    not_selected: ['admin'],
+    withdrawn: ['student'],
+  },
   shortlisted: { selected: ['admin'], not_selected: ['admin'], withdrawn: ['student'] },
 }
 

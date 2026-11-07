@@ -1,6 +1,7 @@
 import { APIError, type Payload, type PayloadRequest } from 'payload'
 
 import { relationId } from '@/access/roles'
+import { lockRow } from '@/lib/db/locks'
 
 import type { ApplyError } from './fields'
 import { MAX_RUNNING_PROJECTS, RUNNING_PROJECT_STATUSES } from './fields'
@@ -44,7 +45,8 @@ export async function runningProjectCount(
  * one after the other cannot add up to more than 2 running projects:
  * - a match whose project is still published (the team moves it to matched after the match);
  * - a selected application whose project is still published (no match yet).
- * `exceptMatchId` leaves out the match being changed.
+ * `exceptMatchId` leaves out the match being changed. Locks the student's profile row until the
+ * transaction ends.
  *
  * Bypass: `overrideAccess: true`, for the same reason as runningProjectCount. Only the decision
  * leaves this function.
@@ -56,6 +58,9 @@ export async function assertRoomForAnotherProject(
   exceptMatchId?: number,
 ): Promise<void> {
   if (!profileId) return
+  // Two picks of one student at the same moment (two projects, two team members) must not both
+  // pass the count: the second waits here for the first to commit, then counts its pick too.
+  await lockRow(req, 'student-profiles', profileId)
   const [matches, selected] = await Promise.all([
     req.payload.find({
       collection: 'matches',

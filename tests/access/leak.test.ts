@@ -1,11 +1,13 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { signedAgreement } from '../helpers/agreements'
 import {
   asUser,
   createWorld,
   graphql,
   login,
   PASSWORD,
+  readyFields,
   sessionFor,
   resetDatabase,
   rest,
@@ -88,6 +90,8 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
 }
 
 let world: World
+let matchedProject: { id: number }
+let selectionMail: { to: string; text: string; html: string; subject: string }[] = []
 let companyCookie: string
 let adminCookie: string
 
@@ -108,6 +112,68 @@ beforeAll(async () => {
     user: asUser(world.admin),
     overrideAccess: false,
   })
+  // Matching: on another published project of company A, beta applies with a note, and so does
+  // alpha. Konnected reviews alpha's profile and selects alpha, so beta is not selected. The
+  // company gets a match with alpha's shared copy and an email; nothing about beta may ever reach
+  // it. (beta also applies to the open project, below, for the apply card's checks.)
+  matchedProject = await world.payload.create({
+    collection: 'projects',
+    data: {
+      ...readyFields(),
+      company: world.companyA.company.id,
+      title: 'Project A matching',
+      fee: 1000,
+      status: 'draft',
+    },
+    overrideAccess: true,
+  })
+  for (const status of ['submitted', 'approved', 'published'] as const) {
+    if (status === 'published') {
+      await signedAgreement(world.payload, world.admin, world.companyA.user, {
+        kind: 'company',
+        projectId: matchedProject.id,
+      })
+    }
+    await world.payload.update({
+      collection: 'projects',
+      id: matchedProject.id,
+      data: { status },
+      user: asUser(world.admin),
+      overrideAccess: false,
+    })
+  }
+  await world.payload.create({
+    collection: 'applications',
+    data: { project: matchedProject.id, note: SENTINEL.beta.applicationNote } as never,
+    user: asUser(world.beta.user),
+    overrideAccess: false,
+  })
+  await world.payload.update({
+    collection: 'student-profiles',
+    id: world.alpha.profile.id,
+    data: { reviewStatus: 'reviewed' },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  const alphaApplies = await world.payload.create({
+    collection: 'applications',
+    data: { project: matchedProject.id, note: 'Alpha on the matched project' } as never,
+    user: asUser(world.alpha.user),
+    overrideAccess: false,
+  })
+  const spy = vi.spyOn(world.payload.email, 'sendEmail')
+  spy.mockClear()
+  await world.payload.update({
+    collection: 'applications',
+    id: alphaApplies.id,
+    data: { status: 'selected' },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  selectionMail = spy.mock.calls.map(
+    (call) => call[0] as { to: string; text: string; html: string; subject: string },
+  )
+  spy.mockRestore()
   // The approval queue: Konnected asks alpha to change their profile (a note about a student),
   // and reviews beta, who then edits the profile (the team's copy and change marker hold beta's
   // personal data).
@@ -405,3 +471,59 @@ describe.each(['local', 'rest', 'graphql'] as const)(
     })
   },
 )
+
+describe('matching: the company learns about its selected student only through the shared copy', () => {
+  it('the project is matched with alpha and beta was not selected (the sweeps above ran on this)', async () => {
+    const match = await world.payload.find({
+      collection: 'matches',
+      where: { project: { equals: matchedProject.id } },
+      depth: 0,
+    })
+    expect(match.docs).toHaveLength(1)
+    expect(match.docs[0]!.student).toBe(world.alpha.profile.id)
+    const beta = await world.payload.find({
+      collection: 'applications',
+      where: {
+        and: [
+          { project: { equals: matchedProject.id } },
+          { student: { equals: world.beta.profile.id } },
+        ],
+      },
+      depth: 0,
+    })
+    expect(beta.docs[0]!.status).toBe('not_selected')
+  })
+
+  it('the email to the company holds no student personal data', async () => {
+    const toCompany = selectionMail.filter((m) => m.to === world.companyA.user.email)
+    expect(toCompany.length).toBeGreaterThan(0)
+    for (const mail of toCompany) {
+      for (const secret of [...FORBIDDEN, SENTINEL.alpha.skill, 'Alpha on the matched project']) {
+        expect(`${mail.subject}${mail.text}${mail.html}`, secret).not.toContain(secret)
+      }
+    }
+  })
+
+  it('every match field a company may read, at every depth, through REST and GraphQL', async () => {
+    for (const depth of [0, 1, 2, 3, 5]) {
+      const res = await rest.get(`matches?depth=${depth}&limit=100`, companyCookie)
+      for (const doc of res.json.docs as Record<string, unknown>[]) {
+        expect(Object.keys(doc).sort(), `depth ${depth}`).toEqual(
+          ['createdAt', 'endDate', 'id', 'project', 'sharedInfo', 'startDate', 'updatedAt'].filter(
+            (key) => key in doc,
+          ),
+        )
+        expect(doc).not.toHaveProperty('student')
+        expect(doc).not.toHaveProperty('application')
+        expect(doc).not.toHaveProperty('agreementNotes')
+      }
+    }
+    const gql = await graphql(
+      '{ Matches(limit: 100) { docs { id student { id } application { id } agreementNotes } } }',
+      companyCookie,
+    )
+    expect(gql.text).not.toContain(SENTINEL.alpha.name)
+    expect(gql.text).not.toMatch(/"student":\{"id"/)
+    expect(gql.text).not.toMatch(/"application":\{"id"/)
+  })
+})
