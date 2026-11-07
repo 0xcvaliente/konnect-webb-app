@@ -9,7 +9,8 @@ import type { PayloadRequest } from 'payload'
  * result (PostgreSQL's default READ COMMITTED takes a fresh snapshot for each statement).
  *
  * Always lock in the same order to avoid deadlocks: project, then application, then student
- * profile. A lock taken twice in one transaction is free.
+ * profile; for the work on a match: match, then deliverable; a payment row on its own. A lock
+ * taken twice in one transaction is free.
  *
  * `share` (`FOR SHARE`) is for a write that only depends on a row staying as it is: a student
  * applying locks the project in share mode, so applies to one project do not wait for each other,
@@ -20,6 +21,9 @@ const TABLES = {
   projects: 'projects',
   applications: 'applications',
   'student-profiles': 'student_profiles',
+  matches: 'matches',
+  deliverables: 'deliverables',
+  payments: 'payments',
 } as const
 
 export type LockableCollection = keyof typeof TABLES

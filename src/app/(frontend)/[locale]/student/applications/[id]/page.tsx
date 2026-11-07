@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { WithdrawForm } from '@/components/app/applications/WithdrawForm'
+import { StudentWork } from '@/components/app/deliverables/StudentWork'
 import { Banner } from '@/components/app/Banner'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { SiteShell } from '@/components/app/SiteShell'
@@ -15,6 +16,7 @@ import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { APPLICATION_STATUS_TONE, canWithdraw } from '@/lib/applications/fields'
 import { findOwnApplication, type OwnApplication, ownSharedItems } from '@/lib/applications/student'
+import { loadStudentWork } from '@/lib/deliverables/student'
 import { requireStudent } from '@/lib/students/session'
 import { cn } from '@/lib/utils'
 
@@ -39,8 +41,11 @@ type StepKey =
   | 'withdrawn'
 type Step = { key: string; title: string; when?: string | null; body?: string; state: StepState }
 
+/** Where the work stands once the student is selected: not started, running, or accepted. */
+type WorkStage = 'none' | 'working' | 'done'
+
 /** The steps for the application's status, oldest first. */
-function useSteps(a: OwnApplication): Step[] {
+function useSteps(a: OwnApplication, work: WorkStage): Step[] {
   const t = useTranslations('Application')
   const format = useFormatter()
   const day = useDay()
@@ -78,7 +83,10 @@ function useSteps(a: OwnApplication): Step[] {
       break
     case 'selected':
       if (wasShortlisted) steps.push(step('shortlisted', 'done', at(a.shortlistedAt)))
-      steps.push(step('selected', 'cur', at(a.decidedAt), a.companyName), step('work', 'next'))
+      steps.push(
+        step('selected', work === 'none' ? 'cur' : 'done', at(a.decidedAt), a.companyName),
+        step('work', work === 'working' ? 'cur' : work === 'done' ? 'done' : 'next'),
+      )
       break
     case 'not_selected':
       if (wasShortlisted) steps.push(step('shortlisted', 'done', at(a.shortlistedAt)))
@@ -93,9 +101,9 @@ function useSteps(a: OwnApplication): Step[] {
 }
 
 /** The progress track and the steps as a timeline (like the company's project history). */
-function Progress({ application }: { application: OwnApplication }) {
+function Progress({ application, work }: { application: OwnApplication; work: WorkStage }) {
   const t = useTranslations('Application')
-  const steps = useSteps(application)
+  const steps = useSteps(application, work)
   const current = steps.findIndex((s) => s.state === 'cur')
   const label =
     current < 0
@@ -252,6 +260,18 @@ export default async function StudentApplicationPage({
     application?.status === 'selected'
       ? await ownSharedItems(payload, user, application.projectId)
       : null
+  // The work on the project, once Konnected selected the student (their own match only).
+  const work =
+    application?.status === 'selected'
+      ? await loadStudentWork(payload, user, application.projectId)
+      : null
+  const workStage: WorkStage = !work
+    ? 'none'
+    : work.state.accepted
+      ? 'done'
+      : work.state.blocked === 'not_started'
+        ? 'none'
+        : 'working'
   const crumb = { href: '/student/applications', label: t('back') }
 
   if (!application) {
@@ -317,7 +337,8 @@ export default async function StudentApplicationPage({
               </Banner>
             </Card>
           )}
-          <Progress application={a} />
+          {work && <StudentWork work={work} company={a.companyName} />}
+          <Progress application={a} work={workStage} />
           {a.note && (
             <Card className="gap-2">
               <CardTitle>{t('noteTitle')}</CardTitle>

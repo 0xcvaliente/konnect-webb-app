@@ -26,6 +26,7 @@ import { StudentProfiles } from './collections/StudentProfiles'
 import { Users } from './collections/Users'
 import { isAdmin } from './access/roles'
 import { AGREEMENTS_QUEUE, generateAgreementTask, sendAgreementEmailTask } from './jobs/agreements'
+import { acceptDueDeliverablesTask } from './jobs/deliverables'
 import { MAINTENANCE_QUEUE, removeUnusedFilesTask } from './jobs/removeUnusedFiles'
 import { emailAdapter } from './lib/email/adapter'
 import { MAX_UPLOAD_BYTES, MB } from './lib/uploads/fileRules'
@@ -75,8 +76,9 @@ export default buildConfig({
     fallbackLanguage: 'en',
   },
   email: emailAdapter(),
-  // Background jobs: the nightly clean-up of unused files, and the agreement work (making the
-  // PDF with Gotenberg, the agreement emails). In development the app itself queues any job that
+  // Background jobs: the nightly clean-up of unused files, the hourly acceptance of released work
+  // whose 7 days for fixes are over, and the agreement work (making the PDF with Gotenberg, the
+  // agreement emails). In development the app itself queues any job that
   // is due once an hour and runs the maintenance queue, and runs the agreements queue every 5
   // seconds (see instrumentation.ts). In production (docker-compose.prod.yml) RUN_JOBS_IN_APP=false
   // turns that off, because two app containers run side by side during a deploy; the single
@@ -85,7 +87,12 @@ export default buildConfig({
   // Only admins may queue, run or cancel jobs through the API; the jobs collection itself stays
   // closed (Payload's default).
   jobs: {
-    tasks: [removeUnusedFilesTask, generateAgreementTask, sendAgreementEmailTask],
+    tasks: [
+      removeUnusedFilesTask,
+      generateAgreementTask,
+      sendAgreementEmailTask,
+      acceptDueDeliverablesTask,
+    ],
     autoRun:
       process.env.RUN_JOBS_IN_APP === 'false'
         ? []

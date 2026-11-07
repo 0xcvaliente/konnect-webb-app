@@ -137,6 +137,7 @@ export interface Config {
       removeUnusedFiles: TaskRemoveUnusedFiles;
       generateAgreement: TaskGenerateAgreement;
       sendAgreementEmail: TaskSendAgreementEmail;
+      acceptDueDeliverables: TaskAcceptDueDeliverables;
       inline: {
         input: unknown;
         output: unknown;
@@ -439,8 +440,15 @@ export interface Deliverable {
         id?: string | null;
       }[]
     | null;
-  status: 'submitted' | 'released';
+  status: 'submitted' | 'returned' | 'released' | 'fix_requested' | 'accepted';
   submittedAt?: string | null;
+  releasedAt?: string | null;
+  returnNote?: string | null;
+  returnedAt?: string | null;
+  fixNote?: string | null;
+  fixRequestedAt?: string | null;
+  acceptedAt?: string | null;
+  acceptedBy?: ('company' | 'team' | 'auto') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -584,9 +592,11 @@ export interface Payment {
   projectFee?: number | null;
   konnectedShare?: number | null;
   studentPay?: number | null;
+  invoiceNumber?: string | null;
   invoiceSentAt?: string | null;
   invoicePaidAt?: string | null;
   studentPaidAt?: string | null;
+  notes?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -697,7 +707,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'removeUnusedFiles' | 'generateAgreement' | 'sendAgreementEmail';
+        taskSlug: 'inline' | 'removeUnusedFiles' | 'generateAgreement' | 'sendAgreementEmail' | 'acceptDueDeliverables';
         taskID: string;
         input?:
           | {
@@ -730,7 +740,8 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'removeUnusedFiles' | 'generateAgreement' | 'sendAgreementEmail') | null;
+  taskSlug?:
+    ('inline' | 'removeUnusedFiles' | 'generateAgreement' | 'sendAgreementEmail' | 'acceptDueDeliverables') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1069,6 +1080,13 @@ export interface DeliverablesSelect<T extends boolean = true> {
       };
   status?: T;
   submittedAt?: T;
+  releasedAt?: T;
+  returnNote?: T;
+  returnedAt?: T;
+  fixNote?: T;
+  fixRequestedAt?: T;
+  acceptedAt?: T;
+  acceptedBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1241,9 +1259,11 @@ export interface PaymentsSelect<T extends boolean = true> {
   projectFee?: T;
   konnectedShare?: T;
   studentPay?: T;
+  invoiceNumber?: T;
   invoiceSentAt?: T;
   invoicePaidAt?: T;
   studentPaidAt?: T;
+  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1421,6 +1441,16 @@ export interface TaskSendAgreementEmail {
   };
   output: {
     sent: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskAcceptDueDeliverables".
+ */
+export interface TaskAcceptDueDeliverables {
+  input?: unknown;
+  output: {
+    accepted: number;
   };
 }
 /**

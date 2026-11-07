@@ -10,6 +10,9 @@ import { publishTestTemplates, signedAgreement } from './agreements'
 import { fileOf, makePdf, makePng } from './files'
 
 export const PASSWORD = 'Test-passw0rd-1234'
+
+/** Company A's fix request on the released deliverable in the world. */
+export const FIX_NOTE = 'Please fix the chart on page 2'
 export const ADMIN_EMAIL = 'admin@konnected.test'
 
 let payloadPromise: Promise<Payload> | undefined
@@ -145,7 +148,8 @@ export type World = Awaited<ReturnType<typeof createWorld>>
  * A small world with every role:
  * - an admin, two students (alpha shares only skills, beta shares nothing), two companies
  * - companyA is approved and has a project Konnected selected alpha for (so it has a match) and
- *   that is in progress, with a released deliverable, an unreleased deliverable and a payment
+ *   that is delivered: a released deliverable on which company A asked for its one round of
+ *   fixes, alpha's fixed hand-in (not released yet), and the match's payment log row
  * - companyB is approved and has its own draft project
  * - files: each student has a CV on their profile (neither ticked "share my CV"), the released and
  *   the unreleased deliverable each list one file, and project A and project A open each have a
@@ -380,6 +384,14 @@ export async function createWorld() {
     user: adminCtx,
     overrideAccess: false,
   })
+  // Company A asks for its one round of fixes, so alpha hands in again (not released yet).
+  await payload.update({
+    collection: 'deliverables',
+    id: deliverableReleased.id,
+    data: { status: 'fix_requested', fixNote: FIX_NOTE },
+    user: asUser(companyA.user),
+    overrideAccess: false,
+  })
   const deliverableHidden = await payload.create({
     collection: 'deliverables',
     data: {
@@ -415,11 +427,18 @@ export async function createWorld() {
   const briefA = await addBrief(projectA.id, 'brief-a.png')
   const briefOpen = await addBrief(projectOpen.id, 'brief-open.png')
 
-  const payment = await payload.create({
+  // Selecting alpha for the paid project A made its payment log row; the team fills it in.
+  const made2 = await payload.find({
     collection: 'payments',
+    where: { match: { equals: match.id } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
+  const payment = await payload.update({
+    collection: 'payments',
+    id: made2.docs[0]!.id,
     data: {
-      match: match.id,
-      projectFee: 1000,
       konnectedShare: 200,
       studentPay: 700,
       invoiceSentAt: new Date().toISOString(),
@@ -608,4 +627,58 @@ export async function login(email: string, password = PASSWORD): Promise<string>
   const cookie = res.headers.getSetCookie().find((c) => c.startsWith('payload-token='))
   if (!cookie) throw new Error('No session cookie returned')
   return cookie.split(';')[0]!
+}
+
+/**
+ * A new project of `company` that Konnected publishes and selects `student` for, with both
+ * agreements signed, moved to in progress: the student may hand in work on its match now.
+ */
+export async function workingMatch(
+  payload: Payload,
+  admin: User,
+  student: { user: User; profile: { id: number } },
+  company: { company: { id: number }; user: User },
+  title: string,
+  extra: Partial<Project> = {},
+) {
+  const adminCtx = asUser(admin)
+  const project = await payload.create({
+    collection: 'projects',
+    data: {
+      ...readyFields(),
+      company: company.company.id,
+      title,
+      fee: 1000,
+      status: 'draft',
+      ...extra,
+    } as Project,
+    overrideAccess: true,
+  })
+  for (const status of ['submitted', 'approved'] as const) {
+    await payload.update({
+      collection: 'projects',
+      id: project.id,
+      data: { status },
+      user: adminCtx,
+      overrideAccess: false,
+    })
+  }
+  await signedAgreement(payload, admin, company.user, { kind: 'company', projectId: project.id })
+  await payload.update({
+    collection: 'projects',
+    id: project.id,
+    data: { status: 'published' },
+    user: adminCtx,
+    overrideAccess: false,
+  })
+  const { match, application } = await selectStudent(payload, admin, student, project.id)
+  await signedAgreement(payload, admin, student.user, { kind: 'student', matchId: match.id })
+  await payload.update({
+    collection: 'projects',
+    id: project.id,
+    data: { status: 'in_progress' },
+    user: adminCtx,
+    overrideAccess: false,
+  })
+  return { project, match, application }
 }

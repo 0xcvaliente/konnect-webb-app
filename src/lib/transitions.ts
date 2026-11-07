@@ -3,6 +3,7 @@ import { APIError, type PayloadRequest } from 'payload'
 import type { Role } from '@/access/roles'
 import type { Project } from '@/payload-types'
 import { assertStudentAgreementSigned } from '@/lib/agreements/gates'
+import type { DeliverableStatus } from '@/lib/deliverables/fields'
 import { assertProjectHasMatch } from '@/lib/matching/rules'
 
 /** from -> to -> roles allowed to make that move. Anything not listed is rejected. */
@@ -101,10 +102,17 @@ export const APPLICATION_TRANSITIONS: TransitionMap<ApplicationStatus> = {
   shortlisted: { selected: ['admin'], not_selected: ['admin'], withdrawn: ['student'] },
 }
 
-export type DeliverableStatus = 'submitted' | 'released'
+export type { DeliverableStatus }
 
+/**
+ * A hand-in (lib/deliverables/fields.ts). Only the team releases one to the company or asks the
+ * student for more; the company accepts the released work or asks for its one round of fixes (the
+ * team may do either on the company's behalf). Accepted is final. The Deliverables hook checks the
+ * rest: the 7 days, the one round, a note with every request.
+ */
 export const DELIVERABLE_TRANSITIONS: TransitionMap<DeliverableStatus> = {
-  submitted: { released: ['admin'] },
+  submitted: { released: ['admin'], returned: ['admin'] },
+  released: { accepted: ['company', 'admin'], fix_requested: ['company', 'admin'] },
 }
 
 /**

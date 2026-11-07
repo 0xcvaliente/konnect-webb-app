@@ -28,6 +28,10 @@ export type EmailType =
   | 'application_selected'
   | 'application_not_selected'
   | 'student_found'
+  | 'deliverable_released'
+  | 'deliverable_returned'
+  | 'deliverable_fix_requested'
+  | 'deliverable_accepted'
 
 /**
  * Send an email after the answer has gone back to the browser, so the answer takes the

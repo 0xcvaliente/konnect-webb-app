@@ -163,10 +163,13 @@ describe('student', () => {
     expect(res.docs[0]).not.toHaveProperty('company')
   })
 
-  it('cannot read companies, other matches, payments or the activity log', async () => {
-    for (const collection of ['companies', 'payments', 'activity-logs'] as const) {
+  it('cannot read companies, other matches, other payments or the activity log', async () => {
+    for (const collection of ['companies', 'activity-logs'] as const) {
       await expect(w.payload.find({ collection, ...as(w.beta.user) })).rejects.toThrow()
     }
+    // A student reads only their own payment rows; beta has none.
+    const payments = await w.payload.find({ collection: 'payments', ...as(w.beta.user) })
+    expect(payments.docs).toHaveLength(0)
     const matches = await w.payload.find({ collection: 'matches', ...as(w.beta.user) })
     expect(matches.docs).toHaveLength(0)
     const own = await w.payload.find({ collection: 'matches', ...as(w.alpha.user) })
@@ -642,37 +645,56 @@ describe('matches', () => {
 
 describe('deliverables', () => {
   it('a student hands in only for their own match', async () => {
+    const links = [{ url: 'https://example.test/work' }]
     await expect(
       w.payload.create({
         collection: 'deliverables',
-        data: { match: w.match.id, note: 'not mine', status: 'submitted' },
+        data: { match: w.match.id, note: 'not mine', status: 'submitted', links },
         ...as(w.beta.user),
       }),
-    ).rejects.toThrow()
+    ).rejects.toThrow(/not yours/)
+    // alpha's own match: refused only because a hand-in already waits for Konnected.
+    await expect(
+      w.payload.create({
+        collection: 'deliverables',
+        data: { match: w.match.id, note: 'mine', status: 'submitted', links },
+        ...as(w.alpha.user),
+      }),
+    ).rejects.toThrow(/already waits/)
+    await w.payload.update({
+      collection: 'deliverables',
+      id: w.deliverableHidden.id,
+      data: { status: 'returned', returnNote: 'Add the appendix.' },
+      ...as(w.admin),
+    })
     const own = await w.payload.create({
       collection: 'deliverables',
-      data: { match: w.match.id, note: 'mine', status: 'submitted' },
+      data: { match: w.match.id, note: 'mine', status: 'submitted', links },
       ...as(w.alpha.user),
     })
     expect(own.status).toBe('submitted')
   })
 
-  it('a student cannot release their own deliverable', async () => {
-    await w.payload.update({
-      collection: 'deliverables',
-      id: w.deliverableHidden.id,
-      data: { status: 'released', note: 'edited' },
-      ...as(w.alpha.user),
-    })
+  it('a student cannot change or release a hand-in after sending it', async () => {
+    await expect(
+      w.payload.update({
+        collection: 'deliverables',
+        id: w.deliverableHidden.id,
+        data: { status: 'released', note: 'edited' },
+        ...as(w.alpha.user),
+      }),
+    ).rejects.toThrow()
     const after = await w.payload.findByID({
       collection: 'deliverables',
       id: w.deliverableHidden.id,
     })
     expect(after.status).toBe('submitted')
+    expect(after.note).toBe('Not released yet')
   })
 
   it('a company sees a deliverable only after release, and only for its own project', async () => {
     const before = await w.payload.find({ collection: 'deliverables', ...as(w.companyA.user) })
+    // The released one (now with the company's fix request), never the waiting hand-in.
     expect(before.docs.map((d) => d.id)).toEqual([w.deliverableReleased.id])
     const other = await w.payload.find({ collection: 'deliverables', ...as(w.companyB.user) })
     expect(other.docs).toHaveLength(0)
@@ -709,10 +731,29 @@ describe('payments', () => {
     expect(res.docs[0]).not.toHaveProperty('studentPaidAt')
   })
 
-  it('another company and a student see nothing, and only admin writes', async () => {
+  it('another company sees nothing, the student only whether they were paid, only admin writes', async () => {
     const other = await w.payload.find({ collection: 'payments', ...as(w.companyB.user) })
     expect(other.docs).toHaveLength(0)
-    await expect(w.payload.find({ collection: 'payments', ...as(w.alpha.user) })).rejects.toThrow()
+    const student = await w.payload.find({
+      collection: 'payments',
+      depth: 0,
+      ...as(w.alpha.user),
+    })
+    expect(student.docs).toHaveLength(1)
+    for (const key of [
+      'projectFee',
+      'konnectedShare',
+      'studentPay',
+      'invoiceNumber',
+      'invoiceSentAt',
+      'invoicePaidAt',
+      'notes',
+    ]) {
+      expect(student.docs[0], key).not.toHaveProperty(key)
+    }
+    expect(student.docs[0]).toHaveProperty('studentPaidAt')
+    const beta = await w.payload.find({ collection: 'payments', ...as(w.beta.user) })
+    expect(beta.docs).toHaveLength(0)
     await expect(
       w.payload.update({
         collection: 'payments',

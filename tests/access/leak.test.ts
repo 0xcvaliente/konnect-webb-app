@@ -52,6 +52,13 @@ const FORBIDDEN = [
   'Sentinel-Agreement-Notes',
   // Konnected's note to alpha about their profile (approval queue card).
   'Sentinel-Review-Note-Alpha',
+  // Deliverables card: what the team asked alpha to add (never shown to the company), and the
+  // hand-in Konnected has not released.
+  'Leak-Return-Note-Alpha',
+  'Not released yet',
+  // Payment log card: the team's notes and what alpha is paid.
+  'Leak-Payment-Notes',
+  '4242.5',
 ]
 
 const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
@@ -68,9 +75,9 @@ const GRAPHQL_QUERIES: Record<(typeof SLUGS)[number], string> = {
   matches:
     '{ Matches(limit: 100) { docs { id agreementNotes sharedInfo { name school programme year pitch skills experience contactEmail phone cv { id originalName owner { id email } } } student { id name contactEmail phone user { id email } } application { id } project { id title company { id name } } } } }',
   deliverables:
-    '{ Deliverables(limit: 100) { docs { id status note links { url } files { id originalName uploadedBy { id email } } match { id student { id name contactEmail } project { id } } } } }',
+    '{ Deliverables(limit: 100) { docs { id status note returnNote returnedAt fixNote fixRequestedAt releasedAt acceptedAt acceptedBy submittedAt links { label url } files { id originalName uploadedBy { id email } } match { id student { id name contactEmail } project { id } } } } }',
   payments:
-    '{ Payments(limit: 100) { docs { id projectFee konnectedShare studentPay invoiceSentAt match { id student { id name } project { id } } } } }',
+    '{ Payments(limit: 100) { docs { id projectFee konnectedShare studentPay invoiceNumber invoiceSentAt invoicePaidAt studentPaidAt notes match { id student { id name } project { id } } } } }',
   'activity-logs': '{ ActivityLogs(limit: 100) { docs { id action targetCollection } } }',
   cvs: '{ Cvs(limit: 100) { docs { id filename originalName url owner { id email } } } }',
   'deliverable-files':
@@ -196,6 +203,22 @@ beforeAll(async () => {
     id: world.beta.profile.id,
     data: { pitch: `${SENTINEL.beta.pitch} edited` },
     user: asUser(world.beta.user),
+    overrideAccess: false,
+  })
+  // Deliverables card: Konnected sends alpha's waiting hand-in back with a note for alpha. Payment
+  // log card: the team writes notes and what alpha is paid on project A's row.
+  await world.payload.update({
+    collection: 'deliverables',
+    id: world.deliverableHidden.id,
+    data: { status: 'returned', returnNote: 'Leak-Return-Note-Alpha' },
+    user: asUser(world.admin),
+    overrideAccess: false,
+  })
+  await world.payload.update({
+    collection: 'payments',
+    id: world.payment.id,
+    data: { notes: 'Leak-Payment-Notes', studentPay: 4242.5 },
+    user: asUser(world.admin),
     overrideAccess: false,
   })
   // Apply card: beta applies to company A's open project with a note (alpha's application to
@@ -443,6 +466,11 @@ describe('company cannot reach student collections directly', () => {
       expect(all, transport).toContain(SENTINEL.alpha.applicationNote)
       expect(all, transport).toContain(SENTINEL.beta.applicationNote)
       expect(all, transport).toContain('profileWaiting')
+      // The deliverables and payment log cards' team-only values.
+      expect(all, transport).toContain('Leak-Return-Note-Alpha')
+      expect(all, transport).toContain('Not released yet')
+      expect(all, transport).toContain('Leak-Payment-Notes')
+      expect(all, transport).toContain('4242.5')
     }
   })
 })
@@ -527,3 +555,30 @@ describe('matching: the company learns about its selected student only through t
     expect(gql.text).not.toMatch(/"application":\{"id"/)
   })
 })
+
+describe.each(['local', 'rest', 'graphql'] as const)(
+  'a student reads only their own work and payment status (%s)',
+  (transport) => {
+    const sweep = async (as: 'alpha' | 'beta', slug: 'payments' | 'deliverables') => {
+      const user = as === 'alpha' ? world.alpha.user : world.beta.user
+      if (transport === 'local') return localAll(user, slug)
+      const cookie = await login(user.email)
+      if (transport === 'rest') return (await rest.get(`${slug}?depth=5&limit=100`, cookie)).text
+      return (await graphql(GRAPHQL_QUERIES[slug], cookie)).text
+    }
+
+    it('the student never reads the payment notes or what they are paid', async () => {
+      const own = await sweep('alpha', 'payments')
+      expect(own).not.toContain('Leak-Payment-Notes')
+      expect(own).not.toContain('4242.5')
+    })
+
+    it('another student reads neither the hand-ins nor the team note', async () => {
+      const other = await sweep('beta', 'deliverables')
+      expect(other).not.toContain('Leak-Return-Note-Alpha')
+      expect(other).not.toContain('Released work')
+      // Positive control: alpha reads the note Konnected wrote to alpha.
+      expect(await sweep('alpha', 'deliverables')).toContain('Leak-Return-Note-Alpha')
+    })
+  },
+)

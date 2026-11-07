@@ -15,6 +15,7 @@ import * as migration_20261106_224507_approval_queue_reviews from './20261106_22
 import * as migration_20261106_230959_agreements_status_rules from './20261106_230959_agreements_status_rules';
 import * as migration_20261107_001309_student_project_list from './20261107_001309_student_project_list';
 import * as migration_20261107_013912_applications_apply_and_track from './20261107_013912_applications_apply_and_track';
+import * as migration_20261107_051645_deliverable_handoff_and_payment_log from './20261107_051645_deliverable_handoff_and_payment_log';
 
 export const migrations = [
   {
@@ -100,6 +101,11 @@ export const migrations = [
   {
     up: migration_20261107_013912_applications_apply_and_track.up,
     down: migration_20261107_013912_applications_apply_and_track.down,
-    name: '20261107_013912_applications_apply_and_track'
+    name: '20261107_013912_applications_apply_and_track',
+  },
+  {
+    up: migration_20261107_051645_deliverable_handoff_and_payment_log.up,
+    down: migration_20261107_051645_deliverable_handoff_and_payment_log.down,
+    name: '20261107_051645_deliverable_handoff_and_payment_log'
   },
 ];

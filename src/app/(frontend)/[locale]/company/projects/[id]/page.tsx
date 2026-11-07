@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 
 import { Banner } from '@/components/app/Banner'
+import { CompanyWork } from '@/components/app/deliverables/CompanyWork'
 import { CompanyAvatar } from '@/components/app/CompanyAvatar'
 import { ProjectDetails } from '@/components/app/ProjectDetails'
 import { ProjectTimeline, ProjectTrack } from '@/components/app/ProjectProgress'
@@ -17,6 +18,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { companyShellProps } from '@/lib/companies/display'
+import { loadCompanyWork } from '@/lib/deliverables/student'
 import { PAYMENT_TERMS_DAYS, priceBreakdown, VAT_RATE } from '@/lib/money'
 import { requireOwnCompany } from '@/lib/companies/session'
 import { isEditable, PROJECT_STATUS_TONE } from '@/lib/projects/display'
@@ -57,11 +59,14 @@ export default async function CompanyProjectPage({
   const payload = await getPayload({ config })
   const project = await findOwnProject(payload, user, Number(id), 1)
   if (!project) notFound()
-  const [history, student] = await Promise.all([
+  const working = ['in_progress', 'delivered', 'closed'].includes(project.status)
+  const [history, student, work] = await Promise.all([
     projectHistory(payload, project.id),
     // Only the selected student's shared copy, once Konnected has selected one; never any other
     // applicant (a company cannot read applications at all).
     findSelectedStudent(payload, user, project.id),
+    // Only the work Konnected released (the collection returns nothing else to a company).
+    working ? loadCompanyWork(payload, user, project.id, project.status) : null,
   ])
   const { sent } = await searchParams
 
@@ -126,11 +131,14 @@ export default async function CompanyProjectPage({
               <p className="text-[0.88rem] text-muted-foreground">
                 {status === 'draft' && company.status !== 'approved'
                   ? t('banner.draft.pending')
-                  : t(`banner.${status}.body`)}
+                  : status === 'delivered' && work?.state.accepted
+                    ? t('banner.deliveredAccepted')
+                    : t(`banner.${status}.body`)}
               </p>
             </Banner>
           )}
 
+          {work && <CompanyWork work={work} />}
           {student && <SelectedStudent student={student} />}
 
           {status !== 'draft' && (
@@ -157,7 +165,11 @@ export default async function CompanyProjectPage({
             <CardHeader>
               <CardTitle>{t('historyTitle')}</CardTitle>
             </CardHeader>
-            <ProjectTimeline status={status} history={history} />
+            <ProjectTimeline
+              status={status}
+              history={history}
+              accepted={Boolean(work?.state.accepted)}
+            />
           </Card>
 
           <Card>
