@@ -82,6 +82,7 @@ export default async function TeamHomePage({
     listProjectsWithoutMatch(payload, user),
   ])
   const problemList = problems ?? []
+  const kickoffs = (todayData?.items ?? []).filter((i) => i.kind === 'kickoff')
   const noMatchList = noMatch ?? []
   const toCheck = (deliverables ?? []).filter((d) => d.section === 'check')
   const firstPayment = payments?.rows[0] ?? null
@@ -120,6 +121,14 @@ export default async function TeamHomePage({
           ? t('decideBy', { name: firstToDecide.title, date: day(firstToDecide.decideBy) })
           : firstToDecide.title
         : t('queueEmpty'),
+    },
+    {
+      // Matched projects whose kick-off is not recorded yet (lib/kickoff).
+      key: 'kickoff',
+      href: kickoffs[0]?.href ?? '/team',
+      label: t('queue.kickoff'),
+      count: kickoffs.length,
+      sub: kickoffs[0] ? t('firstKickoff', { name: kickoffs[0].title }) : t('queueEmpty'),
     },
     {
       key: 'problems',

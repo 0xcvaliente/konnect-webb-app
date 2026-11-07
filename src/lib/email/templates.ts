@@ -812,3 +812,42 @@ export function teamMorningEmail(locale: EmailLocale, digest: MorningDigest): Re
     footer: all.common.accountFooter,
   })
 }
+
+// ---------- The owner's decision reminder ----------
+
+export type DecisionReminder = {
+  name: string
+  title: string
+  company: string
+  /** `YYYY-MM-DD`: the day Konnected promised the applicants a decision by. */
+  decisionDay: string
+  /** Applications waiting for a decision. */
+  waiting: number
+  href: string
+}
+
+/**
+ * To the project's owner on the team, the working day before a decision is due. Names no student:
+ * only how many applications wait. The details stay behind sign-in on Matching.
+ */
+export function decisionReminderEmail(locale: EmailLocale, r: DecisionReminder): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.decisionReminder
+  const date = formatDay(locale, r.decisionDay)
+  const fill = (text: string) =>
+    text
+      .replace('{name}', r.name)
+      .replace('{title}', r.title)
+      .replace('{company}', r.company)
+      .replace('{date}', date)
+      .replace('{count}', String(r.waiting))
+  return render({
+    locale,
+    subject: fill(m.subject),
+    heading: fill(m.heading),
+    paragraphs: [fill(m.body), fill(r.waiting === 1 ? m.waitingOne : m.waiting), m.next],
+    action: { label: m.button, href: r.href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}

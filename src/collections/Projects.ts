@@ -63,7 +63,8 @@ import {
   PROJECT_TRANSITIONS,
   type ProjectStatus,
 } from '@/lib/transitions'
-import { storedToDay, todayInOslo } from '@/lib/projects/fields'
+import { dayToStored, storedToDay, todayInOslo } from '@/lib/projects/fields'
+import { decisionDay } from '@/lib/applications/fields'
 
 /** Statuses whose changes wait for each other (row lock in the hook below). */
 const LOCKED_FROM: readonly ProjectStatus[] = ['published', ...ENDS_MATCH]
@@ -336,6 +337,15 @@ export const Projects: CollectionConfig = {
           }
         }
 
+        // Konnected's decision day: 3 working days after applications close (the promise shown to
+        // students and counted on Matching). Follows the closing day on every save; never a client
+        // value (field access keeps it admin-only to write, and this overwrites it).
+        const closes = storedToDay(
+          data.deadline === undefined ? originalDoc?.deadline : data.deadline,
+        )
+        const decideBy = decisionDay(closes)
+        data.decisionBy = decideBy ? dayToStored(decideBy) : null
+
         // The date of Konnected's latest note follows the note. Only admins write either (field
         // access drops a company's value).
         if (
@@ -381,6 +391,25 @@ export const Projects: CollectionConfig = {
       },
     ],
     afterChange: [
+      async ({ doc, previousDoc, operation, req, context }) => {
+        // Every note Konnected writes to the company is kept in the activity log (the history the
+        // team sees); the project shows only the latest. Written as the team member who wrote it.
+        if (
+          operation === 'update' &&
+          isAdmin(req.user) &&
+          !context?.skipActivityLog &&
+          (doc.noteToCompany ?? '') !== (previousDoc?.noteToCompany ?? '')
+        ) {
+          await writeActivity(req, {
+            action: 'review_change',
+            targetCollection: 'projects',
+            targetId: String(doc.id),
+            field: 'noteToCompany',
+            note: doc.noteToCompany ? String(doc.noteToCompany).slice(0, 2000) : undefined,
+          })
+        }
+        return doc
+      },
       logReassignments(['owner', 'takenBy']),
       logActivityAfterChange({ statusField: 'status' }),
       async ({ doc, previousDoc, operation, req, context }) => {
@@ -624,6 +653,25 @@ export const Projects: CollectionConfig = {
     },
     // Applications close on this day. Konnected may change it at review.
     { name: 'deadline', label: 'Applications close', type: 'date' },
+    {
+      // Konnected's decision day: 3 working days after applications close (`deadline`). Set by
+      // the server on every save. Students see it on their applications; the team counts down to
+      // it on Matching, and the project's owner gets a reminder the working day before.
+      name: 'decisionBy',
+      label: 'Decision by',
+      type: 'date',
+      index: true,
+      access: { create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
+      // The decision day the owner's reminder was sent for (jobs/decisionReminder.ts), so a
+      // reminder goes once per decision day. Set by the job. Team only.
+      name: 'decisionReminderFor',
+      type: 'date',
+      access: { read: adminOnlyField, create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
+    },
     {
       // Brief attachments (see `brief-files`). Only the owning company, admins and the selected
       // student can open them; other students see at most the ids.

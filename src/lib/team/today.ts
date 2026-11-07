@@ -3,9 +3,14 @@ import type { Payload } from 'payload'
 import { isAdmin, relationId } from '@/access/roles'
 import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import { storedToDay } from '@/lib/projects/fields'
-import { DECISION_DAYS } from '@/lib/applications/fields'
 import { PROFILE_REVIEW_DAYS } from '@/lib/students/fields'
-import { osloDay, type PromiseState, promiseState, workingDaysBetween } from '@/lib/workingDays'
+import {
+  countdownTo,
+  osloDay,
+  type PromiseState,
+  promiseState,
+  workingDaysBetween,
+} from '@/lib/workingDays'
 import type { Agreement, Deliverable, Match, Project } from '@/payload-types'
 
 import { isOpen, listQueue, type QueueItem, type SessionUser } from './approvals'
@@ -34,6 +39,7 @@ export type WorkKind =
   | 'project'
   | 'publish'
   | 'decision'
+  | 'kickoff'
   | 'agreement'
   | 'deliverable'
   | 'problem'
@@ -259,6 +265,51 @@ async function workDueItems(
   })
 }
 
+/**
+ * Matched projects whose kick-off is not recorded yet: the owner agrees the plan with the student
+ * and the company, then the student agreement can be made.
+ */
+async function kickoffItems(payload: Payload, actor: SessionUser): Promise<WorkItem[]> {
+  const projects = await payload.find({
+    collection: 'projects',
+    where: { status: { equals: 'matched' } },
+    depth: 0,
+    pagination: false,
+    select: { title: true, companyName: true, owner: true },
+    ...asActor(actor),
+  })
+  if (!projects.docs.length) return []
+  const matches = await payload.find({
+    collection: 'matches',
+    where: { and: [{ project: { in: projects.docs.map((p) => p.id) } }, ACTIVE_MATCH] },
+    depth: 0,
+    pagination: false,
+    select: { project: true, kickoff: true, createdAt: true },
+    ...asActor(actor),
+  })
+  const matchOf = new Map(
+    (matches.docs as Match[]).map((m) => [relationId(m.project as number) ?? 0, m]),
+  )
+  return projects.docs.flatMap((project) => {
+    const match = matchOf.get(project.id)
+    if (!match || match.kickoff?.recordedAt) return []
+    return [
+      {
+        key: `kickoff-${match.id}`,
+        kind: 'kickoff' as const,
+        title: project.title,
+        detail: project.companyName ?? null,
+        href: `/team/projects/${project.id}`,
+        ownerId: relationId(project.owner as number) ?? null,
+        since: match.createdAt,
+        due: null,
+        target: onProject(project.id),
+        pool: null,
+      },
+    ]
+  })
+}
+
 async function keyNumbers(payload: Payload, actor: SessionUser, pool: number): Promise<KeyNumbers> {
   const count = async (
     collection: 'projects' | 'agreements' | 'student-profiles' | 'companies',
@@ -314,10 +365,11 @@ export async function loadToday(
       listDeliverableQueue(payload, actor),
       listOpenProblems(payload, actor),
     ])
-  const [noMatch, payments, workDue] = await Promise.all([
+  const [noMatch, payments, workDue, kickoffs] = await Promise.all([
     listProjectsWithoutMatch(payload, actor),
     listPaymentLog(payload, actor, { filter: 'action' }),
     workDueItems(payload, actor, today),
+    kickoffItems(payload, actor),
   ])
 
   const items: WorkItem[] = [
@@ -334,13 +386,12 @@ export async function loadToday(
         href: `/team/matching?project=${m.id}`,
         ownerId: m.owner?.id ?? null,
         since: m.closesOn ? `${m.closesOn}T12:00:00.000Z` : now.toISOString(),
-        // The decision promise, counted to `now` (the morning email looks at a set time).
-        due: m.closesOn
-          ? promiseState(new Date(`${m.closesOn}T12:00:00Z`), DECISION_DAYS, now)
-          : m.due,
+        // The decision day, counted to `now` (the morning email looks at a set time).
+        due: m.decideBy ? countdownTo(m.decideBy, now) : m.due,
         target: onProject(m.id),
         pool: null,
       })),
+    ...kickoffs,
     ...agreements,
     ...(deliverables ?? [])
       .filter((d) => d.section === 'check')

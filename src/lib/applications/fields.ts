@@ -1,4 +1,5 @@
 import type { ApplicationStatus } from '@/lib/transitions'
+import { storedToDay } from '@/lib/projects/fields'
 import { addWorkingDays } from '@/lib/workingDays'
 
 /**
@@ -57,6 +58,15 @@ export const APPLICATION_STATUS_TONE: Record<
  */
 export const decisionDay = (closingDay: string | null): string | null =>
   closingDay ? addWorkingDays(closingDay, DECISION_DAYS) : null
+
+/**
+ * A project's decision day: the one the server stored (`decisionBy`, set from the closing day on
+ * every save), or, for a project saved before it existed, counted from the closing day.
+ */
+export const decisionDayOf = (project: {
+  decisionBy?: string | null
+  deadline?: string | null
+}): string | null => storedToDay(project.decisionBy) ?? decisionDay(storedToDay(project.deadline))
 
 /** Why the server refused an application. Each has its own message in both languages. */
 export const APPLY_ERRORS = [

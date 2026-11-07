@@ -28,6 +28,7 @@ import { TeamMembers } from './collections/TeamMembers'
 import { Users } from './collections/Users'
 import { isAdmin } from './access/roles'
 import { AGREEMENTS_QUEUE, generateAgreementTask, sendAgreementEmailTask } from './jobs/agreements'
+import { decisionReminderTask } from './jobs/decisionReminder'
 import { acceptDueDeliverablesTask } from './jobs/deliverables'
 import { teamMorningEmailTask } from './jobs/morningEmail'
 import { MAINTENANCE_QUEUE, removeUnusedFilesTask } from './jobs/removeUnusedFiles'
@@ -98,6 +99,7 @@ export default buildConfig({
       sendAgreementEmailTask,
       acceptDueDeliverablesTask,
       teamMorningEmailTask,
+      decisionReminderTask,
     ],
     autoRun:
       process.env.RUN_JOBS_IN_APP === 'false'

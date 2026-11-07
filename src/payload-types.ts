@@ -143,6 +143,7 @@ export interface Config {
       sendAgreementEmail: TaskSendAgreementEmail;
       acceptDueDeliverables: TaskAcceptDueDeliverables;
       teamMorningEmail: TaskTeamMorningEmail;
+      decisionReminder: TaskDecisionReminder;
       inline: {
         input: unknown;
         output: unknown;
@@ -346,6 +347,8 @@ export interface Project {
   studentPay?: number | null;
   publishedAt?: string | null;
   deadline?: string | null;
+  decisionBy?: string | null;
+  decisionReminderFor?: string | null;
   attachments?: (number | BriefFile)[] | null;
   noteToCompany?: string | null;
   noteToCompanyAt?: string | null;
@@ -433,6 +436,19 @@ export interface Match {
       }[]
     | null;
   endedAt?: string | null;
+  kickoff?: {
+    scope?: string | null;
+    delivery?: string | null;
+    checkIns?:
+      | {
+          day: string;
+          id?: string | null;
+        }[]
+      | null;
+    contact?: (number | null) | User;
+    contactName?: string | null;
+    recordedAt?: string | null;
+  };
   sharedInfo?: {
     name?: string | null;
     school?: string | null;
@@ -770,7 +786,8 @@ export interface PayloadJob {
           | 'generateAgreement'
           | 'sendAgreementEmail'
           | 'acceptDueDeliverables'
-          | 'teamMorningEmail';
+          | 'teamMorningEmail'
+          | 'decisionReminder';
         taskID: string;
         input?:
           | {
@@ -811,6 +828,7 @@ export interface PayloadJob {
         | 'sendAgreementEmail'
         | 'acceptDueDeliverables'
         | 'teamMorningEmail'
+        | 'decisionReminder'
       )
     | null;
   queue?: string | null;
@@ -1087,6 +1105,8 @@ export interface ProjectsSelect<T extends boolean = true> {
   studentPay?: T;
   publishedAt?: T;
   deadline?: T;
+  decisionBy?: T;
+  decisionReminderFor?: T;
   attachments?: T;
   noteToCompany?: T;
   noteToCompanyAt?: T;
@@ -1144,6 +1164,21 @@ export interface MatchesSelect<T extends boolean = true> {
         id?: T;
       };
   endedAt?: T;
+  kickoff?:
+    | T
+    | {
+        scope?: T;
+        delivery?: T;
+        checkIns?:
+          | T
+          | {
+              day?: T;
+              id?: T;
+            };
+        contact?: T;
+        contactName?: T;
+        recordedAt?: T;
+      };
   sharedInfo?:
     | T
     | {
@@ -1585,6 +1620,16 @@ export interface TaskAcceptDueDeliverables {
  * via the `definition` "TaskTeamMorningEmail".
  */
 export interface TaskTeamMorningEmail {
+  input?: unknown;
+  output: {
+    sent: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskDecisionReminder".
+ */
+export interface TaskDecisionReminder {
   input?: unknown;
   output: {
     sent: number;

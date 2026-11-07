@@ -44,6 +44,7 @@ export type EmailType =
   | 'invoice_sent'
   | 'invoice_paid'
   | 'student_paid'
+  | 'decision_reminder'
 
 /**
  * Send an email after the answer has gone back to the browser, so the answer takes the

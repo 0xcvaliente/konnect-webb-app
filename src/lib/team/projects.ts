@@ -68,6 +68,8 @@ export type TeamProject = {
   paid: boolean
   /** Applications close on this day (`YYYY-MM-DD`), or null. */
   closesOn: string | null
+  /** The earliest start the company asked for (`YYYY-MM-DD`), or null. */
+  startDay: string | null
   /** Applications have closed (the closing day is before today). */
   applicationsClosed: boolean
   applications: { total: number; open: number }
@@ -256,6 +258,7 @@ export async function loadTeamProject(
     status: project.status,
     paid: project.paidOrUnpaid === 'paid',
     closesOn,
+    startDay: day(project.startDate),
     applicationsClosed,
     applications: {
       total: applications.docs.length,
