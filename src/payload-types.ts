@@ -335,6 +335,8 @@ export interface Project {
   paidOrUnpaid?: ('paid' | 'unpaid') | null;
   unpaidBenefit?: string | null;
   fee?: number | null;
+  studentPay?: number | null;
+  publishedAt?: string | null;
   deadline?: string | null;
   attachments?: (number | BriefFile)[] | null;
   noteToCompany?: string | null;
@@ -983,6 +985,8 @@ export interface ProjectsSelect<T extends boolean = true> {
   paidOrUnpaid?: T;
   unpaidBenefit?: T;
   fee?: T;
+  studentPay?: T;
+  publishedAt?: T;
   deadline?: T;
   attachments?: T;
   noteToCompany?: T;

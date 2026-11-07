@@ -216,6 +216,9 @@ async function describer() {
       if (row.field === 'fee') {
         return row.toStatus ? t('price', { price: row.toStatus }) : t('priceCleared')
       }
+      if (row.field === 'studentPay') {
+        return row.toStatus ? t('studentPay', { amount: row.toStatus }) : t('studentPayCleared')
+      }
       if (row.field === 'paidOrUnpaid' && (row.toStatus === 'paid' || row.toStatus === 'unpaid')) {
         return t('pay', { choice: pay(row.toStatus) })
       }
@@ -472,6 +475,7 @@ async function ProjectDetail({ id, tab, mine, payload, user }: DetailProps) {
                       rate: VAT_RATE * 100,
                     }),
                   ],
+                  ...(project.studentPay ? [[tp('studentPaySet'), money(project.studentPay)]] : []),
                 ] as [string, ReactNode][])
               : []),
           ]}

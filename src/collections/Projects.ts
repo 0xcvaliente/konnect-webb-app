@@ -11,6 +11,7 @@ import type { Project } from '@/payload-types'
 import {
   adminOnlyField,
   adminOrCompanyField,
+  adminOrStudentField,
   companyIdOf,
   effectiveRole,
   isAdmin,
@@ -30,6 +31,7 @@ import {
   type ReviewInput,
   WORK_MODES,
 } from '@/lib/projects/fields'
+import { isValidPrice } from '@/lib/money'
 import { approvalProblem, assertCanPublish } from '@/lib/projects/publish'
 import { MAX_BRIEF_FILES } from './BriefFiles'
 import {
@@ -59,6 +61,16 @@ export const PROJECT_STATUSES: ProjectStatus[] = [
  */
 const teamWritesCompanyReads = {
   read: adminOrCompanyField,
+  create: adminOnlyField,
+  update: adminOnlyField,
+}
+
+/**
+ * Konnected writes these; students read them on published projects; companies never read them
+ * (what the student is paid would show the company Konnected's share).
+ */
+const teamWritesStudentReads = {
+  read: adminOrStudentField,
   create: adminOnlyField,
   update: adminOnlyField,
 }
@@ -93,7 +105,7 @@ const numberAnd =
  * Projects a company submits for Konnected to review.
  *
  * Read: admins all; students only `published` projects (never the price or Konnected's note); a
- * company only its own. Create: admins, and a pending or approved company (a draft; owner
+ * company only its own (never what the student is paid). Create: admins, and a pending or approved company (a draft; owner
  * decision). Update: admins; the company its own project while it is a draft or changes were
  * requested, and only while the company is pending or approved. Sending for review needs an
  * approved company and, for a company, a complete project (checked in the hook, for every API).
@@ -214,7 +226,25 @@ export const Projects: CollectionConfig = {
             throw new APIError('Project: a paid project needs a fixed price before approving', 400)
           }
         }
-        if (next.paidOrUnpaid === 'unpaid' && to !== 'draft') data.fee = null
+        if (next.paidOrUnpaid === 'unpaid' && to !== 'draft') {
+          data.fee = null
+          // An unpaid project pays the student nothing.
+          data.studentPay = null
+        }
+        // What the student is paid comes out of the price, so it can never be more.
+        const studentPay = data.studentPay === undefined ? next.studentPay : data.studentPay
+        const fee = data.fee === undefined ? next.fee : data.fee
+        if (
+          typeof studentPay === 'number' &&
+          (!isValidPrice(studentPay) || (typeof fee === 'number' && studentPay > fee))
+        ) {
+          throw new APIError(
+            'Project: the student pay must be a whole amount, at most the price',
+            400,
+          )
+        }
+        // When students first saw it: the project list sorts on it ("newest first"). Server only.
+        if (to === 'published' && from !== 'published') data.publishedAt = new Date().toISOString()
         // Publishing goes through one gate: approved company, paid or unpaid and price, and the
         // signed company agreement (lib/projects/publish.ts).
         if (to === 'published' && from !== 'published') {
@@ -243,7 +273,7 @@ export const Projects: CollectionConfig = {
         // Konnected's price and paid or unpaid decisions go to the activity log too. A company
         // changing its own draft is not a decision and is not logged here.
         if (operation === 'update' && isAdmin(req.user) && !context?.skipActivityLog) {
-          for (const field of ['fee', 'paidOrUnpaid'] as const) {
+          for (const field of ['fee', 'studentPay', 'paidOrUnpaid'] as const) {
             const before = previousDoc?.[field] ?? null
             const after = doc[field] ?? null
             if (before === after) continue
@@ -364,6 +394,25 @@ export const Projects: CollectionConfig = {
       type: 'number',
       min: 0,
       access: teamWritesCompanyReads,
+    },
+    {
+      // What the student is paid for a paid project, in whole kroner, if Konnected has decided it
+      // (optional; set by the team at review). Students see it on the project list and page.
+      // Never readable by a company: the difference to the price is Konnected's share.
+      name: 'studentPay',
+      label: 'Student pay (NOK)',
+      type: 'number',
+      min: 1,
+      access: teamWritesStudentReads,
+    },
+    {
+      // When the project was published. Set by the server; the student project list sorts on it.
+      name: 'publishedAt',
+      label: 'Published',
+      type: 'date',
+      index: true,
+      access: { create: adminOnlyField, update: adminOnlyField },
+      admin: { readOnly: true, position: 'sidebar' },
     },
     // Applications close on this day. Konnected may change it at review.
     { name: 'deadline', label: 'Applications close', type: 'date' },

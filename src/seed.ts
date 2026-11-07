@@ -297,6 +297,7 @@ async function seed() {
         workMode: 'remote',
         paidOrUnpaid: 'paid',
         fee: 5000,
+        studentPay: 3500,
       },
       overrideAccess: true,
     })

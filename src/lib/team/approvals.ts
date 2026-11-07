@@ -630,19 +630,28 @@ export const askCompanyInfo: Decision = async (payload, actor, form) => {
 
 /**
  * Approve a submitted project: Konnected's final paid or unpaid decision and, for a paid project,
- * the fixed price in whole kroner excluding VAT. The Projects hook checks both again.
+ * the fixed price in whole kroner excluding VAT, and optionally what the student is paid (shown
+ * to students; at most the price). The Projects hook checks all three again.
  */
 export const approveProject: Decision = async (payload, actor, form) => {
   if (!actor || !isAdmin(actor)) return fail('forbidden')
   const pay = text(form, 'pay')
   if (pay !== 'paid' && pay !== 'unpaid') return fail('pay_choice')
   let fee: number | null = null
+  let studentPay: number | null = null
   if (pay === 'paid') {
     const typed = text(form, 'price')
     if (!typed) return fail('price_required')
     const price = parsePrice(typed)
     if (price === undefined) return fail('price_invalid')
     fee = price
+    // Optional: what the student is paid, shown to students. Never more than the price.
+    const typedPay = text(form, 'studentPay')
+    if (typedPay) {
+      const amount = parsePrice(typedPay)
+      if (amount === undefined || amount > price) return fail('student_pay_invalid')
+      studentPay = amount
+    }
   }
   const project = (await load(payload, actor, 'projects', form)) as Project | null
   if (!project) return fail('not_found')
@@ -652,6 +661,7 @@ export const approveProject: Decision = async (payload, actor, form) => {
     status: 'approved',
     paidOrUnpaid: pay,
     fee,
+    studentPay,
     // The note asked for changes before; the approval closes it.
     noteToCompany: null,
   })
