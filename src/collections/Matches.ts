@@ -11,6 +11,7 @@ import {
   relationId,
 } from '@/access/roles'
 import { logActivityAfterChange, logActivityAfterDelete } from '@/hooks/logActivity'
+import { assertRoomForAnotherProject } from '@/lib/applications/rules'
 
 /**
  * Konnected's pick of a student for a project. Only admin creates or edits a match.
@@ -36,12 +37,23 @@ export const Matches: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
-      async ({ data, originalDoc, req }) => {
+      async ({ data, originalDoc, operation, req }) => {
         const studentId = relationId(data.student ?? originalDoc?.student)
         const projectId = relationId(data.project ?? originalDoc?.project)
         const applicationId = relationId(data.application ?? originalDoc?.application)
         if (!studentId || !projectId)
           throw new APIError('A match needs a student and a project', 400)
+
+        // At most 2 running projects per student: a new match, or a match moved to another
+        // student or project, is a pick and is checked here. Saves that keep both (the shared
+        // copy being rebuilt, dates) are not.
+        if (
+          operation === 'create' ||
+          relationId(originalDoc?.student) !== studentId ||
+          relationId(originalDoc?.project) !== projectId
+        ) {
+          await assertRoomForAnotherProject(req, studentId, projectId, originalDoc?.id)
+        }
 
         // Bypass for the reads below: the server needs the full student profile to copy only the
         // shared fields, and the application to check it belongs to this student and project.

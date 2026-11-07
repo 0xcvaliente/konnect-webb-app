@@ -669,7 +669,13 @@ async function ProfileDetail({ id, tab, mine, payload, user }: DetailProps) {
             [sf('highlights'), profile.highlights || tp('missing')],
             [sf('contactEmail'), profile.contactEmail || tp('missing')],
             [sf('phone'), profile.phone || tp('missing')],
-            [tp('applications'), String(view.applications)],
+            [
+              tp('applications'),
+              t('applicationsValue', {
+                count: view.applications,
+                waiting: view.applicationsBeforeReview,
+              }),
+            ],
           ]}
         />
 

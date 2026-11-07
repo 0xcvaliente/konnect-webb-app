@@ -338,6 +338,17 @@
       "next": "Update your profile and save it. It comes back to Konnected for review. You can still browse and apply in the meantime.",
       "button": "Update your profile",
       "ignore": "If you do not have a Konnected profile, write to the Konnected team."
+    },
+    "applicationReceived": {
+      "subject": "Konnected received your application",
+      "heading": "Your application is with Konnected",
+      "body": "You applied to “{title}”. Konnected reads every application and picks one student by hand.",
+      "decideBy": "Konnected decides by {date}, 3 working days after applications close. You get an email either way.",
+      "decideNoDate": "Konnected decides within 3 working days after applications close. You get an email either way.",
+      "profileWaiting": "Konnected is still reviewing your profile. It is reviewed before Konnected decides.",
+      "next": "You can follow your application, and withdraw it, under My applications. If you withdraw, you cannot apply to this project again.",
+      "button": "See your application",
+      "ignore": "If you did not apply, write to the Konnected team."
     }
   },
   "DesignGuide": {
@@ -1746,7 +1757,9 @@
           "text": "Please write a few sentences about what you are good at."
         }
       }
-    }
+    },
+    "appliedTag": "{count, plural, one {Applied to # project} other {Applied to # projects}}",
+    "applicationsValue": "{count, plural, =0 {None} other {#}}{waiting, plural, =0 {} other { (# sent before the profile was reviewed)}}"
   },
   "StudentProjects": {
     "title": "Projects",
@@ -1814,6 +1827,7 @@
       "start": "Earliest start",
       "where": "Where",
       "applyBy": "Apply by",
+      "decideBy": "Decision by",
       "payment": "Payment",
       "paidNote": "Before tax. Konnected pays you in the monthly pay run after the company has paid.",
       "paidNoAmount": "Konnected tells you the amount before the work starts.",
@@ -1822,7 +1836,6 @@
       "notSet": "Not set",
       "limit": "You can work on up to 2 projects at a time.",
       "apply": "Apply to this project",
-      "applyComing": "Coming soon: applying opens in the next update.",
       "closedTitle": "Applications are closed",
       "closedBody": "Konnected is deciding, or has picked a student already.",
       "otherProjects": "See other projects",
@@ -1831,5 +1844,166 @@
       "notOpenBody": "The link may be old, or the project may no longer be open. Your profile and the other projects are still here.",
       "seeProjects": "See projects"
     }
+  },
+  "ApplicationStatus": {
+    "applied": "Applied",
+    "shortlisted": "Shortlisted",
+    "selected": "Selected",
+    "not_selected": "Not selected",
+    "withdrawn": "Withdrawn"
+  },
+  "Apply": {
+    "noteLabel": "Why are you a good fit?",
+    "noteHint": "A few sentences. Only Konnected reads this, when it assesses applications.",
+    "noteCount": "{count} of {max} characters",
+    "submit": "Apply to this project",
+    "sending": "Sending…",
+    "sentToast": "Application sent.",
+    "waitingTitle": "Konnected is still reviewing your profile",
+    "waitingBody": "You can apply now. Konnected reviews your profile before it decides.",
+    "decideBy": "Konnected decides by {date}, 3 working days after applications close.",
+    "decideNoDate": "Konnected decides within 3 working days after applications close.",
+    "appliedTitle": "Application sent",
+    "appliedBody": "Konnected assesses applications and picks a student by hand. Follow it under My applications.",
+    "seeApplication": "See your application",
+    "withdrawnTitle": "You withdrew your application",
+    "withdrawnBody": "You cannot apply to this project again.",
+    "tooManyTitle": "You already work on 2 projects",
+    "tooManyBody": "That is the most at one time. You can apply again when one of them is finished.",
+    "changesTitle": "Konnected asked you to change your profile",
+    "changesBody": "Make the changes first. Then you can apply.",
+    "changesAction": "Open your profile",
+    "errors": {
+      "forbidden": "Only a signed-in student can apply. Sign in again.",
+      "no_profile": "Create your profile before you apply.",
+      "not_open": "This project is not open for applications.",
+      "closed": "Applications for this project are closed.",
+      "already_applied": "You already applied to this project.",
+      "withdrawn_before": "You withdrew your application to this project, so you cannot apply again.",
+      "too_many": "You already work on 2 projects, the most at one time.",
+      "changes_requested": "Make the changes Konnected asked for in your profile first.",
+      "note_required": "Write a short note on why you fit this project.",
+      "note_too_long": "The note is too long. Keep it under {max} characters.",
+      "generic": "Something went wrong. Nothing was sent. Try again in a minute."
+    }
+  },
+  "Applications": {
+    "title": "My applications",
+    "lede": "Every project you applied to, with what happens next and when Konnected decides. Open an application to see its full progress.",
+    "sortLabel": "Show first",
+    "sort": {
+      "need": "Open applications",
+      "recent": "Most recent",
+      "company": "Company"
+    },
+    "sortNote": "{count, plural, one {# application} other {# applications}}, {order}",
+    "sortOrder": {
+      "need": "open ones first",
+      "recent": "most recent first",
+      "company": "by company, A to Z"
+    },
+    "columns": {
+      "project": "Project",
+      "dates": "Dates",
+      "status": "Status"
+    },
+    "listLabel": "Your applications",
+    "applied": "Applied {date}",
+    "decideBy": "Konnected decides by {date}",
+    "decideSoon": "Konnected decides within 3 working days after applications close",
+    "shortlisted": "Shortlisted {date}",
+    "decided": "Decided {date}",
+    "withdrawn": "Withdrawn {date}",
+    "emptyTitle": "You have not applied yet",
+    "emptyBody": "Applications you send show up here, with what happens next and when Konnected decides.",
+    "emptyAction": "Browse projects"
+  },
+  "Application": {
+    "back": "Back to my applications",
+    "decideTitle": "Konnected decides by {date}",
+    "decideNoDateTitle": "Konnected decides within 3 working days after applications close",
+    "decideBody": "You get an email either way. If it takes longer, Konnected emails you a new date.",
+    "progress": "Progress",
+    "stepOf": "Step {n} of {total}",
+    "finished": "Finished",
+    "stepDone": "done",
+    "stepCurrent": "now",
+    "now": "Now",
+    "closes": "Applications close {date}",
+    "by": "By {date}",
+    "step": {
+      "applied": {
+        "title": "Applied",
+        "body": "You applied with a short note."
+      },
+      "assess": {
+        "title": "Konnected assesses applications",
+        "body": "Konnected reads every application and picks one student by hand."
+      },
+      "shortlisted": {
+        "title": "Shortlisted",
+        "body": "You are on the shortlist. Konnected may email you a question."
+      },
+      "decide": {
+        "title": "Konnected decides",
+        "body": "Konnected picks one student by hand."
+      },
+      "result": {
+        "title": "Selected or not selected",
+        "body": "You get an email either way."
+      },
+      "work": {
+        "title": "Work and delivery",
+        "body": "You upload your work here, and Konnected checks it."
+      },
+      "selected": {
+        "title": "Selected by Konnected",
+        "body": "Konnected shares what you agreed to share with {company}."
+      },
+      "notSelected": {
+        "title": "Not selected",
+        "body": "Konnected picked another student this time. Your profile stays active for new projects."
+      },
+      "withdrawn": {
+        "title": "Withdrawn",
+        "body": "You withdrew this application."
+      }
+    },
+    "noteTitle": "Your note",
+    "noteHint": "Only Konnected reads it.",
+    "projectTitle": "Project",
+    "company": "Company",
+    "workload": "Workload",
+    "timeframe": "Timeframe",
+    "applyBy": "Apply by",
+    "payment": "Payment",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "deliverable": "Expected deliverable",
+    "seeProject": "See the project page",
+    "notListed": "Konnected has matched or closed this project, so its page is no longer listed.",
+    "seesTitle": "What {company} sees",
+    "seesOpen": "Nothing yet. {company} sees your details only if Konnected selects you, and only what you agreed to share.",
+    "seesSelected": "Only what you agreed to share, sent by Konnected after it selected you.",
+    "seesSelectedAction": "Check what you share",
+    "seesNone": "Nothing. Your details were not shared with {company}.",
+    "withdrawTitle": "Changed your mind?",
+    "withdrawBody": "You can withdraw while Konnected is still deciding.",
+    "withdraw": "Withdraw application",
+    "confirmTitle": "Withdraw this application?",
+    "confirmBody": "Konnected stops assessing it. You cannot apply to this project again.",
+    "confirmYes": "Yes, withdraw",
+    "keep": "Keep it",
+    "withdrawing": "Withdrawing…",
+    "withdrawnToast": "Application withdrawn.",
+    "errors": {
+      "forbidden": "Only the student who applied can withdraw. Sign in again.",
+      "not_found": "This application no longer exists.",
+      "not_withdrawable": "Konnected has already decided, so the application can no longer be withdrawn.",
+      "generic": "Something went wrong. Nothing changed. Try again in a minute."
+    },
+    "notFoundTitle": "Application not found",
+    "notFoundBody": "The link may be old. Your applications are listed under My applications.",
+    "seeAll": "See my applications"
   }
 }

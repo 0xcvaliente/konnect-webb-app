@@ -378,3 +378,47 @@ export function profileReviewEmail(
     footer: all.common.accountFooter,
   })
 }
+
+// ---------- Applications: sent to the student's own address ----------
+
+/** A day (`YYYY-MM-DD`) in words, in the email's language: "13 November 2026". */
+const formatDay = (locale: EmailLocale, day: string): string => {
+  const [y, m, d] = day.split('-').map(Number)
+  return new Intl.DateTimeFormat(locale === 'no' ? 'nb-NO' : 'en-GB', {
+    dateStyle: 'long',
+    timeZone: 'Europe/Oslo',
+  }).format(new Date(Date.UTC(y!, m! - 1, d!, 12)))
+}
+
+/**
+ * "We received your application": what happens next, when Konnected decides (3 working days
+ * after applications close), and that withdrawing is final. The title is the company's project
+ * title; the note the student wrote is not repeated.
+ */
+export function applicationReceivedEmail(
+  locale: EmailLocale,
+  {
+    title,
+    decideBy,
+    profileWaiting,
+    href,
+  }: { title: string; decideBy: string | null; profileWaiting: boolean; href: string },
+): RenderedEmail {
+  const all = MESSAGES[locale]
+  const m = all.applicationReceived
+  const paragraphs = [
+    m.body.replace('{title}', title),
+    decideBy ? m.decideBy.replace('{date}', formatDay(locale, decideBy)) : m.decideNoDate,
+  ]
+  if (profileWaiting) paragraphs.push(m.profileWaiting)
+  paragraphs.push(m.next)
+  return render({
+    locale,
+    subject: m.subject,
+    heading: m.heading,
+    paragraphs,
+    action: { label: m.button, href },
+    ignore: m.ignore,
+    footer: all.common.accountFooter,
+  })
+}

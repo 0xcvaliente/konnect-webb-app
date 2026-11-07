@@ -273,7 +273,9 @@ async function seed() {
     'closed',
   ]
 
-  for (const status of target) {
+  // Finished projects first: a student works on at most 2 projects at once, so the seed student
+  // applies to the closed and delivered ones before the matched and in-progress ones are running.
+  for (const status of [...target].reverse()) {
     const title = `Seed project: ${status}`
     const exists = await payload.count({
       collection: 'projects',
@@ -316,7 +318,7 @@ async function seed() {
         // Konnected picks the student: apply, shortlist, select, then create the match.
         const application = await payload.create({
           collection: 'applications',
-          data: { project: project.id } as never,
+          data: { project: project.id, note: 'I have done similar work before.' } as never,
           user: studentCtx,
           overrideAccess: false,
         })
