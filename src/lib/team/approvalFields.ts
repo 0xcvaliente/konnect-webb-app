@@ -28,6 +28,10 @@ export type ReviewError =
   | 'company_not_approved'
   /** Another approved company has this organisation number. */
   | 'duplicate_org'
+  /** Publishing needs the company agreement signed by the company and Konnected. */
+  | 'agreement_unsigned'
+  /** The signed company agreement no longer matches the project (price, scope or company). */
+  | 'agreement_changed'
   | 'generic'
 
 export type ReviewState = {

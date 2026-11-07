@@ -1,6 +1,7 @@
 import { APIError, type PayloadRequest } from 'payload'
 
 import { relationId } from '@/access/roles'
+import { assertCompanyAgreementSigned } from '@/lib/agreements/gates'
 import { isValidPrice } from '@/lib/money'
 import type { Project } from '@/payload-types'
 
@@ -8,18 +9,17 @@ import type { Project } from '@/payload-types'
  * The one gate for `approved -> published`. The Projects hook calls it for every API, so the team
  * page, the admin panel, REST and GraphQL all meet the same rule.
  *
- * Today it checks that Konnected approved the company (a company rejected after its project was
- * approved, or sent back to pending by its one correction, must not reach students), and what
- * the review settled: Konnected's paid or unpaid decision, and a fixed price for a paid project. The agreements card (run 3) extends this function with "the company signed
- * the company agreement for this project"; keep every publishing rule here, not in callers.
+ * It checks that Konnected approved the company (a company rejected after its project was
+ * approved, or sent back to pending by its one correction, must not reach students), what the
+ * review settled (Konnected's paid or unpaid decision, and a fixed price for a paid project), and
+ * last the company agreement: signed by the company and Konnected, and still matching the project
+ * as it will be saved (lib/agreements/gates.ts). Keep every publishing rule here, not in callers:
+ * the team's approval queue (publishProject) publishes through this hook too.
  *
- * `project` is the stored project with the update merged in. `req` carries the transaction, so a
- * later check can read related records with it.
+ * `project` is the stored project with the update merged in. `req` carries the transaction, so
+ * the checks read related records with it.
  */
-export async function assertCanPublish(
-  req: PayloadRequest,
-  project: Pick<Project, 'id' | 'company' | 'paidOrUnpaid' | 'fee'>,
-): Promise<void> {
+export async function assertCanPublish(req: PayloadRequest, project: Project): Promise<void> {
   const companyId = relationId(project.company)
   // Bypass: the server reads the company's status whatever the acting user may read. Only the
   // status is used.
@@ -43,6 +43,7 @@ export async function assertCanPublish(
   if (project.paidOrUnpaid === 'paid' && !isValidPrice(project.fee)) {
     throw new APIError('Project: a paid project needs a fixed price before publishing', 400)
   }
+  await assertCompanyAgreementSigned(req, project)
 }
 
 /**

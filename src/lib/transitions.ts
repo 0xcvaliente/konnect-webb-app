@@ -1,6 +1,8 @@
-import { APIError } from 'payload'
+import { APIError, type PayloadRequest } from 'payload'
 
 import type { Role } from '@/access/roles'
+import type { Project } from '@/payload-types'
+import { assertStudentAgreementSigned } from '@/lib/agreements/gates'
 
 /** from -> to -> roles allowed to make that move. Anything not listed is rejected. */
 export type TransitionMap<S extends string> = Partial<Record<S, Partial<Record<S, Role[]>>>>
@@ -31,6 +33,25 @@ export const PROJECT_TRANSITIONS: TransitionMap<ProjectStatus> = {
   // The student delivering is wired up by the deliverables card. Admin only until then.
   in_progress: { delivered: ['admin'] },
   delivered: { closed: ['admin'] },
+}
+
+/**
+ * Project moves that also need a signed agreement (konnected-agreements). `matched` to
+ * `in_progress` needs the student agreement, signed by the student and by Konnected, and still
+ * matching the project and match. Call after assertTransition, for every role, with the project
+ * as it will be saved (the stored project with this request's changes).
+ *
+ * The other gate, the company agreement before `approved` to `published`, is part of the one
+ * publishing rule, assertCanPublish (lib/projects/publish.ts), which the Projects hook runs for
+ * every way of publishing, the team's approval queue included.
+ */
+export async function assertProjectGates(
+  req: PayloadRequest,
+  from: ProjectStatus,
+  to: ProjectStatus,
+  project: Project | undefined,
+): Promise<void> {
+  if (from === 'matched' && to === 'in_progress') await assertStudentAgreementSigned(req, project)
 }
 
 export type CompanyStatus = 'pending' | 'approved' | 'rejected'

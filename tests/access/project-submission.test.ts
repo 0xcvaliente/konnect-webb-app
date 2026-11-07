@@ -15,6 +15,7 @@ import en from '@/messages/en.json'
 import no from '@/messages/no.json'
 import type { Project, User } from '@/payload-types'
 
+import { signedAgreement } from '../helpers/agreements'
 import { fileOf, makePdf, makePng } from '../helpers/files'
 import {
   asUser,
@@ -112,13 +113,22 @@ const draftOfA = (data: Partial<Project> = {}) =>
   })
 
 /** Move a project. Approving needs Konnected's fixed price for a paid project. */
-const move = (id: number, status: Project['status'], user: User) =>
-  w.payload.update({
+const move = async (id: number, status: Project['status'], user: User) => {
+  // Publishing needs the company agreement signed by the company and Konnected (the gate). Made
+  // only for the team's move: other roles are refused before the gate.
+  if (status === 'published' && user.role === 'admin') {
+    const project = await w.payload.findByID({ collection: 'projects', id, depth: 0 })
+    if (project.status === 'approved') {
+      await signedAgreement(w.payload, w.admin, w.companyA.user, { kind: 'company', projectId: id })
+    }
+  }
+  return w.payload.update({
     collection: 'projects',
     id,
     data: { status, ...(status === 'approved' ? { fee: 5_000 } : {}) },
     ...as(user),
   })
+}
 
 const stored = (id: number) => w.payload.findByID({ collection: 'projects', id, depth: 0 })
 

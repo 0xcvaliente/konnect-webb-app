@@ -36,6 +36,7 @@ import { approvalProblem, assertCanPublish } from '@/lib/projects/publish'
 import { MAX_BRIEF_FILES } from './BriefFiles'
 import {
   assertInitialStatus,
+  assertProjectGates,
   assertTransition,
   PROJECT_TRANSITIONS,
   type ProjectStatus,
@@ -153,6 +154,7 @@ export const Projects: CollectionConfig = {
         const to = (data.status ?? from) as ProjectStatus
         if (operation === 'update') {
           assertTransition(PROJECT_TRANSITIONS, from, to, role, 'Project')
+          await assertProjectGates(req, from, to, originalDoc && { ...originalDoc, ...data })
         }
 
         const companyId = relationId(data.company ?? originalDoc?.company)
@@ -243,7 +245,8 @@ export const Projects: CollectionConfig = {
         }
         // When students first saw it: the project list sorts on it ("newest first"). Server only.
         if (to === 'published' && from !== 'published') data.publishedAt = new Date().toISOString()
-        // Publishing goes through one gate (agreements extend it later).
+        // Publishing goes through one gate: approved company, paid or unpaid and price, and the
+        // signed company agreement (lib/projects/publish.ts).
         if (to === 'published' && from !== 'published') {
           await assertCanPublish(req, { ...next, fee: data.fee === null ? null : next.fee })
         }

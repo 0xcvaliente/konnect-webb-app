@@ -9,6 +9,12 @@ import { addSessionToUser, generatePayloadCookie } from 'payload/shared'
 
 import { AccountPausedError, isPaused } from './paused'
 
+/** How a session made here started: Google, or an email link (magic link). */
+export type SessionMethod = 'google' | 'email_link'
+
+/** The token claim that carries the SessionMethod. */
+export const SIGN_IN_METHOD_CLAIM = 'signInMethod'
+
 /** The Payload session cookie as separate parts, for `cookies().set()` in a Server Action. */
 export type SessionCookie = {
   name: string
@@ -85,7 +91,11 @@ export function sessionCookieFor(payload: Payload, token: string): SessionCookie
  * A paused account is refused (AccountPausedError). Returns the signed token. Never log it: it is
  * the user's session.
  */
-export async function createSessionToken(payload: Payload, userId: number): Promise<string> {
+export async function createSessionToken(
+  payload: Payload,
+  userId: number,
+  method?: SessionMethod,
+): Promise<string> {
   const collectionConfig = payload.collections.users.config
   const req = await createLocalReq({}, payload)
 
@@ -123,7 +133,9 @@ export async function createSessionToken(payload: Payload, userId: number): Prom
     user: user as never,
   })
   const { token } = await jwtSign({
-    fieldsToSign,
+    // `signInMethod` says how this session started, for the agreement signing record. Payload
+    // ignores claims it does not know. Payload's own password login leaves it out.
+    fieldsToSign: method ? { ...fieldsToSign, [SIGN_IN_METHOD_CLAIM]: method } : fieldsToSign,
     secret: payload.secret,
     tokenExpiration: collectionConfig.auth.tokenExpiration,
   })
@@ -139,15 +151,23 @@ export async function createSessionToken(payload: Payload, userId: number): Prom
 }
 
 /** The same session as a full Set-Cookie value, for route handlers. Never log it. */
-export async function createSessionCookie(payload: Payload, userId: number): Promise<string> {
+export async function createSessionCookie(
+  payload: Payload,
+  userId: number,
+  method?: SessionMethod,
+): Promise<string> {
   return generatePayloadCookie({
     collectionAuthConfig: payload.collections.users.config.auth,
     cookiePrefix: payload.config.cookiePrefix,
-    token: await createSessionToken(payload, userId),
+    token: await createSessionToken(payload, userId, method),
   })
 }
 
 /** The same session as cookie parts, for Server Actions. Never log it. */
-export async function createSession(payload: Payload, userId: number): Promise<SessionCookie> {
-  return sessionCookieFor(payload, await createSessionToken(payload, userId))
+export async function createSession(
+  payload: Payload,
+  userId: number,
+  method?: SessionMethod,
+): Promise<SessionCookie> {
+  return sessionCookieFor(payload, await createSessionToken(payload, userId, method))
 }
