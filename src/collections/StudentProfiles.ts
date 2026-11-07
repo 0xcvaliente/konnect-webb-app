@@ -16,7 +16,7 @@ import {
   logReassignments,
   writeActivity,
 } from '@/hooks/logActivity'
-import { isAdminEmail } from '@/access/adminEmails'
+import { isOnTeam, refuseTakenOnPoolTake } from '@/access/team'
 import { sendProfileReviewEmail } from '@/lib/email/profileEmails'
 import { ACTIVE_MATCH } from '@/lib/problems/rules'
 import {
@@ -79,6 +79,7 @@ export const StudentProfiles: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
+      refuseTakenOnPoolTake('student-profiles'),
       async ({ data, originalDoc, operation, req }) => {
         // A student can only create a profile for themselves. The client cannot choose the user.
         if (operation === 'create' && isStudent(req.user)) {
@@ -159,19 +160,9 @@ export const StudentProfiles: CollectionConfig = {
             if ((reviewedNow || to === 'changes_requested') && !relationId(data.takenBy)) {
               data.takenBy = req.user!.id
             }
-            // Bypass: the server reads the chosen user's role and address to check they are on
-            // the team. Only the role and the address are used.
             const taker = relationId(data.takenBy)
             if (taker && taker !== relationId(originalDoc?.takenBy)) {
-              const member = await req.payload.findByID({
-                collection: 'users',
-                id: taker,
-                depth: 0,
-                overrideAccess: true,
-                disableErrors: true,
-                req,
-              })
-              if (!member || member.role !== 'admin' || !isAdminEmail(member.email)) {
+              if (!(await isOnTeam(req, taker))) {
                 throw new APIError('Profile: the person taking it must be on the team', 400)
               }
             }

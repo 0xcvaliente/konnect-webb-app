@@ -16,6 +16,7 @@ import {
   graphql,
   login,
   PASSWORD,
+  readyFields,
   resetDatabase,
   rest,
   SENTINEL,
@@ -362,6 +363,198 @@ describe('the shared pool', () => {
     expect(profile.pool).toMatchObject({ waited: 2, amber: true })
     const fresh = await loadToday(w.payload, session(w.admin))
     expect(fresh!.items.find((i) => i.key === profile.key)!.pool!.amber).toBe(false)
+  })
+})
+
+describe('an owner who leaves the team', () => {
+  const sendProject = async (title: string) => {
+    const draft = await w.payload.create({
+      collection: 'projects',
+      data: { title, status: 'draft' } as never,
+      ...as(w.companyA.user),
+    })
+    return w.payload.update({
+      collection: 'projects',
+      id: draft.id,
+      data: { ...readyFields(), status: 'submitted' } as never,
+      ...as(w.companyA.user),
+    })
+  }
+
+  it('the company still creates and sends projects; the work waits in the pool until taken', async () => {
+    await reassign(
+      w.payload,
+      session(w.admin),
+      form({
+        collection: 'companies',
+        id: w.companyA.company.id,
+        ownerId: julie.id,
+        note: 'Julie owns Company A',
+      }),
+    )
+    // Julie leaves: off ADMIN_EMAILS (her role is still admin in the database).
+    vi.stubEnv('ADMIN_EMAILS', `${ADMIN_EMAIL},${AMANDA}`)
+
+    const sent = await sendProject('After Julie left')
+    expect(sent.status).toBe('submitted')
+    expect(await ownerOf(sent.id)).toBeNull()
+
+    const today = await loadToday(w.payload, session(w.admin))
+    expect(today!.items.some((i) => i.ownerId === julie.id)).toBe(false)
+    const pool = poolItems(today!.items).map((i) => i.key)
+    expect(pool).toContain(`projects-${sent.id}`)
+    // Her other open work, owned before she left, waits in the pool too.
+    const hers = today!.items.filter((i) => i.target.collection === 'projects')
+    expect(hers.filter((i) => i.target.id === w.projectOpen.id).every((i) => i.pool)).toBe(true)
+
+    // Anyone on the team can take over the company: its projects follow the new owner.
+    const taken = await takeFromPool(
+      w.payload,
+      session(amanda),
+      form({ collection: 'companies', id: w.companyA.company.id }),
+    )
+    expect(taken.status).toBe('done')
+    expect(await ownerOf(w.projectOpen.id)).toBe(amanda.id)
+    const company = await w.payload.findByID({
+      collection: 'companies',
+      id: w.companyA.company.id,
+      depth: 0,
+      overrideAccess: true,
+    })
+    expect(company.teamOwner).toBe(amanda.id)
+    // The team cannot pick someone off the team as an owner.
+    await expect(
+      w.payload.update({
+        collection: 'projects',
+        id: sent.id,
+        data: { owner: julie.id } as never,
+        ...as(w.admin),
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('approving a company someone took before leaving makes the approver its owner', async () => {
+    const user = await w.payload.create({
+      collection: 'users',
+      data: {
+        email: 'left.co@company.test',
+        password: PASSWORD,
+        role: 'company',
+        _verified: true,
+      } as never,
+      overrideAccess: true,
+      disableVerificationEmail: true,
+    })
+    const company = await w.payload.create({
+      collection: 'companies',
+      data: { ...companyDetails('Fjord Labs'), status: 'pending' },
+      ...as(user as User),
+    })
+    const took = await takeFromPool(
+      w.payload,
+      session(julie),
+      form({ collection: 'companies', id: company.id }),
+    )
+    expect(took.status).toBe('done')
+    vi.stubEnv('ADMIN_EMAILS', `${ADMIN_EMAIL},${AMANDA}`)
+    await w.payload.update({
+      collection: 'companies',
+      id: company.id,
+      data: { status: 'approved' },
+      ...as(amanda),
+    })
+    const approved = await w.payload.findByID({
+      collection: 'companies',
+      id: company.id,
+      depth: 0,
+      overrideAccess: true,
+    })
+    expect(approved.teamOwner).toBe(amanda.id)
+  })
+
+  it("a paused member's work goes to the pool", async () => {
+    await reassign(
+      w.payload,
+      session(w.admin),
+      form({
+        collection: 'projects',
+        id: w.projectHidden.id,
+        ownerId: julie.id,
+        note: 'Julie has this one',
+      }),
+    )
+    const key = `projects-${w.projectHidden.id}`
+    const before = await loadToday(w.payload, session(w.admin))
+    expect(itemsOf(before!.items, new Set([julie.id])).map((i) => i.key)).toContain(key)
+    await w.payload.update({
+      collection: 'users',
+      id: julie.id,
+      data: { accountStatus: 'paused' } as never,
+      overrideAccess: true,
+    })
+    const after = await loadToday(w.payload, session(w.admin))
+    expect(poolItems(after!.items).map((i) => i.key)).toContain(key)
+    // A new project of a company a paused member owns starts without an owner.
+    await reassign(
+      w.payload,
+      session(w.admin),
+      form({
+        collection: 'companies',
+        id: w.companyA.company.id,
+        ownerId: amanda.id,
+        note: 'Amanda for now',
+      }),
+    )
+    await w.payload.update({
+      collection: 'users',
+      id: amanda.id,
+      data: { accountStatus: 'paused' } as never,
+      overrideAccess: true,
+    })
+    const sent = await sendProject('While Amanda is paused')
+    expect(await ownerOf(sent.id)).toBeNull()
+  })
+})
+
+describe('the shared pool under a race', () => {
+  it('two members pressing "Take it" at once: one gets it, the other is told it is taken', async () => {
+    const user = await w.payload.create({
+      collection: 'users',
+      data: {
+        email: 'race.co@company.test',
+        password: PASSWORD,
+        role: 'company',
+        _verified: true,
+      } as never,
+      overrideAccess: true,
+      disableVerificationEmail: true,
+    })
+    const company = await w.payload.create({
+      collection: 'companies',
+      data: { ...companyDetails('Race Robotics'), status: 'pending' },
+      ...as(user as User),
+    })
+    for (const [collection, id] of [
+      ['companies', company.id],
+      ['student-profiles', w.beta.profile.id],
+    ] as const) {
+      const take = (actor: User) =>
+        takeFromPool(w.payload, session(actor), form({ collection, id }))
+      const results = await Promise.all([take(amanda), take(julie)])
+      expect(results.map((r) => r.status).sort()).toEqual(['done', 'error'])
+      expect(results.find((r) => r.status === 'error')).toMatchObject({ error: 'taken' })
+      const winner = results[0].status === 'done' ? amanda : julie
+      const stored = (await w.payload.findByID({
+        collection,
+        id,
+        depth: 0,
+        overrideAccess: true,
+      })) as { takenBy?: unknown }
+      expect(stored.takenBy).toBe(winner.id)
+      expect(await logRows(collection, id)).toMatchObject([
+        { field: 'takenBy', toStatus: String(winner.id) },
+      ])
+    }
   })
 })
 

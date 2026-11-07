@@ -54,7 +54,12 @@ export type WorkItem = {
   since: string
   /** The countdown, where a working-day promise (or a due date) applies. */
   due: PromiseState | null
-  /** Set while nobody owns the item: it waits in the shared pool for someone to take it. */
+  /** What "Take it" takes to own the item: the company, profile or project behind it. */
+  target: { collection: PoolCollection; id: number }
+  /**
+   * Set while nobody on the team owns the item (no owner, or one who has left the team): it waits
+   * in the shared pool for someone to take it.
+   */
   pool: { collection: PoolCollection; id: number; waited: number; amber: boolean } | null
 }
 
@@ -107,14 +112,14 @@ const POOL_OF: Record<'companies' | 'projects' | 'students', PoolCollection> = {
   students: 'student-profiles',
 }
 
+const onProject = (id: number) => ({ collection: 'projects' as const, id })
+
 function approvalItems(
   tab: 'companies' | 'projects' | 'students',
   items: QueueItem[],
   now: Date,
 ): WorkItem[] {
-  const today = osloDay(now)
   return items.filter(isOpen).map((item) => {
-    const waited = Math.max(0, workingDaysBetween(osloDay(new Date(item.since)), today))
     const kind: WorkKind =
       tab === 'companies'
         ? 'company'
@@ -133,9 +138,8 @@ function approvalItems(
       since: item.since,
       // The profile review promise, counted to `now` (the morning email looks at a set time).
       due: item.due ? promiseState(new Date(item.since), PROFILE_REVIEW_DAYS, now) : null,
-      pool: item.owner
-        ? null
-        : { collection: POOL_OF[tab], id: item.id, waited, amber: waited >= POOL_AMBER_DAYS },
+      target: { collection: POOL_OF[tab], id: item.id },
+      pool: null,
     }
   })
 }
@@ -164,7 +168,8 @@ async function agreementItems(payload: Payload, actor: SessionUser): Promise<Wor
   })
   const projectOf = new Map(projects.docs.map((p) => [p.id, p]))
   return (found.docs as Agreement[]).map((a) => {
-    const project = projectOf.get(relationId(a.project as number) ?? 0)
+    const projectId = relationId(a.project as number) ?? 0
+    const project = projectOf.get(projectId)
     return {
       key: `agreement-${a.id}`,
       kind: 'agreement' as const,
@@ -174,6 +179,7 @@ async function agreementItems(payload: Payload, actor: SessionUser): Promise<Wor
       ownerId: relationId(project?.owner as number) ?? null,
       since: a.updatedAt,
       due: null,
+      target: onProject(projectId),
       pool: null,
     }
   })
@@ -246,6 +252,7 @@ async function workDueItems(
         ownerId: relationId(project.owner as number) ?? null,
         since: m.updatedAt,
         due: dueOn(dueDay, today),
+        target: onProject(project.id),
         pool: null,
       },
     ]
@@ -269,6 +276,24 @@ async function keyNumbers(payload: Payload, actor: SessionUser, pool: number): P
     ])
   return { inProgress, waitingForStudent, agreementsOpen, studentsReviewed, activeCompanies, pool }
 }
+
+/**
+ * An item owned by someone on the team stays theirs. Any other item (no owner, or an owner who has
+ * left the team or is paused) goes to the shared pool, so no work is left on nobody's list.
+ */
+const toPool =
+  (team: TeamMember[], today: string) =>
+  (item: WorkItem): WorkItem => {
+    if (item.ownerId !== null && team.some((m) => m.id === item.ownerId)) {
+      return { ...item, pool: null }
+    }
+    const waited = Math.max(0, workingDaysBetween(osloDay(new Date(item.since)), today))
+    return {
+      ...item,
+      ownerId: null,
+      pool: { ...item.target, waited, amber: waited >= POOL_AMBER_DAYS },
+    }
+  }
 
 /** Everything Today shows, read as the team member. Null for anyone not on the team. */
 export async function loadToday(
@@ -313,6 +338,7 @@ export async function loadToday(
         due: m.closesOn
           ? promiseState(new Date(`${m.closesOn}T12:00:00Z`), DECISION_DAYS, now)
           : m.due,
+        target: onProject(m.id),
         pool: null,
       })),
     ...agreements,
@@ -327,6 +353,7 @@ export async function loadToday(
         ownerId: d.owner?.id ?? null,
         since: d.since,
         due: null,
+        target: onProject(d.projectId),
         pool: null,
       })),
     ...(problems ?? []).map((p): WorkItem => ({
@@ -338,6 +365,7 @@ export async function loadToday(
       ownerId: p.ownerId,
       since: p.since,
       due: null,
+      target: onProject(p.projectId),
       pool: null,
     })),
     ...(noMatch ?? []).map((p): WorkItem => ({
@@ -349,6 +377,7 @@ export async function loadToday(
       ownerId: p.ownerId,
       since: `${p.closedOn}T12:00:00.000Z`,
       due: null,
+      target: onProject(p.projectId),
       pool: null,
     })),
     ...(payments?.rows ?? []).map((r): WorkItem => ({
@@ -360,10 +389,13 @@ export async function loadToday(
       ownerId: r.owner?.id ?? null,
       since: r.releasedAt ?? r.version,
       due: null,
+      target: onProject(r.projectId),
       pool: null,
     })),
     ...workDue,
-  ].sort(byUrgency)
+  ]
+    .map(toPool(team ?? [], today))
+    .sort(byUrgency)
 
   const pool = items.filter((i) => i.pool).length
   return {

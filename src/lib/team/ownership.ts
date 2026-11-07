@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { isAdmin, relationId } from '@/access/roles'
+import { POOL_TAKE } from '@/access/team'
 
 import type { SessionUser } from './approvals'
 import {
@@ -39,7 +40,9 @@ const idFrom = (form: FormData, name: string): number | undefined => {
 
 /**
  * "Take it": the team member takes a new company, student profile or project from the shared
- * pool (form: `collection`, `id`). Refused when someone took it, or it has an owner, already.
+ * pool (form: `collection`, `id`). Refused when someone on the team took it, or owns it, already;
+ * an owner who has left the team does not count, so their work can be taken over. The collection
+ * hook checks again under a row lock, so two people pressing at once cannot both get it.
  */
 export async function takeFromPool(
   payload: Payload,
@@ -58,22 +61,28 @@ export async function takeFromPool(
     ...asActor(actor),
   })) as { takenBy?: unknown; teamOwner?: unknown; owner?: unknown } | null
   if (!doc) return teamFail('notFound')
-  const owned =
-    relationId(doc.takenBy as number) ??
-    relationId(doc.teamOwner as number) ??
-    relationId(doc.owner as number)
-  if (owned) return teamFail('taken')
+  const team = new Set(((await listTeam(payload, actor)) ?? []).map((m) => m.id))
+  const onTeam = (value: unknown) => team.has(relationId(value as number) ?? 0)
+  if (onTeam(doc.takenBy) || onTeam(doc.teamOwner) || onTeam(doc.owner)) return teamFail('taken')
+  // A company whose owner left the team: the taker becomes its owner (and its projects follow).
+  const data =
+    collection === 'projects'
+      ? { takenBy: actor.id, owner: actor.id }
+      : collection === 'companies' && relationId(doc.teamOwner as number)
+        ? { takenBy: actor.id, teamOwner: actor.id }
+        : { takenBy: actor.id }
   try {
     await payload.update({
       collection,
       id,
-      data:
-        collection === 'projects' ? { takenBy: actor.id, owner: actor.id } : { takenBy: actor.id },
+      data,
+      context: { [POOL_TAKE]: true },
       ...asActor(actor),
     })
     return teamDone()
-  } catch {
-    return teamFail('failed')
+  } catch (error) {
+    // 409: someone else took it a moment earlier (the collection hook checked under a lock).
+    return (error as { status?: number }).status === 409 ? teamFail('taken') : teamFail('failed')
   }
 }
 

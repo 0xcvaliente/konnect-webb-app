@@ -26,7 +26,7 @@ import {
   logReassignments,
   writeActivity,
 } from '@/hooks/logActivity'
-import { isAdminEmail } from '@/access/adminEmails'
+import { isOnTeam, refuseTakenOnPoolTake } from '@/access/team'
 import { sendMatchEndedEmails, sendNoMatchEmail } from '@/lib/email/problemEmails'
 import { sendProjectReviewEmail, sendProjectSubmittedEmail } from '@/lib/email/projectEmails'
 import {
@@ -156,6 +156,7 @@ export const Projects: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
+      refuseTakenOnPoolTake('projects'),
       async ({ data, originalDoc, operation, req }) => {
         const role = effectiveRole(req.user)
 
@@ -320,10 +321,13 @@ export const Projects: CollectionConfig = {
         // company's owner, and so does a project without one when it reaches Konnected. The team
         // may move one project to someone else; a team decision on a project nobody owns makes
         // the deciding team member its owner. Field access keeps both fields admin-only to write.
+        // An owner who has left the team (not an admin, off ADMIN_EMAILS, or paused) is not
+        // copied: the project starts without one and waits in the shared pool.
         const admin = isAdmin(req.user)
         const owner = relationId(data.owner === undefined ? originalDoc?.owner : data.owner)
         if (!owner && (operation === 'create' || sending)) {
-          data.owner = relationId(company.teamOwner) ?? relationId(data.takenBy) ?? null
+          const copied = relationId(company.teamOwner) ?? relationId(data.takenBy)
+          data.owner = (await isOnTeam(req, copied)) ? copied : null
         }
         const decided =
           operation === 'update' &&
@@ -332,20 +336,11 @@ export const Projects: CollectionConfig = {
         if (admin && decided && !relationId(data.owner ?? originalDoc?.owner)) {
           data.owner = req.user!.id
         }
-        // Bypass: the server reads the chosen users' role and address to check they are on the
-        // team. Only admins can write these fields.
+        // A newly chosen owner or taker must be on the team. Only admins can write these fields.
         for (const key of ['owner', 'takenBy'] as const) {
           const id = relationId(data[key])
           if (!id || id === relationId(originalDoc?.[key])) continue
-          const member = await req.payload.findByID({
-            collection: 'users',
-            id,
-            depth: 0,
-            overrideAccess: true,
-            disableErrors: true,
-            req,
-          })
-          if (!member || member.role !== 'admin' || !isAdminEmail(member.email)) {
+          if (!(await isOnTeam(req, id))) {
             throw new APIError(`Project: the ${key} must be on the team`, 400)
           }
         }

@@ -16,6 +16,7 @@ import {
   isCompany,
   relationId,
 } from '@/access/roles'
+import { isOnTeam, refuseTakenOnPoolTake } from '@/access/team'
 import { copyNameToUser } from '@/hooks/copyNameToUser'
 import {
   logActivityAfterChange,
@@ -182,6 +183,7 @@ export const Companies: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
+      refuseTakenOnPoolTake('companies'),
       async ({ data, originalDoc, operation, req }) => {
         const role = effectiveRole(req.user)
         const admin = isAdmin(req.user)
@@ -268,8 +270,11 @@ export const Companies: CollectionConfig = {
           data.approvedAt ??= new Date().toISOString()
           // Whoever took the company from the shared pool, or else whoever approves it, becomes
           // its owner on the team, unless the team already chose one (team split by company).
-          if (admin && !relationId(data.teamOwner ?? originalDoc?.teamOwner)) {
-            data.teamOwner = relationId(data.takenBy ?? originalDoc?.takenBy) ?? req.user!.id
+          // Someone who has left the team is skipped.
+          const chosen = relationId(data.teamOwner ?? originalDoc?.teamOwner)
+          if (admin && !(await isOnTeam(req, chosen))) {
+            const taker = relationId(data.takenBy ?? originalDoc?.takenBy)
+            data.teamOwner = (await isOnTeam(req, taker)) ? taker : req.user!.id
           }
         } else if (status !== 'approved') {
           data.approvedAt = null
@@ -301,7 +306,7 @@ export const Companies: CollectionConfig = {
         // Admin changes only (field access drops these for everyone else): the linked user must
         // have the company role, and the Konnected owner must be on the team.
         if (admin) {
-          const checkRole = async (id: number | undefined, wanted: 'company' | 'admin') => {
+          const checkRole = async (id: number | undefined, wanted: 'company') => {
             if (!id) return
             const user = await req.payload.findByID({
               collection: 'users',
@@ -318,11 +323,12 @@ export const Companies: CollectionConfig = {
           if (relationId(data.user) !== relationId(originalDoc?.user)) {
             await checkRole(relationId(data.user), 'company')
           }
-          if (relationId(data.teamOwner) !== relationId(originalDoc?.teamOwner)) {
-            await checkRole(relationId(data.teamOwner), 'admin')
-          }
-          if (relationId(data.takenBy) !== relationId(originalDoc?.takenBy)) {
-            await checkRole(relationId(data.takenBy), 'admin')
+          // A newly chosen owner or taker must be on the team (admin, on ADMIN_EMAILS, not paused).
+          for (const key of ['teamOwner', 'takenBy'] as const) {
+            const id = relationId(data[key])
+            if (id && id !== relationId(originalDoc?.[key]) && !(await isOnTeam(req, id))) {
+              throw new APIError(`Company: the ${key} must be on the team`, 400)
+            }
           }
         }
         return data

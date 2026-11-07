@@ -35,6 +35,7 @@ export type DeliverableItem = {
   /** The hand-in the item opens. */
   id: number
   matchId: number
+  projectId: number
   title: string
   companyName: string | null
   studentName: string
@@ -129,6 +130,7 @@ export async function listDeliverableQueue(
     const state = deliveryState(rows as DeliveryItem[], fact.projectStatus)
     const base = {
       matchId,
+      projectId: fact.projectId,
       title: fact.title,
       companyName: fact.companyName,
       studentName: fact.studentName,

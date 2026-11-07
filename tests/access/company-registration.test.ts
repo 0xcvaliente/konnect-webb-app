@@ -721,7 +721,7 @@ describe('changing a company', () => {
         data: { teamOwner: user.id },
         ...as(w.admin),
       }),
-    ).rejects.toThrow(/not a admin user/)
+    ).rejects.toThrow(/must be on the team/)
     const owned = await w.payload.update({
       collection: 'companies',
       id: company.id,

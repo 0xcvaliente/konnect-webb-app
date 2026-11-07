@@ -10,8 +10,8 @@ import type { PayloadRequest } from 'payload'
  *
  * Always lock in the same order to avoid deadlocks: project, then application, then student
  * profile; for the work on a match: project, then match, then deliverable; a payment row on its
- * own. A lock
- * taken twice in one transaction is free.
+ * own; a company, project or student profile on its own when a team member takes it from the
+ * shared pool. A lock taken twice in one transaction is free.
  *
  * `share` (`FOR SHARE`) is for a write that only depends on a row staying as it is: a student
  * applying locks the project in share mode, so applies to one project do not wait for each other,
@@ -25,6 +25,7 @@ const TABLES = {
   matches: 'matches',
   deliverables: 'deliverables',
   payments: 'payments',
+  companies: 'companies',
 } as const
 
 export type LockableCollection = keyof typeof TABLES
